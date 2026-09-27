@@ -13,6 +13,7 @@ import {
   SelectField,
   SelectWithCustomField,
   SocialLengthSettings,
+  SocialWritingStyleSettings,
   TextField,
 } from "@/components/admin-promotion/admin-promotion-fields";
 import {
@@ -49,6 +50,10 @@ import {
   type AdminSocialLengthPlan,
   type AdminSocialPlatform,
 } from "@/lib/admin-promotion";
+import {
+  DEFAULT_ADMIN_SOCIAL_WRITING_STYLE,
+  type AdminSocialWritingStyle,
+} from "@/lib/social-writing-style";
 
 export function AdminPromotionPage() {
   const { state } = useSharedAccessState();
@@ -58,6 +63,7 @@ export function AdminPromotionPage() {
   const [facts, setFacts] = useState<AdminProductFacts>(DEFAULT_ADMIN_PRODUCT_FACTS);
   const [socialLengths, setSocialLengths] = useState<AdminSocialLengthPlan>({ ...DEFAULT_SOCIAL_LENGTH_PLAN });
   const [socialPresetIds, setSocialPresetIds] = useState<Record<AdminSocialPlatform, string>>({ ...DEFAULT_SOCIAL_PRESET_IDS });
+  const [advancedSocialStyle, setAdvancedSocialStyle] = useState<AdminSocialWritingStyle>({ ...DEFAULT_ADMIN_SOCIAL_WRITING_STYLE });
   const [article, setArticle] = useState<AdminArticlePromotionInput>({
     platform: "note",
     phase: "実運用テスト中（販売前）",
@@ -151,23 +157,24 @@ export function AdminPromotionPage() {
         ...social,
         lengthPresetId: socialPresetIds[social.platform],
         targetChars: socialLengths[social.platform],
+        socialStyle: advancedSocialStyle,
       });
     },
-    [facts, social, socialLengths, socialPresetIds, workspacePreference],
+    [facts, social, socialLengths, socialPresetIds, advancedSocialStyle, workspacePreference],
   );
   const campaignPrompt = useMemo(
     () => {
       void workspacePreference; // Prompt context reads the runtime workspace preset.
-      return buildAdminCampaignPrompt(facts, { ...campaign, socialLengths });
+      return buildAdminCampaignPrompt(facts, { ...campaign, socialLengths, socialStyle: advancedSocialStyle });
     },
-    [facts, campaign, socialLengths, workspacePreference],
+    [facts, campaign, socialLengths, advancedSocialStyle, workspacePreference],
   );
   const previewPrompt = useMemo(
     () => {
       void workspacePreference; // Prompt context reads the runtime workspace preset.
-      return buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths });
+      return buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths, socialStyle: advancedSocialStyle });
     },
-    [facts, preview, socialLengths, workspacePreference],
+    [facts, preview, socialLengths, advancedSocialStyle, workspacePreference],
   );
   const updateSocialLength = (platform: AdminSocialPlatform, presetId: string, targetChars: number) => {
     setSocialPresetIds((current) => ({ ...current, [platform]: presetId }));
@@ -264,6 +271,7 @@ export function AdminPromotionPage() {
             <span>価格・販売URL・公開日が未確定なら断定しません。実際に確認していないPV、売上、反応、レビュー、感想も作成しません。</span>
           </div>
           <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
+          <SocialWritingStyleSettings value={advancedSocialStyle} onChange={setAdvancedSocialStyle} />
           <PromptOutput prompt={previewPrompt} onCopy={() => void copyPrompt(previewPrompt)} />
         </section>
       )}
@@ -298,6 +306,7 @@ export function AdminPromotionPage() {
             <SelectField label="作成数" value={String(social.variants)} onChange={(value) => setSocial((current) => ({ ...current, variants: Number(value) || 1 }))} options={["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]} />
           </div>
           <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
+          <SocialWritingStyleSettings value={advancedSocialStyle} onChange={setAdvancedSocialStyle} />
           <PromptOutput prompt={socialPrompt} onCopy={() => void copyPrompt(socialPrompt)} />
         </section>
       )}
@@ -316,6 +325,7 @@ export function AdminPromotionPage() {
             <SelectWithCustomField label="CTA・誘導先" value={campaign.cta} onChange={(value) => setCampaign((current) => ({ ...current, cta: value }))} options={CTA_OPTIONS} customPlaceholder="CTA・誘導先を入力" />
           </div>
           <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
+          <SocialWritingStyleSettings value={advancedSocialStyle} onChange={setAdvancedSocialStyle} />
           <PromptOutput prompt={campaignPrompt} onCopy={() => void copyPrompt(campaignPrompt)} />
         </section>
       )}
