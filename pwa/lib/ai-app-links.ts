@@ -176,6 +176,7 @@ type AiUsageGuide = {
   temporaryNote: string;
   stepsTitle: string;
   stepsText: string;
+  handoffText: string;
 };
 
 const AI_USAGE_GUIDES: Record<AiAppKey, AiUsageGuide> = {
@@ -190,6 +191,7 @@ const AI_USAGE_GUIDES: Record<AiAppKey, AiUsageGuide> = {
     temporaryNote: "パーソナライズありでは既存のメモリ・カスタム指示等を利用できますが、一時チャット中はメモリを新規作成・更新しません。開始後はパーソナライズ設定を変更できません。",
     stepsTitle: "一時チャットで使う場合",
     stepsText: "ChatGPTを開く → 一時チャットを選ぶ → 必要なら「パーソナライズあり」を選ぶ → AASでコピーしたプロンプトを貼り付ける",
+    handoffText: "AASの「設定 → AI・文章の好み」では、自分の文章設定をChatGPTへ明示的に渡す引き継ぎプロンプトを作れます。ChatGPTのメモリやカスタム指示へ自動登録する機能ではありません。",
   },
   claude: {
     eyebrow: "CLAUDE GUIDE",
@@ -202,6 +204,7 @@ const AI_USAGE_GUIDES: Record<AiAppKey, AiUsageGuide> = {
     temporaryNote: "カスタムスタイルや個人設定などのプロフィール情報は利用できます。シークレットチャットは通常チャットへ変換・保存できないため、必要な完成文はAASへ戻す前にコピーしてください。",
     stepsTitle: "シークレットチャットで使う場合",
     stepsText: "Claudeを開く → 新規チャット画面のゴーストアイコンでシークレットモードを有効化 → AASでコピーしたプロンプトを貼り付ける",
+    handoffText: "AASの「設定 → AI・文章の好み」では、自分の文章設定をClaudeへ明示的に渡す引き継ぎプロンプトを作れます。Claudeのメモリ・プロフィール・カスタムスタイルへ自動登録する機能ではありません。",
   },
   gemini: {
     eyebrow: "GEMINI GUIDE",
@@ -214,6 +217,7 @@ const AI_USAGE_GUIDES: Record<AiAppKey, AiUsageGuide> = {
     temporaryNote: "一時チャットの内容は将来のパーソナライズ用情報として保存されません。Gemsや、一時チャットでは利用できない接続サービス等がある点にも注意してください。",
     stepsTitle: "一時チャットで使う場合",
     stepsText: "Geminiを開く → 一時チャットを選ぶ → AASでコピーしたプロンプトを貼り付ける",
+    handoffText: "AASの「設定 → AI・文章の好み」では、自分の文章設定をGeminiへ明示的に渡す引き継ぎプロンプトを作れます。GeminiのPersonal Intelligenceや保存済み指示へ自動登録する機能ではありません。",
   },
 };
 
@@ -272,6 +276,17 @@ function showAiUsageGuide(app: AiAppLink): void {
   stepsText.textContent = guide.stepsText;
   steps.append(stepsTitle, stepsText);
 
+  const handoff = document.createElement("div");
+  handoff.className = "ai-usage-handoff";
+  const handoffTitle = document.createElement("strong");
+  handoffTitle.textContent = "AASのパーソナライズ引き継ぎ";
+  const handoffText = document.createElement("p");
+  handoffText.textContent = guide.handoffText;
+  const handoffLink = document.createElement("a");
+  handoffLink.href = "/settings";
+  handoffLink.textContent = "AASの設定を開く";
+  handoff.append(handoffTitle, handoffText, handoffLink);
+
   const actions = document.createElement("div");
   actions.className = "ai-usage-actions";
 
@@ -299,7 +314,7 @@ function showAiUsageGuide(app: AiAppLink): void {
   });
 
   actions.append(openButton, cancelButton);
-  dialog.append(eyebrow, title, intro, choices, steps, actions);
+  dialog.append(eyebrow, title, intro, choices, steps, handoff, actions);
   backdrop.append(dialog);
   document.body.append(backdrop);
   openButton.focus();
