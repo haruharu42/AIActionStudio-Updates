@@ -42,6 +42,10 @@ test("promotion screenshot vision supports secure API analysis and direct ChatGP
   assert.match(analyzer, /adminGetPromotionScreenshotAnalysisConfig/);
   assert.match(analyzer, /adminSetPromotionScreenshotAnalysisConfig/);
   assert.match(analyzer, /Supabase Vault/);
+  assert.match(analyzer, /configEnabled && !config\?\.apiKeyConfigured && !configApiKey\.trim\(\)/);
+  assert.match(analyzer, /OpenAI APIキーを入力してください/);
+  assert.match(analyzer, /next\.enabled && next\.apiKeyConfigured/);
+  assert.match(analyzer, /configLoading \|\| items\.length >= Math\.min/);
   assert.doesNotMatch(analyzer, /storage\.from|indexedDB|localStorage/);
 
   assert.match(lib, /PROMOTION_SCREENSHOT_MAX_IMAGES = 4/);
