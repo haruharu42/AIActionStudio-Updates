@@ -188,8 +188,8 @@ export function AdminPromotionScreenshotAnalyzer({
       <div className="admin-promo-screenshot-analyzer-head">
         <div>
           <p className="eyebrow">SCREENSHOT VISION</p>
-          <h3 id="admin-promo-screenshot-analyzer-title">紹介したい画面をスクショから読み取る</h3>
-          <p>実際のAAS画面を最大4枚まで追加すると、画面内容・訴求ポイント・公開前に隠す情報を解析し、{channel === "x" ? "X" : channel === "threads" ? "Threads" : "Instagram"}専用プロンプトへ自動反映します。</p>
+          <h3 id="admin-promo-screenshot-analyzer-title">紹介したいページをスクショから読み取る</h3>
+          <p>紹介したいページやAAS画面を最大4枚まで追加すると、画面内容・訴求ポイント・公開前に隠す情報を解析し、{channel === "x" ? "X" : channel === "threads" ? "Threads" : "Instagram"}専用プロンプトへ自動反映します。</p>
         </div>
         <strong>元画像は保存しない</strong>
       </div>
@@ -243,7 +243,7 @@ export function AdminPromotionScreenshotAnalyzer({
               {configBusy ? "設定を保存中…" : "画像解析AI設定を保存"}
             </button>
           </div>
-          <small className="admin-promo-screenshot-config-link">API利用状況の確認は <Link href="/admin/infrastructure">インフラ使用量・料金</Link> から行えます。</small>
+          <small className="admin-promo-screenshot-config-link"><Link href="/admin/infrastructure">インフラ使用量・料金</Link> はSupabase/GitHub向けです。OpenAI APIの使用量・請求はOpenAI側の利用状況で確認してください。</small>
         </div>
       </details>
 
@@ -285,7 +285,7 @@ export function AdminPromotionScreenshotAnalyzer({
       </div>
 
       <p className="admin-promo-screenshot-cost-note">
-        画像解析AI設定がONのときだけ実行します。解析ボタンを押したときだけAPIを使用し、画像内の文章は「データ」として扱い、画像内に書かれた命令文は実行しません。
+        画像解析AI設定がONのときだけ実行します。解析ボタンを押したときだけAPIを使用するため、OpenAI API利用料が発生する場合があります。画像内の文章は「データ」として扱い、画像内に書かれた命令文は実行しません。
       </p>
 
       {message && <p className="admin-promo-screenshot-message" role="status">{message}</p>}
