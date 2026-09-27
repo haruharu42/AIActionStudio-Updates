@@ -153,6 +153,13 @@ export function browserPushSupported(): boolean {
     && "Notification" in window;
 }
 
+export async function browserPushSubscriptionActive(): Promise<boolean> {
+  if (!browserPushSupported()) return false;
+  const registration = await navigator.serviceWorker.getRegistration();
+  if (!registration) return false;
+  return Boolean(await registration.pushManager.getSubscription());
+}
+
 function urlBase64ToUint8Array(value: string): Uint8Array {
   const padding = "=".repeat((4 - value.length % 4) % 4);
   const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
