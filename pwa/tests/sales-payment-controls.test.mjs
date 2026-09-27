@@ -211,6 +211,12 @@ test("sales center groups legal support and access-code review without auto-appr
   assert.match(preflight, /販売前チェック/);
   assert.match(preflight, /利用コードの発行・使用履歴を確認/);
   assert.match(preflight, /href="\/admin\/users"/);
+  assert.match(preflight, /auth\.mfa\.listFactors\(\)/);
+  assert.match(preflight, /管理者MFA/);
+  assert.match(preflight, /verifiedMfaCount/);
+  assert.match(preflight, /href="\/admin\/security"/);
+  assert.match(preflight, /漏洩パスワード保護/);
+  assert.match(preflight, /要Dashboard確認/);
   for (const route of ["/commercial-transactions", "/terms", "/privacy", "/ai-terms", "/support"]) {
     assert.ok(preflight.includes(route), `missing pre-sale review route: ${route}`);
   }
