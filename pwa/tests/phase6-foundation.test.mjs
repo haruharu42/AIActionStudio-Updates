@@ -68,7 +68,8 @@ test("manifest and install icons are complete", async () => {
   assert.equal(manifest.start_url, "/");
   assert.deepEqual(manifest.icons.map((icon) => icon.sizes), ["512x512"]);
   assert.equal(manifest.icons[0]?.src, "/aas-axia-icon-512.png?v=20260928-axia-v1");
-  assert.equal(manifest.icons[0]?.type, "image/png");\n  assert.equal(manifest.icons[0]?.purpose, "any");
+  assert.equal(manifest.icons[0]?.type, "image/png");
+  assert.equal(manifest.icons[0]?.purpose, "any");
 });
 
 test("build configuration rejects secret browser keys", async () => {
