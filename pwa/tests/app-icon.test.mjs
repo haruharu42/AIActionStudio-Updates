@@ -28,6 +28,7 @@ test("AAS uses the Rumo SVG for installed and browser app icons", async () => {
     && icon.purpose.includes("maskable")
   ));
 
+  assert.match(layout, /manifest:\s*"\/manifest\.webmanifest\?v=20260927-rumo-v1"/);
   assert.match(layout, /icon:\s*"\/aas-app-icon\.svg\?v=20260927-rumo-v1"/);
   assert.match(layout, /shortcut:\s*"\/aas-app-icon\.svg\?v=20260927-rumo-v1"/);
   assert.match(layout, /apple:\s*"\/aas-app-icon\.svg\?v=20260927-rumo-v1"/);
