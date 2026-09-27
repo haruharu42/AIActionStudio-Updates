@@ -47,16 +47,17 @@ test("service worker never caches auth callbacks, remote Supabase traffic, or pe
   assert.match(worker, /url\.searchParams\.has\("code"\)/);
   assert.match(worker, /url\.searchParams\.has\("access_token"\)/);
   assert.match(worker, /url\.searchParams\.has\("refresh_token"\)/);
-  assert.match(worker, /aas-pwa-phase17-prod-v2-runtime-v7-branding/);
+  assert.match(worker, /aas-pwa-phase17-prod-v2-runtime-v8-hq-branding/);
   assert.match(worker, /const FRESH_BRANDING_ASSETS = new Set/);
   assert.match(worker, /"\/manifest\.webmanifest"/);
-  assert.match(worker, /"\/icon-192\.png"/);
-  assert.match(worker, /"\/icon-512\.png"/);
+  assert.match(worker, /"\/aas-app-icon\.svg"/);
+  assert.match(worker, /"\/aas-login-tile-1\.svg"/);
+  assert.match(worker, /"\/aas-login-tile-4\.svg"/);
   assert.match(worker, /FRESH_BRANDING_ASSETS\.has\(url\.pathname\)/);
   const appShell = worker.match(/const APP_SHELL = \[[\s\S]*?\];/)?.[0] ?? "";
   assert.doesNotMatch(appShell, /"\/manifest\.webmanifest"/);
-  assert.doesNotMatch(appShell, /"\/icon-192\.png"/);
-  assert.doesNotMatch(appShell, /"\/icon-512\.png"/);
+  assert.doesNotMatch(appShell, /"\/aas-app-icon\.svg"/);
+  assert.doesNotMatch(appShell, /"\/aas-login-tile-1\.svg"/);
   assert.doesNotMatch(appShell, /["']\/["']/);
   assert.doesNotMatch(worker, /supabase\.co/);
 });
@@ -65,10 +66,9 @@ test("manifest and install icons are complete", async () => {
   const manifest = JSON.parse(await read("public/manifest.webmanifest"));
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.start_url, "/");
-  assert.deepEqual(
-    manifest.icons.map((icon) => icon.sizes),
-    ["192x192", "512x512"],
-  );
+  assert.deepEqual(manifest.icons.map((icon) => icon.sizes), ["any"]);
+  assert.equal(manifest.icons[0]?.src, "/aas-app-icon.svg?v=20260927-rumo-v1");
+  assert.equal(manifest.icons[0]?.type, "image/svg+xml");
 });
 
 test("build configuration rejects secret browser keys", async () => {
