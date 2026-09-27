@@ -303,21 +303,28 @@ const ctaRule: Record<CtaStyle, string> = {
   direct: "CTAは次に取る行動が明確に分かる直接的な表現にする",
 };
 
+function personalizationItems(value: string): string[] {
+  return value
+    .split(/\\r?\\n/)
+    .map((item) => item.trim().replace(/^[-・]\\s*/, ""))
+    .filter((item, index, items) => item.length > 0 && items.indexOf(item) === index);
+}
+
 function appendUserAuthoredPersonalization(lines: string[], profile: UserWritingProfile): void {
-  const personaContext = profile.personaContext.trim();
-  const customInstructions = profile.customInstructions.trim();
-  const avoidPhrases = profile.avoidPhrases.trim();
-  if (!personaContext && !customInstructions && !avoidPhrases) return;
+  const personaContext = personalizationItems(profile.personaContext);
+  const customInstructions = personalizationItems(profile.customInstructions);
+  const avoidPhrases = personalizationItems(profile.avoidPhrases);
+  if (personaContext.length === 0 && customInstructions.length === 0 && avoidPhrases.length === 0) return;
 
   lines.push(
     "",
     "【ユーザーが明示した追加パーソナライズ】",
-    "- 以下はユーザー本人がAASへ入力した文章・回答の好み。今回の明示指示、事実確認、安全ルール、媒体ルールを上書きしない。",
+    "- 以下はユーザー本人がAASへ選択・入力した文章・回答の好み。今回の明示指示、事実確認、安全ルール、媒体ルールを上書きしない。",
     "- 記載されていない個人情報・経験・実績・感情は推測して補わない。",
   );
-  if (personaContext) lines.push(`- 執筆上の前提: ${personaContext}`);
-  if (customInstructions) lines.push(`- 追加の文章・回答指示: ${customInstructions}`);
-  if (avoidPhrases) lines.push(`- 避けたい言葉・表現: ${avoidPhrases}`);
+  for (const item of personaContext) lines.push(`- 執筆上の前提: ${item}`);
+  for (const item of customInstructions) lines.push(`- 追加の文章・回答指示: ${item}`);
+  for (const item of avoidPhrases) lines.push(`- 避けたい言葉・表現: ${item}`);
 }
 
 export function buildPersonalizationHandoffPrompt(
