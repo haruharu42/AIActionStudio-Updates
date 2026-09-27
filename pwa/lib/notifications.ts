@@ -153,11 +153,17 @@ export function browserPushSupported(): boolean {
     && "Notification" in window;
 }
 
-export async function browserPushSubscriptionActive(): Promise<boolean> {
+export async function browserPushSubscriptionActive(client: SupabaseClient): Promise<boolean> {
   if (!browserPushSupported()) return false;
   const registration = await navigator.serviceWorker.getRegistration();
   if (!registration) return false;
-  return Boolean(await registration.pushManager.getSubscription());
+  const subscription = await registration.pushManager.getSubscription();
+  if (!subscription) return false;
+  const { data, error } = await client.rpc("is_my_push_subscription_enabled_v2", {
+    p_endpoint: subscription.endpoint,
+  });
+  if (error) throw error;
+  return data === true;
 }
 
 function urlBase64ToUint8Array(value: string): Uint8Array {
