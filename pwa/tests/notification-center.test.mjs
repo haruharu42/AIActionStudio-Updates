@@ -110,14 +110,17 @@ test("settings support in-app, push, and per-category notification switches", as
 });
 
 test("push enablement is scoped to the current device while the server keeps an aggregate flag", async () => {
-  const [panel, client, migration] = await Promise.all([
+  const [panel, client, migration, deviceLookupMigration] = await Promise.all([
     readPwa("components/notification-settings-panel.tsx"),
     readPwa("lib/notifications.ts"),
     readRepo("supabase/migrations/20260927110715_notification_device_push_state_v2.sql"),
+    readRepo("supabase/migrations/20260927124446_notification_current_device_push_lookup_v2.sql"),
   ]);
 
-  assert.match(client, /browserPushSubscriptionActive/);
+  assert.match(client, /browserPushSubscriptionActive\(client: SupabaseClient\)/);
   assert.match(client, /pushManager\.getSubscription\(\)/);
+  assert.match(client, /is_my_push_subscription_enabled_v2/);
+  assert.match(panel, /browserPushSubscriptionActive\(client\)/);
   assert.match(panel, /devicePushEnabled/);
   assert.match(panel, /setDevicePushEnabled\(false\)/);
   assert.match(panel, /setDevicePushEnabled\(true\)/);
@@ -127,6 +130,11 @@ test("push enablement is scoped to the current device while the server keeps an 
   assert.match(migration, /where s\.user_id=v_user and s\.enabled=true/);
   assert.match(migration, /push_enabled=v_push_enabled/);
   assert.match(migration, /pref\.push_enabled is distinct from exists/);
+  assert.match(deviceLookupMigration, /where s\.user_id=v_user/);
+  assert.match(deviceLookupMigration, /s\.endpoint=p_endpoint/);
+  assert.match(deviceLookupMigration, /s\.enabled=true/);
+  assert.match(deviceLookupMigration, /revoke all on function public\.is_my_push_subscription_enabled_v2\(text\) from public, anon, authenticated/);
+  assert.match(deviceLookupMigration, /grant execute on function public\.is_my_push_subscription_enabled_v2\(text\) to authenticated/);
 });
 
 test("service worker displays Push notifications and opens the AAS destination", async () => {
