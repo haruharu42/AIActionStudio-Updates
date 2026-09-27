@@ -224,9 +224,10 @@ test("sales center groups legal support and access-code review without auto-appr
 
 
 test("access-code purchase flow owns its own request state", async () => {
-  const [plans, accessCode] = await Promise.all([
+  const [plans, accessCode, commerceCss] = await Promise.all([
     readPwa("components/commerce-plans-page.tsx"),
     readPwa("components/commerce/commerce-access-code-panel.tsx"),
+    readPwa("app/phase27-commerce.css"),
   ]);
 
   assert.doesNotMatch(plans, /inviteCode|inviteBusy|inviteMessage|inviteSuccess|inviteInFlight|redeemInvite/);
@@ -234,9 +235,16 @@ test("access-code purchase flow owns its own request state", async () => {
   assert.match(accessCode, /const \[busy, setBusy\] = useState/);
   assert.match(accessCode, /const inFlight = useRef/);
   assert.match(accessCode, /await refresh\(\)/);
+  assert.match(accessCode, /autoCapitalize="none"/);
+  assert.match(accessCode, /autoCorrect="off"/);
+  assert.match(accessCode, /spellCheck=\{false\}/);
+  assert.match(accessCode, /enterKeyHint="done"/);
   assert.match(accessCode, /state\.kind === "ready" \|\| state\.kind === "entitlement_denied" \|\| state\.kind === "pending"/);
   assert.match(accessCode, /state\.kind === "ready" && !success/);
   assert.match(accessCode, /success && state\.kind === "ready"/);
+  assert.match(commerceCss, /padding: 28px clamp\(14px, 4vw, 32px\) calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(commerceCss, /@media \(max-width: 620px\)[\s\S]*?\.commerce-invite-form \{ align-items: stretch; flex-direction: column; \}/);
+  assert.match(commerceCss, /@media \(max-width: 620px\)[\s\S]*?\.commerce-invite-form button \{ width: 100%; \}/);
 });
 
 
