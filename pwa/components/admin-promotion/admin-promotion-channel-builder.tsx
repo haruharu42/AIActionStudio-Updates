@@ -26,7 +26,7 @@ import {
   buildAdminChannelPromotionPrompt,
   type AdminPromotionChannel,
 } from "@/lib/admin-promotion-channel";
-import type { PromotionScreenshotAnalysis } from "@/lib/promotion-screenshot-analysis";
+import type { PromotionScreenshotAnalysis, PromotionScreenshotChannel } from "@/lib/promotion-screenshot-analysis";
 
 const CHANNEL_ORDER: AdminPromotionChannel[] = [
   "note",
@@ -231,7 +231,7 @@ export function AdminPromotionChannelBuilder({
           </div>
           <AdminPromotionScreenshotAnalyzer
             key={channel}
-            channel={socialPlatform}
+            channel={channel as PromotionScreenshotChannel}
             onAnalysisChange={setScreenshotAnalysis}
           />
         </>
@@ -247,7 +247,9 @@ export function AdminPromotionChannelBuilder({
       <PromptOutput
         prompt={prompt}
         onCopy={() => onCopy(prompt)}
-        note={`${meta.label}専用プロンプトです。スクリーンショットは自動取得せず、必要な画面・撮影範囲・挿入または添付位置だけを具体的に指示します。`}
+        note={screenshotAnalysis
+          ? `${meta.label}専用プロンプトです。アップロード済みスクショの解析結果・裏付け可能な主張・公開前の注意を反映しています。`
+          : `${meta.label}専用プロンプトです。スクリーンショットを追加しない場合は、必要な画面・撮影範囲・挿入または添付位置だけを具体的に指示します。`}
       />
     </section>
   );
