@@ -38,7 +38,11 @@ test("article creation keeps AI selection as wizard step one and allows returnin
 });
 
 test("personalization settings can be viewed edited saved and reset", async () => {
-  const [settings, accessProvider] = await Promise.all([\n    read("components/pwa-settings-page.tsx"),\n    read("components/access-state-provider.tsx"),\n  ]);\n  for (const label of ["AIの書き方を自分好みにする", "普段使うAI", "文章の雰囲気", "主な掲載先", "AASが保持している小さな利用傾向", "最適化設定を保存", "学習内容をリセット"]) {
+  const [settings, accessProvider] = await Promise.all([
+    read("components/pwa-settings-page.tsx"),
+    read("components/access-state-provider.tsx"),
+  ]);
+  for (const label of ["AIの書き方を自分好みにする", "普段使うAI", "文章の雰囲気", "主な掲載先", "AASが保持している小さな利用傾向", "最適化設定を保存", "学習内容をリセット"]) {
     assert.match(settings, new RegExp(label));
   }
   assert.match(settings, /loadWritingProfile/);
