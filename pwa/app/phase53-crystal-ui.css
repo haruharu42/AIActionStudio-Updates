@@ -1295,18 +1295,26 @@ body.aas-crystal-theme .auth-character-copy .trust-row span {
 body.aas-crystal-theme .auth-character-visual {
   position: absolute;
   z-index: 1;
-  left: 23%;
-  right: -9%;
-  top: 3%;
-  bottom: -1%;
+  width: min(72%, 690px);
+  aspect-ratio: 690 / 750;
+  right: -1.5%;
+  top: 50%;
+  transform: translateY(-50%);
   min-height: 0;
-  background: url("/aas-axia-rumo-hero.svg") 56% 50% / cover no-repeat;
+  background-image:
+    url("/aas-login-tile-1.svg?v=20260927-hq-v1"),
+    url("/aas-login-tile-2.svg?v=20260927-hq-v1"),
+    url("/aas-login-tile-3.svg?v=20260927-hq-v1"),
+    url("/aas-login-tile-4.svg?v=20260927-hq-v1");
+  background-size: 50% 50%;
+  background-position: left top, right top, left bottom, right bottom;
+  background-repeat: no-repeat;
   filter:
-    saturate(1.04)
-    contrast(1.015)
-    drop-shadow(0 28px 54px rgb(86 113 170 / 14%));
-  -webkit-mask-image: radial-gradient(ellipse 70% 74% at 58% 51%, #000 0 55%, rgb(0 0 0 / 94%) 65%, rgb(0 0 0 / 54%) 78%, transparent 96%);
-  mask-image: radial-gradient(ellipse 70% 74% at 58% 51%, #000 0 55%, rgb(0 0 0 / 94%) 65%, rgb(0 0 0 / 54%) 78%, transparent 96%);
+    saturate(1.015)
+    contrast(1.01)
+    drop-shadow(0 26px 50px rgb(86 113 170 / 13%));
+  -webkit-mask-image: radial-gradient(ellipse 76% 78% at 52% 52%, #000 0 58%, rgb(0 0 0 / 96%) 67%, rgb(0 0 0 / 58%) 82%, transparent 100%);
+  mask-image: radial-gradient(ellipse 76% 78% at 52% 52%, #000 0 58%, rgb(0 0 0 / 96%) 67%, rgb(0 0 0 / 58%) 82%, transparent 100%);
   pointer-events: none;
 }
 
@@ -1574,12 +1582,16 @@ body.aas-crystal-theme .status-card::after {
   body.aas-crystal-theme .auth-character-visual {
     position: relative;
     inset: auto;
-    min-height: 260px;
-    margin-top: -38px;
-    background-position: center bottom;
-    background-size: contain;
-    -webkit-mask-image: radial-gradient(ellipse 76% 78% at 50% 50%, #000 0 58%, rgb(0 0 0 / 88%) 72%, transparent 100%);
-    mask-image: radial-gradient(ellipse 76% 78% at 50% 50%, #000 0 58%, rgb(0 0 0 / 88%) 72%, transparent 100%);
+    width: min(94vw, 560px);
+    aspect-ratio: 690 / 750;
+    min-height: 0;
+    margin: -24px auto -8px;
+    transform: none;
+    background-size: 50% 50%;
+    background-position: left top, right top, left bottom, right bottom;
+    background-repeat: no-repeat;
+    -webkit-mask-image: radial-gradient(ellipse 78% 80% at 50% 50%, #000 0 58%, rgb(0 0 0 / 90%) 72%, transparent 100%);
+    mask-image: radial-gradient(ellipse 78% 80% at 50% 50%, #000 0 58%, rgb(0 0 0 / 90%) 72%, transparent 100%);
   }
 
   body.aas-crystal-theme .auth-character-label {
@@ -1609,8 +1621,8 @@ body.aas-crystal-theme .status-card::after {
   }
 
   body.aas-crystal-theme .auth-character-visual {
-    min-height: 245px;
-    margin-inline: -16px;
+    width: min(102vw, 470px);
+    margin: -18px -5vw -6px;
   }
 
   body.aas-crystal-theme .auth-card.auth-crystal-card h2 {
