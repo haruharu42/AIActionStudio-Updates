@@ -53,9 +53,11 @@ test("service worker never caches auth callbacks, remote Supabase traffic, or pe
   assert.match(worker, /"\/icon-192\.png"/);
   assert.match(worker, /"\/icon-512\.png"/);
   assert.match(worker, /FRESH_BRANDING_ASSETS\.has\(url\.pathname\)/);
-  assert.doesNotMatch(worker, /const APP_SHELL = \[[\s\S]*?"\/manifest\.webmanifest"/);
-  assert.doesNotMatch(worker, /const APP_SHELL = \[[\s\S]*?"\/icon-192\.png"/);
-  assert.doesNotMatch(worker, /const APP_SHELL = \[\s*["']\/["']/);
+  const appShell = worker.match(/const APP_SHELL = \[[\s\S]*?\];/)?.[0] ?? "";
+  assert.doesNotMatch(appShell, /"\/manifest\.webmanifest"/);
+  assert.doesNotMatch(appShell, /"\/icon-192\.png"/);
+  assert.doesNotMatch(appShell, /"\/icon-512\.png"/);
+  assert.doesNotMatch(appShell, /["']\/["']/);
   assert.doesNotMatch(worker, /supabase\.co/);
 });
 
