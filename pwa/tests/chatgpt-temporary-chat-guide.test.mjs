@@ -38,6 +38,12 @@ test("AI launch explains provider-specific regular and temporary/private chat be
 
   assert.match(links, /AASから一時チャットを自動選択することはできない/);
   assert.match(links, /AASからシークレットチャットを自動選択することはできない/);
+  assert.match(links, /AASの「設定 → AI・文章の好み」/);
+  assert.match(links, /メモリやカスタム指示へ自動登録する機能ではありません/);
+  assert.match(links, /メモリ・プロフィール・カスタムスタイルへ自動登録する機能ではありません/);
+  assert.match(links, /Personal Intelligenceや保存済み指示へ自動登録する機能ではありません/);
+  assert.match(links, /ai-usage-handoff/);
+  assert.match(links, /href = "\/settings"/);
   assert.match(links, /openAiProvider\(app\)/);
   assert.doesNotMatch(links, /showChatGptUsageGuide/);
 
@@ -47,6 +53,7 @@ test("AI launch explains provider-specific regular and temporary/private chat be
   assert.match(css, /\.ai-usage-backdrop/);
   assert.match(css, /\.ai-usage-dialog/);
   assert.match(css, /\.ai-usage-choices/);
+  assert.match(css, /\.ai-usage-handoff/);
   assert.match(css, /@media \(max-width: 600px\)[\s\S]*?\.ai-usage-choices/);
   assert.doesNotMatch(css, /\.chatgpt-usage-/);
 });
