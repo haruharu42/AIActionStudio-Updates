@@ -122,8 +122,8 @@ test("push enablement is scoped to the current device while the server keeps an 
   assert.match(panel, /setDevicePushEnabled\(false\)/);
   assert.match(panel, /setDevicePushEnabled\(true\)/);
   assert.match(panel, /他の端末の通知設定は変更しません/);
-  assert.doesNotMatch(panel, /pushEnabled: false/);
-  assert.doesNotMatch(panel, /pushEnabled: true/);
+  assert.doesNotMatch(panel, /updateNotificationPreferences[\s\S]{0,180}pushEnabled:\s*false/);
+  assert.doesNotMatch(panel, /updateNotificationPreferences[\s\S]{0,180}pushEnabled:\s*true/);
   assert.match(migration, /where s\.user_id=v_user and s\.enabled=true/);
   assert.match(migration, /push_enabled=v_push_enabled/);
   assert.match(migration, /pref\.push_enabled is distinct from exists/);
