@@ -10,13 +10,14 @@ const readPwa = (relative) => readFile(path.join(pwaRoot, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
 test("home widgets restore cloud-saved desktop and mobile customization", async () => {
-  const [home, settings, customizer, lib, css, settingsCss, rlsMigration] = await Promise.all([
+  const [home, settings, customizer, lib, css, settingsCss, baseMigration, rlsMigration] = await Promise.all([
     readPwa("components/phase18-beginner-home.tsx"),
     readPwa("components/pwa-settings-page.tsx"),
     readPwa("components/home-widget-customizer.tsx"),
     readPwa("lib/home-widget-preferences.ts"),
     readPwa("app/phase53-crystal-ui.css"),
     readPwa("app/phase25-user-personalization.css"),
+    readRepo("supabase/migrations/20260924063233_user_home_widget_preferences.sql"),
     readRepo("supabase/migrations/20260925102518_optimize_home_widget_rls_auth_uid.sql"),
   ]);
 
@@ -72,6 +73,12 @@ test("home widgets restore cloud-saved desktop and mobile customization", async 
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.home-widget-slot\.half/);
   assert.match(settingsCss, /\.home-widget-customizer/);
   assert.match(settingsCss, /\.home-widget-row/);
+
+  assert.match(baseMigration, /create table if not exists public\.user_home_widget_preferences/);
+  assert.match(baseMigration, /desktop_layout jsonb not null default '\[\]'::jsonb/);
+  assert.match(baseMigration, /mobile_layout jsonb not null default '\[\]'::jsonb/);
+  assert.match(baseMigration, /grant select, insert, update, delete on public\.user_home_widget_preferences to authenticated/);
+  assert.match(baseMigration, /user_home_widget_preferences_select_own/);
 
   assert.match(rlsMigration, /user_home_widget_preferences_select_own/);
   assert.match(rlsMigration, /user_home_widget_preferences_insert_own/);
