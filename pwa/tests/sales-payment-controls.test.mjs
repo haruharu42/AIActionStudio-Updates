@@ -234,6 +234,9 @@ test("access-code purchase flow owns its own request state", async () => {
   assert.match(accessCode, /const \[busy, setBusy\] = useState/);
   assert.match(accessCode, /const inFlight = useRef/);
   assert.match(accessCode, /await refresh\(\)/);
+  assert.match(accessCode, /state\.kind === "ready" \|\| state\.kind === "entitlement_denied" \|\| state\.kind === "pending"/);
+  assert.match(accessCode, /state\.kind === "ready" && !success/);
+  assert.match(accessCode, /success && state\.kind === "ready"/);
 });
 
 
