@@ -97,8 +97,8 @@ test("user-authored personalization handoff is cloud-backed prompt-safe and prov
   assert.match(panel, /一時チャットではパーソナライズされた回答は利用できません/);
   assert.match(panel, /シークレットチャットでは既存メモリを使いません/);
   assert.match(panel, /AASの設定がChatGPTのメモリやカスタム指示へ自動登録されるわけではありません/);
-  assert.match(panel, /個人最適化がONのときはAASの生成プロンプトへ自動反映/);
-  assert.match(panel, /ON\/OFFに関係なくChatGPT・Claude・Geminiへ渡す専用プロンプトをコピーできます/);
+  assert.match(panel, /個人最適化がONの場合はAASが生成する記事・SNSプロンプトへ自動反映/);
+  assert.match(panel, /ChatGPT・Claude・Gemini/);
 
   assert.match(migration, /char_length\(persona_context\) <= 1200/);
   assert.match(migration, /char_length\(custom_instructions\) <= 2400/);
@@ -108,6 +108,64 @@ test("user-authored personalization handoff is cloud-backed prompt-safe and prov
   assert.match(css, /\.personalization-handoff/);
   assert.match(css, /\.personalization-provider-handoff/);
   assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.personalization-provider-handoff/);
+});
+
+test("personalization UI is dropdown-first with addable presets and free input", async () => {
+  const [settings, panel, personalization, css] = await Promise.all([
+    read("components/pwa-settings-page.tsx"),
+    read("components/personalization-handoff-panel.tsx"),
+    read("lib/user-personalization.ts"),
+    read("app/phase25-user-personalization.css"),
+  ]);
+
+  for (const label of [
+    "AIの書き方を自分好みにする",
+    "STEP 1",
+    "普段使うAIと投稿先",
+    "STEP 2",
+    "文章の書き方",
+    "主なジャンル",
+    "その他・自由入力",
+    "誇張・煽り表現",
+  ]) {
+    assert.match(settings, new RegExp(label));
+  }
+  assert.match(settings, /COMMON_PERSONALIZATION_GENRES/);
+  assert.match(settings, /<select/);
+  assert.match(settings, /ジャンルを自由入力/);
+
+  for (const label of [
+    "AIへ伝える追加条件",
+    "選んで追加",
+    "自由入力を追加",
+    "初心者向けにする",
+    "結論から書く",
+    "具体例を入れる",
+    "人間味を残す",
+    "成果保証を避ける",
+    "AI定型句を避ける",
+    "絵文字の使いすぎを避ける",
+  ]) {
+    assert.match(panel, new RegExp(label));
+  }
+  assert.match(panel, /function PresetAdder/);
+  assert.match(panel, /items\.length >= 12/);
+  assert.match(panel, /onClick=\{\(\) => addItem\(selected\)\}/);
+  assert.match(panel, /onClick=\{\(\) => addItem\(custom\)\}/);
+  assert.match(panel, /onClick=\{\(\) => removeItem\(item\)\}/);
+  assert.match(panel, /<optgroup/);
+  assert.doesNotMatch(panel, /<textarea/);
+
+  assert.match(personalization, /function personalizationItems/);
+  assert.match(personalization, /for \(const item of personaContext\)/);
+  assert.match(personalization, /for \(const item of customInstructions\)/);
+  assert.match(personalization, /for \(const item of avoidPhrases\)/);
+
+  assert.match(css, /\.personalization-choice-section/);
+  assert.match(css, /\.personalization-preset-add/);
+  assert.match(css, /\.personalization-preset-chips/);
+  assert.match(css, /\.personalization-custom-add/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.personalization-preset-add/);
 });
 
 test("prompt builder applies provider plan and optional user preferences", async () => {
