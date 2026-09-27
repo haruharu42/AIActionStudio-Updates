@@ -30,6 +30,54 @@ export type PromotionScreenshotAnalysis = {
   model: string;
 };
 
+export type PromotionScreenshotAnalysisConfig = {
+  enabled: boolean;
+  provider: "openai";
+  model: string;
+  maxImages: number;
+  apiKeyConfigured: boolean;
+};
+
+function configFromRpc(value: unknown): PromotionScreenshotAnalysisConfig {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  const maxImages = Math.max(1, Math.min(PROMOTION_SCREENSHOT_MAX_IMAGES, Number(row.max_images ?? 4) || 4));
+  return {
+    enabled: row.enabled === true,
+    provider: "openai",
+    model: cleanText(row.model, 120) || "gpt-5.6-luna",
+    maxImages,
+    apiKeyConfigured: row.api_key_configured === true,
+  };
+}
+
+export async function adminGetPromotionScreenshotAnalysisConfig(
+  client: SupabaseClient,
+): Promise<PromotionScreenshotAnalysisConfig> {
+  const { data, error } = await client.rpc("admin_get_promotion_screenshot_analysis_config");
+  if (error) throw error;
+  return configFromRpc(data);
+}
+
+export async function adminSetPromotionScreenshotAnalysisConfig(
+  client: SupabaseClient,
+  input: {
+    enabled: boolean;
+    model: string;
+    maxImages: number;
+    apiKey?: string;
+  },
+): Promise<PromotionScreenshotAnalysisConfig> {
+  const { error } = await client.rpc("admin_set_promotion_screenshot_analysis_config", {
+    p_enabled: input.enabled,
+    p_model: input.model.trim(),
+    p_max_images: Math.max(1, Math.min(PROMOTION_SCREENSHOT_MAX_IMAGES, input.maxImages)),
+    p_api_key: input.apiKey?.trim() ?? "",
+  });
+  if (error) throw error;
+  return adminGetPromotionScreenshotAnalysisConfig(client);
+}
+
 type ScreenshotPayload = {
   filename: string;
   mimeType: string;
