@@ -31,11 +31,11 @@ test("AAS uses high-resolution Axia artwork for installed and browser app icons"
 
   const manifest = JSON.parse(manifestRaw);
   assert.equal(manifest.name, "AI Action Studio");
-  assert.ok(manifest.icons.some((icon) => icon.src === "/icon-192.png" && icon.sizes === "192x192"));
-  assert.ok(manifest.icons.some((icon) => icon.src === "/icon-512.png" && icon.sizes === "512x512"));
+  assert.ok(manifest.icons.some((icon) => icon.src === "/icon-192.png?v=20260927-axia-v2" && icon.sizes === "192x192"));
+  assert.ok(manifest.icons.some((icon) => icon.src === "/icon-512.png?v=20260927-axia-v2" && icon.sizes === "512x512"));
 
-  assert.match(layout, /icon:\s*"\/icon-192\.png"/);
-  assert.match(layout, /shortcut:\s*"\/icon-192\.png"/);
-  assert.match(layout, /apple:\s*"\/icon-192\.png"/);
+  assert.match(layout, /icon:\s*"\/icon-192\.png\?v=20260927-axia-v2"/);
+  assert.match(layout, /shortcut:\s*"\/icon-192\.png\?v=20260927-axia-v2"/);
+  assert.match(layout, /apple:\s*"\/icon-192\.png\?v=20260927-axia-v2"/);
   assert.doesNotMatch(layout, /favicon\.svg/);
 });
