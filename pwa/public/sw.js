@@ -1,11 +1,13 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v6-notifications";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v7-branding";
 const APP_SHELL = [
   "/offline.html",
-  "/manifest.webmanifest",
   "/favicon.svg",
+];
+const FRESH_BRANDING_ASSETS = new Set([
+  "/manifest.webmanifest",
   "/icon-192.png",
   "/icon-512.png",
-];
+]);
 
 function freshRequest(request) {
   return new Request(request, { cache: "no-store" });
@@ -72,6 +74,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (FRESH_BRANDING_ASSETS.has(url.pathname)) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
   if (APP_SHELL.includes(url.pathname)) {
     event.respondWith(
       caches.match(request).then(
@@ -113,8 +120,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      icon: "/icon-192.png?v=20260927-axia-v2",
+      badge: "/icon-192.png?v=20260927-axia-v2",
       tag: notificationId > 0 ? "aas-notification-" + notificationId : undefined,
       renotify: false,
       data: { href, notificationId },
