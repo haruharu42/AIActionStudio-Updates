@@ -161,10 +161,10 @@ test("personalization UI is dropdown-first with addable presets and free input",
   assert.match(personalization, /for \(const item of personaContext\)/);
   assert.match(personalization, /for \(const item of customInstructions\)/);
   assert.match(personalization, /for \(const item of avoidPhrases\)/);
-  assert.equal(personalization.includes(String.raw`.split(/\\\\r?\\\\n/)`), false);
-  assert.equal(personalization.includes(String.raw`.split(/\\r?\\n/)`), true);
-  assert.equal(personalization.includes(String.raw`.replace(/^[-・]\\\\s*/`), false);
-  assert.equal(personalization.includes(String.raw`.replace(/^[-・]\\s*/`), true);
+  assert.equal(personalization.includes(String.raw`.split(/\\r?\\n/)`), false, "newline regex must not be double escaped");
+  assert.equal(personalization.includes(String.raw`.split(/\r?\n/)`), true, "newline regex must split saved multi-line preferences");
+  assert.equal(personalization.includes(String.raw`.replace(/^[-・]\\s*/`), false, "bullet-strip whitespace regex must not be double escaped");
+  assert.equal(personalization.includes(String.raw`.replace(/^[-・]\s*/`), true, "bullet-strip regex must remove optional whitespace");
 
   assert.match(css, /\.personalization-choice-section/);
   assert.match(css, /\.personalization-preset-add/);
