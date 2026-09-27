@@ -56,6 +56,7 @@ test("promotion screenshot vision stays admin-only, ephemeral, prompt-aware, and
   assert.match(edge, /role !== "admin"/);
   assert.match(edge, /status !== "active"/);
   assert.match(edge, /get_promotion_screenshot_analysis_worker_config/);
+  assert.doesNotMatch(edge, /get_knowledge_automation_worker_ai_config/);
   assert.match(edge, /input_image/);
   assert.match(edge, /detail: "high"/);
   assert.match(edge, /store: false/);
