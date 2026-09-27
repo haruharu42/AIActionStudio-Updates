@@ -151,18 +151,7 @@ function showIosLaunchChoice(app: AiAppLink): void {
   appButton.focus();
 }
 
-/**
- * Open an AI provider without embedding API credentials.
- *
- * Android keeps the one-tap package intent with an official Google Play
- * fallback. iPhone/iPad cannot reliably expose installed-app state to a PWA,
- * so AAS presents an explicit app/Web choice with no timer and no automatic
- * App Store redirect. Desktop browsers open the provider Web app separately.
- */
-export function launchAiApp(key: AiAppKey): void {
-  if (typeof window === "undefined") return;
-  const app = AI_APP_LINKS[key];
-
+function openAiProvider(app: AiAppLink): void {
   if (isAndroid()) {
     window.location.assign(buildAndroidIntent(app));
     return;
@@ -174,4 +163,113 @@ export function launchAiApp(key: AiAppKey): void {
   }
 
   openWebApp(app);
+}
+
+function showChatGptUsageGuide(app: AiAppLink): void {
+  document.getElementById("aas-chatgpt-usage-guide")?.remove();
+
+  const backdrop = document.createElement("div");
+  backdrop.id = "aas-chatgpt-usage-guide";
+  backdrop.className = "chatgpt-usage-backdrop";
+
+  const dialog = document.createElement("div");
+  dialog.className = "chatgpt-usage-dialog";
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  dialog.setAttribute("aria-label", "ChatGPTを使う前の案内");
+
+  const eyebrow = document.createElement("span");
+  eyebrow.className = "chatgpt-usage-eyebrow";
+  eyebrow.textContent = "CHATGPT GUIDE";
+
+  const title = document.createElement("strong");
+  title.textContent = "ChatGPTは通常チャット・一時チャットのどちらでも使えます";
+
+  const intro = document.createElement("p");
+  intro.textContent = "用途に合わせて選んでください。AASから一時チャットを自動選択することはできないため、ChatGPT側で開始方法を選びます。";
+
+  const choices = document.createElement("div");
+  choices.className = "chatgpt-usage-choices";
+
+  const normal = document.createElement("section");
+  normal.className = "chatgpt-usage-choice";
+  const normalTitle = document.createElement("strong");
+  normalTitle.textContent = "通常チャット";
+  const normalText = document.createElement("p");
+  normalText.textContent = "あとで続きから作業したい記事、シリーズ記事、継続して育てる内容に向いています。";
+  normal.append(normalTitle, normalText);
+
+  const temporary = document.createElement("section");
+  temporary.className = "chatgpt-usage-choice recommended";
+  const temporaryTitle = document.createElement("strong");
+  temporaryTitle.textContent = "一時チャット";
+  const temporaryText = document.createElement("p");
+  temporaryText.textContent = "履歴へ残さず単発で記事を作りたい時に使えます。既存の好みを反映したい場合は、会話開始前に「パーソナライズあり」を選んでください。";
+  const temporaryNote = document.createElement("small");
+  temporaryNote.textContent = "パーソナライズありでは既存のメモリ・カスタム指示等を利用できますが、一時チャット中はメモリを新規作成・更新しません。開始後はパーソナライズ設定を変更できません。";
+  temporary.append(temporaryTitle, temporaryText, temporaryNote);
+
+  choices.append(normal, temporary);
+
+  const steps = document.createElement("div");
+  steps.className = "chatgpt-usage-steps";
+  const stepsTitle = document.createElement("strong");
+  stepsTitle.textContent = "一時チャットで使う場合";
+  const stepsText = document.createElement("p");
+  stepsText.textContent = "ChatGPTを開く → 一時チャットを選ぶ → 必要なら「パーソナライズあり」を選ぶ → AASでコピーしたプロンプトを貼り付ける";
+  steps.append(stepsTitle, stepsText);
+
+  const actions = document.createElement("div");
+  actions.className = "chatgpt-usage-actions";
+
+  const openButton = document.createElement("button");
+  openButton.type = "button";
+  openButton.className = "chatgpt-usage-primary";
+  openButton.textContent = "ChatGPTを開く";
+
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.className = "chatgpt-usage-cancel";
+  cancelButton.textContent = "キャンセル";
+
+  const cleanup = () => backdrop.remove();
+  openButton.addEventListener("click", () => {
+    cleanup();
+    openAiProvider(app);
+  });
+  cancelButton.addEventListener("click", cleanup);
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) cleanup();
+  });
+  backdrop.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") cleanup();
+  });
+
+  actions.append(openButton, cancelButton);
+  dialog.append(eyebrow, title, intro, choices, steps, actions);
+  backdrop.append(dialog);
+  document.body.append(backdrop);
+  openButton.focus();
+}
+
+/**
+ * Open an AI provider without embedding API credentials.
+ *
+ * ChatGPT always shows a short guide first so users can choose between a
+ * regular chat and a temporary chat intentionally. Android keeps the one-tap
+ * package intent with an official Google Play fallback. iPhone/iPad cannot
+ * reliably expose installed-app state to a PWA, so AAS presents an explicit
+ * app/Web choice with no timer and no automatic App Store redirect. Desktop
+ * browsers open the provider Web app separately.
+ */
+export function launchAiApp(key: AiAppKey): void {
+  if (typeof window === "undefined") return;
+  const app = AI_APP_LINKS[key];
+
+  if (key === "chatgpt") {
+    showChatGptUsageGuide(app);
+    return;
+  }
+
+  openAiProvider(app);
 }
