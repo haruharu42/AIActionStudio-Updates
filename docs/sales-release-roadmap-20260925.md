@@ -11,7 +11,7 @@ Status: in progress.
 - [x] Admin Web Push real-device delivery/tap verified.
 - [x] Notification Center moved to Tester rollout.
 - [x] Designated non-admin tester can access Tester notification UI.
-- [ ] Tester device creates/enables a Web Push subscription. Live DB re-check on 2026-09-26 JST: one active non-admin release tester exists, but that tester has no enabled Push subscription.
+- [ ] Tester device creates/enables a Web Push subscription. Live DB re-check on 2026-09-27 JST: one active non-admin release tester exists, but that tester still has no enabled Push subscription.
 - [ ] Send Tester-only push and verify receipt/tap. Do not send until the tester subscription exists and target/content are explicitly confirmed.
 - [ ] Re-check article creation, external-AI return, core side-hustle workflow and mobile navigation on Tester.
 
@@ -31,7 +31,12 @@ Completed:
 
 Remaining:
 
-- [ ] Enable Supabase Auth leaked-password protection if the Supabase project plan supports it (Pro+); this is an Auth setting, not a SQL migration.
+- [ ] Enable Supabase Auth leaked-password protection if the Supabase project plan supports it (Pro+); this is an Auth setting, not a SQL migration. Live Security Advisor re-check on 2026-09-27 still reports `auth_leaked_password_protection` WARN, so Dashboard confirmation/action remains required.
+- [x] Keep first-factor enrollment and AAL2 challenge UI implemented in `AdminRouteGuard`; the production enforcement switch remains intentionally OFF during development.
+- [x] Add a clear zero-MFA warning/first-factor flow to Admin Security and show the current admin MFA state in Sales Center pre-sale review.
+- [ ] Enroll at least one verified TOTP on the active admin before enabling AAL2 enforcement. Live DB re-check on 2026-09-27: 1 active admin, 0 active admins with a verified MFA factor.
+- [ ] After a verified admin TOTP exists, re-enable both the PWA admin-route MFA requirement and the database AAL2 admin guard, then complete admin login/re-login E2E. Do not enable only one side or enable either side before enrollment.
+- [x] Map weak/leaked Supabase password errors to clear user-facing guidance so stronger Auth settings fail understandably.
 - [x] Classify the remaining authenticated SECURITY DEFINER warnings by guard type and delegated call path.
 - [x] Convert the zero-argument release-state wrapper to SECURITY INVOKER after compatibility testing.
 - [x] Review `pg_net` public-schema warning: live extension is v0.20.4, non-relocatable, and actively used by Knowledge/Push worker invocation. Keep it in place rather than drop/recreate a live dependency.
@@ -54,8 +59,9 @@ Required configuration:
 - [x] Add admin access-code redemption audit (AAS ID / redeemed time / PWA entitlement state; no email or billing data).
 - [x] Rollback-only DB failure E2E: duplicate-user reuse, exhausted code and expired code all fail closed.
 - [x] Rollback-only DB OFF-gate E2E: disabling new code redemption blocks new redemption while preserving the already-active PWA entitlement.
-- [ ] Verify the same redemption path through the real browser UI.
-- [ ] Verify duplicate/expired/exhausted code failures through disposable browser E2E.
+- [x] Harden browser access-code entry against duplicate submission, mobile auto-correction/capitalization and silent client-initialization failure; keep iPhone-readable input/layout regression coverage.
+- [ ] Verify the same redemption path through the real authenticated browser UI.
+- [ ] Verify duplicate/expired/exhausted code failures through disposable authenticated browser E2E.
 
 This is the recommended first paid-launch path.
 
