@@ -843,6 +843,14 @@
   .ai-usage-actions {
     grid-template-columns: 1fr;
   }
+
+  .ai-usage-choice > p,
+  .ai-usage-choice > small,
+  .ai-usage-steps p,
+  .ai-usage-handoff p,
+  .ai-usage-handoff a {
+    font-size: 12px;
+  }
 }
 
 /* iOS does not expose reliable installed-app detection to Safari/PWAs. Keep
