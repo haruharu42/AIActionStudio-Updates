@@ -435,6 +435,205 @@
 }
 
 
+/* Explicit personalization handoff to external AI providers. */
+.personalization-handoff {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  border: 1px solid #d8e6f5;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f5f9ff 100%);
+  padding: 16px;
+}
+
+.personalization-handoff-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.personalization-handoff-head span {
+  color: #6d9de1;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .09em;
+}
+
+.personalization-handoff-head h3 {
+  margin: 4px 0 6px;
+  color: #193b61;
+  font-size: 15px;
+}
+
+.personalization-handoff-head p,
+.personalization-handoff-scope p,
+.personalization-handoff-warning p,
+.personalization-handoff-note p,
+.personalization-provider-handoff p,
+.personalization-provider-handoff small {
+  margin: 0;
+  color: #7185a2;
+  line-height: 1.7;
+}
+
+.personalization-handoff-head p {
+  font-size: 9px;
+}
+
+.personalization-handoff-scope {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.personalization-handoff-scope > div {
+  border: 1px solid #dde8f4;
+  border-radius: 12px;
+  background: #fff;
+  padding: 11px 12px;
+}
+
+.personalization-handoff-scope strong,
+.personalization-handoff-warning strong,
+.personalization-handoff-note strong {
+  display: block;
+  color: #31506f;
+  font-size: 10px;
+}
+
+.personalization-handoff-scope p,
+.personalization-handoff-warning p,
+.personalization-handoff-note p {
+  margin-top: 5px;
+  font-size: 9px;
+}
+
+.personalization-handoff-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.personalization-handoff-fields label {
+  display: grid;
+  gap: 6px;
+}
+
+.personalization-handoff-fields label > span {
+  color: #45607f;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.personalization-handoff-fields textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #cfdaea;
+  border-radius: 12px;
+  background: #fff;
+  color: #203552;
+  padding: 10px 11px;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.personalization-handoff-fields label > small {
+  justify-self: end;
+  color: #8a9bb1;
+  font-size: 8px;
+}
+
+.personalization-handoff-warning {
+  border: 1px solid #f0d5b0;
+  border-radius: 12px;
+  background: #fffaf2;
+  padding: 11px 12px;
+}
+
+.personalization-handoff-warning strong {
+  color: #a46821;
+}
+
+.personalization-provider-handoff {
+  display: grid;
+  gap: 9px;
+}
+
+.personalization-provider-handoff article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dce7f4;
+  border-radius: 13px;
+  background: #fff;
+  padding: 12px;
+}
+
+.personalization-provider-handoff article > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.personalization-provider-handoff article strong {
+  color: #244d7a;
+  font-size: 10px;
+}
+
+.personalization-provider-handoff article p,
+.personalization-provider-handoff article small {
+  font-size: 8px;
+}
+
+.personalization-provider-handoff article small {
+  color: #8a7892;
+}
+
+.personalization-provider-handoff button {
+  min-height: 38px;
+  border: 1px solid #b9d6fb;
+  border-radius: 10px;
+  background: #f1f7ff;
+  color: #176bd9;
+  padding: 8px 10px;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.personalization-handoff-note {
+  border-radius: 12px;
+  background: #edf6ff;
+  padding: 11px 12px;
+}
+
+.personalization-handoff-message {
+  margin: 0;
+  border-radius: 10px;
+  background: #eef8f4;
+  color: #28705d;
+  padding: 9px 11px;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+@media (max-width: 650px) {
+  .personalization-handoff-scope {
+    grid-template-columns: 1fr;
+  }
+
+  .personalization-provider-handoff article {
+    grid-template-columns: 1fr;
+  }
+
+  .personalization-provider-handoff button {
+    width: 100%;
+  }
+}
+
 /* Home widget customizer */
 .home-widget-customizer {
   display: grid;
