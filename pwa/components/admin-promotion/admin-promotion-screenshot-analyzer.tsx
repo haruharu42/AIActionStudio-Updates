@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DirectRuntimeImage } from "@/components/direct-runtime-image";
 import {
@@ -34,6 +34,7 @@ export function AdminPromotionScreenshotAnalyzer({
   onAnalysisChange(analysis: PromotionScreenshotAnalysis | null): void;
 }) {
   const [items, setItems] = useState<LocalScreenshot[]>([]);
+  const itemsRef = useRef<LocalScreenshot[]>([]);
   const [analysis, setAnalysis] = useState<PromotionScreenshotAnalysis | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -45,6 +46,15 @@ export function AdminPromotionScreenshotAnalyzer({
   const [configMaxImages, setConfigMaxImages] = useState(PROMOTION_SCREENSHOT_MAX_IMAGES);
   const [configApiKey, setConfigApiKey] = useState("");
   const [configBusy, setConfigBusy] = useState(false);
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => () => {
+    revoke(itemsRef.current);
+    itemsRef.current = [];
+  }, []);
 
   useEffect(() => {
     let active = true;
