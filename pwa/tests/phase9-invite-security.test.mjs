@@ -84,6 +84,7 @@ test("PWA access-code page uses sales terminology and PWA-only device guidance",
   assert.match(page, /autoCorrect="off"/);
   assert.match(page, /spellCheck=\{false\}/);
   assert.match(page, /enterKeyHint="done"/);
+  assert.match(page, /role="status"/);
   assert.match(css, /\.route-field input,[\s\S]*?font-size: 16px;/);
   assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.route-meta \{[\s\S]*?grid-template-columns: 1fr;/);
   assert.doesNotMatch(page, /Windows利用権/);
