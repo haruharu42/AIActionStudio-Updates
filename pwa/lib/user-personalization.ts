@@ -305,8 +305,8 @@ const ctaRule: Record<CtaStyle, string> = {
 
 function personalizationItems(value: string): string[] {
   return value
-    .split(/\\r?\\n/)
-    .map((item) => item.trim().replace(/^[-・]\\s*/, ""))
+    .split(/\r?\n/)
+    .map((item) => item.trim().replace(/^[-・]\s*/, ""))
     .filter((item, index, items) => item.length > 0 && items.indexOf(item) === index);
 }
 
