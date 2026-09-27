@@ -60,7 +60,7 @@ export const metadata: Metadata = {
   description:
     "AI Action Studio（AAS）— AIで副業を、もっと簡単に。記事・SNS・画像・副業支援を、スマホとPCから手軽に進められるAIアクション支援PWAです。",
   applicationName: "AI Action Studio",
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.webmanifest?v=20260927-rumo-v1",
   robots: { index: false, follow: false },
   other: {
     "aas-phase": "17",
