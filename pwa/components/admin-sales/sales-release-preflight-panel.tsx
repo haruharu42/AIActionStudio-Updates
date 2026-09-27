@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import type { SalesSettings } from "@/lib/sales-settings";
+import { getSupabaseClient } from "@/lib/supabase";
 
 const REVIEW_LINKS = [
   { href: "/commercial-transactions", label: "特定商取引法に基づく表記", note: "販売者情報・価格・支払・返金等の表示を人が最終確認" },
@@ -31,6 +33,41 @@ export function SalesReleasePreflightPanel({
   hasUnsavedChanges?: boolean;
 }) {
   const purchaseUrl = externalPurchaseUrl(settings.externalSalesUrl);
+  const [verifiedMfaCount, setVerifiedMfaCount] = useState<number | null>(null);
+  const [mfaCheckFailed, setMfaCheckFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void getSupabaseClient().auth.mfa.listFactors().then(
+      ({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          setMfaCheckFailed(true);
+          setVerifiedMfaCount(null);
+          return;
+        }
+        setMfaCheckFailed(false);
+        setVerifiedMfaCount(data.totp.filter((factor) => factor.status === "verified").length);
+      },
+      () => {
+        if (!active) return;
+        setMfaCheckFailed(true);
+        setVerifiedMfaCount(null);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const mfaReady = verifiedMfaCount !== null && verifiedMfaCount > 0;
+  const mfaStatus = mfaCheckFailed
+    ? "確認失敗"
+    : verifiedMfaCount === null
+      ? "確認中"
+      : mfaReady
+        ? `${verifiedMfaCount}個確認済み`
+        : "未登録";
 
   return (
     <section className="admin-panel sales-release-preflight" aria-labelledby="sales-release-preflight-title">
@@ -62,6 +99,18 @@ export function SalesReleasePreflightPanel({
           <div><strong>購入ページ</strong><span className={purchaseUrl ? "ready" : "action"}>{purchaseUrl ? "設定あり" : "未設定"}</span></div>
           <small>実際に公開する外部購入ページのURLを確認します。</small>
           {purchaseUrl && <a href={purchaseUrl} target="_blank" rel="noopener noreferrer">購入ページを開く ↗</a>}
+        </article>
+        <article>
+          <div>
+            <strong>管理者MFA</strong>
+            <span className={mfaReady ? "ready" : mfaCheckFailed ? "review" : "action"}>{mfaStatus}</span>
+          </div>
+          <small>販売開始前に、現在の管理者アカウントへ確認済みTOTPを最低1個登録します。AAL2強制はMFA登録後に別工程で有効化します。</small>
+          <Link href="/admin/security">管理者MFAを確認 →</Link>
+        </article>
+        <article>
+          <div><strong>漏洩パスワード保護</strong><span className="review">要Dashboard確認</span></div>
+          <small>Supabase Authの漏洩パスワード保護はDashboard設定のためAASから自動変更しません。販売公開前に有効化状態を確認します。</small>
         </article>
 
         {REVIEW_LINKS.map((item) => (
