@@ -97,6 +97,8 @@ test("user-authored personalization handoff is cloud-backed prompt-safe and prov
   assert.match(panel, /一時チャットではパーソナライズされた回答は利用できません/);
   assert.match(panel, /シークレットチャットでは既存メモリを使いません/);
   assert.match(panel, /AASの設定がChatGPTのメモリやカスタム指示へ自動登録されるわけではありません/);
+  assert.match(panel, /個人最適化がONのときはAASの生成プロンプトへ自動反映/);
+  assert.match(panel, /ON\/OFFに関係なくChatGPT・Claude・Geminiへ渡す専用プロンプトをコピーできます/);
 
   assert.match(migration, /char_length\(persona_context\) <= 1200/);
   assert.match(migration, /char_length\(custom_instructions\) <= 2400/);
