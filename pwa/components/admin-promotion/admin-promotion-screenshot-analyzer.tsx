@@ -78,6 +78,11 @@ export function AdminPromotionScreenshotAnalyzer({
   }, []);
 
   const saveConfig = async () => {
+    if (configEnabled && !config?.apiKeyConfigured && !configApiKey.trim()) {
+      setMessage("画像解析AIをONにするにはOpenAI APIキーを入力してください。");
+      setConfigOpen(true);
+      return;
+    }
     setConfigBusy(true);
     setMessage("");
     try {
@@ -92,9 +97,11 @@ export function AdminPromotionScreenshotAnalyzer({
       setConfigModel(next.model);
       setConfigMaxImages(next.maxImages);
       setConfigApiKey("");
-      setMessage(next.enabled
+      setMessage(next.enabled && next.apiKeyConfigured
         ? "画像解析AIを有効にしました。スクリーンショット解析を利用できます。"
-        : "画像解析AIをOFFにしました。API利用は発生しません。");
+        : next.enabled
+          ? "画像解析AIはONですが、APIキーが未設定のため解析はまだ利用できません。"
+          : "画像解析AIをOFFにしました。API利用は発生しません。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "画像解析AI設定を保存できませんでした。");
     } finally {
@@ -253,7 +260,7 @@ export function AdminPromotionScreenshotAnalyzer({
           type="file"
           accept="image/png,image/jpeg,image/webp"
           multiple
-          disabled={busy || configBusy || items.length >= Math.min(PROMOTION_SCREENSHOT_MAX_IMAGES, config?.maxImages ?? PROMOTION_SCREENSHOT_MAX_IMAGES)}
+          disabled={busy || configBusy || configLoading || items.length >= Math.min(PROMOTION_SCREENSHOT_MAX_IMAGES, config?.maxImages ?? PROMOTION_SCREENSHOT_MAX_IMAGES)}
           onChange={(event) => {
             addFiles(event.target.files);
             event.currentTarget.value = "";
