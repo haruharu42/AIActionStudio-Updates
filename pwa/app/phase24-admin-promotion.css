@@ -1504,3 +1504,57 @@
     width: 100%;
   }
 }
+
+
+/* Shared social expression controls for X / Threads / Instagram. */
+.admin-promo-social-style {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d8e6f4;
+  border-radius: 12px;
+  background: #fbfdff;
+  padding: 11px;
+}
+
+.admin-promo-social-style-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-promo-social-style-head strong {
+  color: #244d7a;
+  font-size: 10px;
+}
+
+.admin-promo-social-style-head small {
+  color: #70859f;
+  font-size: 8px;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.admin-promo-social-style-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.admin-promo-social-style-grid .admin-promo-field {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .admin-promo-social-style-head {
+    display: grid;
+  }
+
+  .admin-promo-social-style-head small {
+    text-align: left;
+  }
+
+  .admin-promo-social-style-grid {
+    grid-template-columns: 1fr;
+  }
+}
