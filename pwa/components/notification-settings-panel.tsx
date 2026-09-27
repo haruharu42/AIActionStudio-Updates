@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import {
   browserPushSupported,
+  browserPushSubscriptionActive,
   disableBrowserPush,
   enableBrowserPush,
   getNotificationPreferences,
@@ -28,6 +29,7 @@ export function NotificationSettingsPanel() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [pushSupported, setPushSupported] = useState(false);
+  const [devicePushEnabled, setDevicePushEnabled] = useState(false);
   const [standalone, setStandalone] = useState(false);
 
   useEffect(() => {
@@ -37,8 +39,16 @@ export function NotificationSettingsPanel() {
       setPushSupported(browserPushSupported());
       setStandalone(isStandaloneWebApp());
     });
-    void getNotificationPreferences(getSupabaseClient()).then(
-      (next) => { if (active) setPreferences(next); },
+    const client = getSupabaseClient();
+    void Promise.all([
+      getNotificationPreferences(client),
+      browserPushSubscriptionActive(),
+    ]).then(
+      ([next, currentDeviceEnabled]) => {
+        if (!active) return;
+        setPreferences(next);
+        setDevicePushEnabled(currentDeviceEnabled);
+      },
       () => { if (active) setMessage("通知設定を取得できませんでした。"); },
     ).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -70,13 +80,15 @@ export function NotificationSettingsPanel() {
     setBusy(true);
     setMessage("");
     try {
-      if (preferences.pushEnabled) {
-        await disableBrowserPush(getSupabaseClient());
-        const next = await updateNotificationPreferences(getSupabaseClient(), { ...preferences, pushEnabled: false });
+      const client = getSupabaseClient();
+      if (devicePushEnabled) {
+        await disableBrowserPush(client);
+        const next = await getNotificationPreferences(client);
         setPreferences(next);
-        setMessage("この端末への通知をOFFにしました。");
+        setDevicePushEnabled(false);
+        setMessage("この端末への通知をOFFにしました。他の端末の通知設定は変更しません。");
       } else {
-        const result = await enableBrowserPush(getSupabaseClient());
+        const result = await enableBrowserPush(client);
         if (result === "unsupported") {
           setMessage("このブラウザではWeb Pushを利用できません。iPhone/iPadではAASをホーム画面へ追加してからお試しください。");
           return;
@@ -85,8 +97,9 @@ export function NotificationSettingsPanel() {
           setMessage("通知が許可されませんでした。端末またはブラウザの通知設定を確認してください。");
           return;
         }
-        const next = await updateNotificationPreferences(getSupabaseClient(), { ...preferences, pushEnabled: true });
+        const next = await getNotificationPreferences(client);
         setPreferences(next);
+        setDevicePushEnabled(true);
         setMessage("この端末への通知をONにしました。");
       }
     } catch (error) {
@@ -127,15 +140,15 @@ export function NotificationSettingsPanel() {
           </small>
         </div>
         <button
-          className={`persistent-toggle ${preferences.pushEnabled ? "on" : ""}`}
+          className={`persistent-toggle ${devicePushEnabled ? "on" : ""}`}
           type="button"
           role="switch"
-          aria-checked={preferences.pushEnabled}
+          aria-checked={devicePushEnabled}
           disabled={busy}
           onClick={() => void togglePush()}
         >
           <span aria-hidden="true" />
-          <b>{preferences.pushEnabled ? "ON" : "OFF"}</b>
+          <b>{devicePushEnabled ? "ON" : "OFF"}</b>
         </button>
       </section>
 
