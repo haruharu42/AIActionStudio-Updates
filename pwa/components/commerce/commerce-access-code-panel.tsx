@@ -68,7 +68,11 @@ export function CommerceAccessCodePanel({ enabled }: { enabled: boolean }) {
             onChange={(event) => setCode(event.target.value)}
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
             autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="text"
+            enterKeyHint="done"
           />
         </label>
         <button type="button" disabled={busy || !code.trim()} onClick={() => void redeem()}>
