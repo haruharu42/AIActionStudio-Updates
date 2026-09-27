@@ -38,23 +38,29 @@ export function SalesReleasePreflightPanel({
 
   useEffect(() => {
     let active = true;
-    void getSupabaseClient().auth.mfa.listFactors().then(
-      ({ data, error }) => {
-        if (!active) return;
-        if (error) {
+    try {
+      const client = getSupabaseClient();
+      void client.auth.mfa.listFactors().then(
+        ({ data, error }) => {
+          if (!active) return;
+          if (error) {
+            setMfaCheckFailed(true);
+            setVerifiedMfaCount(null);
+            return;
+          }
+          setMfaCheckFailed(false);
+          setVerifiedMfaCount(data.totp.filter((factor) => factor.status === "verified").length);
+        },
+        () => {
+          if (!active) return;
           setMfaCheckFailed(true);
           setVerifiedMfaCount(null);
-          return;
-        }
-        setMfaCheckFailed(false);
-        setVerifiedMfaCount(data.totp.filter((factor) => factor.status === "verified").length);
-      },
-      () => {
-        if (!active) return;
-        setMfaCheckFailed(true);
-        setVerifiedMfaCount(null);
-      },
-    );
+        },
+      );
+    } catch {
+      setMfaCheckFailed(true);
+      setVerifiedMfaCount(null);
+    }
     return () => {
       active = false;
     };
