@@ -23,9 +23,9 @@ test("Axia and Rumo are local presentation assets and the crystal theme loads la
   assert.match(css, /url\("\/aas-login-tile-1\.svg\?v=20260927-hq-v1"\)/);
   assert.match(css, /url\("\/aas-login-tile-4\.svg\?v=20260927-hq-v1"\)/);
   assert.match(css, /\.auth-character-visual[\s\S]*?width:\s*min\(72%, 690px\)/);
-  assert.match(css, /\.auth-character-visual[\s\S]*?background-size:\s*50% 50%/);
+  assert.match(css, /\.auth-character-visual[\s\S]*?background-size:\s*50.8% 50.8%/);
   assert.match(css, /\.action-studio-hero::after[\s\S]*?background:\s*url\("\/aas-axia-rumo-hero\.svg"\) center right \/ contain no-repeat/);
-  assert.match(css, /@media \(max-width: 900px\)[\s\S]*?\.auth-character-visual[\s\S]*?width:\s*min\(94vw, 560px\)[\s\S]*?background-size:\s*50% 50%/);
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*?\.auth-character-visual[\s\S]*?width:\s*min\(94vw, 560px\)[\s\S]*?background-size:\s*50.8% 50.8%/);
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.action-studio-hero::after[\s\S]*?background-size:\s*contain/);
   assert.match(hub, /アクシア × ルーモ/);
   assert.match(hub, /今日はAIで何を進めますか？/);
