@@ -38,7 +38,11 @@ export function Phase9InvitePage() {
   }, [accessState]);
 
   const redeem = async () => {
-    if (inFlight.current || !client) return;
+    if (inFlight.current) return;
+    if (!client) {
+      setMessage("アカウント接続を確認できません。");
+      return;
+    }
     inFlight.current = true;
     setBusy(true);
     setMessage("");
