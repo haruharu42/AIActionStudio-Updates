@@ -33,6 +33,17 @@ import {
 
 type SettingsSection = "preset" | "home" | "navigation" | "notifications" | "personalization" | "account";
 
+const COMMON_PERSONALIZATION_GENRES = [
+  "AI副業",
+  "AI活用",
+  "note運用",
+  "SNS運用",
+  "コンテンツ販売",
+  "副業全般",
+  "ブログ",
+  "ライティング",
+] as const;
+
 function SettingsAccordion({
   id,
   title,
@@ -251,7 +262,7 @@ export function PwaSettingsPage() {
               id="personalization"
               icon="◎"
               title="AI・文章の好み"
-              description="使用AI・文体・CTA・個人最適化"
+              description="選ぶだけでAIの書き方・読者・NG表現を設定"
               open={openSection === "personalization"}
               onOpen={toggleSection}
             >
@@ -260,8 +271,8 @@ export function PwaSettingsPage() {
                   <div className="personalization-settings-head">
                     <div>
                       <p className="eyebrow">PERSONALIZATION</p>
-                      <h2 id="personalization-settings-title">あなた向け最適化</h2>
-                      <p>使用するAIと文章の好みをクラウドへ保存し、記事プロンプトへ反映します。</p>
+                      <h2 id="personalization-settings-title">AIの書き方を自分好みにする</h2>
+                      <p>基本はプルダウンから選ぶだけです。細かい条件は下の「AIへ伝える追加条件」で追加できます。</p>
                     </div>
                     {writingProfile && (
                       <button
@@ -281,20 +292,67 @@ export function PwaSettingsPage() {
 
                   {writingProfile && !writingLoading && (
                     <>
-                      <div className="personalization-grid">
-                        <label><span>普段使うAI</span><select value={writingProfile.preferredAi} onChange={(event) => patchWritingProfile("preferredAi", event.target.value as AiProvider)}>{(Object.keys(AI_PROVIDER_LABELS) as AiProvider[]).map((key) => <option key={key} value={key}>{AI_PROVIDER_LABELS[key]}</option>)}</select></label>
-                        <label><span>利用プラン</span><select value={writingProfile.preferredPlan} onChange={(event) => patchWritingProfile("preferredPlan", event.target.value as AiPlan)}>{(Object.keys(AI_PLAN_LABELS) as AiPlan[]).map((key) => <option key={key} value={key}>{AI_PLAN_LABELS[key]}</option>)}</select></label>
-                        <label><span>文章の雰囲気</span><select value={writingProfile.tone} onChange={(event) => patchWritingProfile("tone", event.target.value as WritingTone)}><option value="balanced">バランス</option><option value="friendly">やさしく親しみやすい</option><option value="professional">落ち着いた専門的</option><option value="casual">自然な会話調</option></select></label>
-                        <label><span>見出し</span><select value={writingProfile.headingStyle} onChange={(event) => patchWritingProfile("headingStyle", event.target.value as HeadingStyle)}><option value="balanced">バランス</option><option value="short">短め</option><option value="descriptive">具体的・説明型</option></select></label>
-                        <label><span>箇条書き</span><select value={writingProfile.listPreference} onChange={(event) => patchWritingProfile("listPreference", event.target.value as ListPreference)}><option value="balanced">必要に応じて</option><option value="low">少なめ</option><option value="high">多め</option></select></label>
-                        <label><span>CTA</span><select value={writingProfile.ctaStyle} onChange={(event) => patchWritingProfile("ctaStyle", event.target.value as CtaStyle)}><option value="balanced">バランス</option><option value="soft">柔らかめ</option><option value="direct">行動を明確に</option></select></label>
-                        <label><span>普段の掲載先</span><select value={writingProfile.preferredPlatform ?? ""} onChange={(event) => patchWritingProfile("preferredPlatform", (event.target.value || null) as PreferredPlatform | null)}><option value="">指定なし</option><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></select></label>
-                        <label><span>普段のジャンル</span><input maxLength={100} value={writingProfile.preferredGenre} onChange={(event) => patchWritingProfile("preferredGenre", event.target.value)} placeholder="例: AI副業" /></label>
-                      </div>
+                      <section className="personalization-choice-section">
+                        <div className="personalization-choice-head">
+                          <span>STEP 1</span>
+                          <div>
+                            <strong>普段使うAIと投稿先</strong>
+                            <small>まずは普段の使い方を選びます。迷う項目は「指定なし」や標準のままで大丈夫です。</small>
+                          </div>
+                        </div>
+                        <div className="personalization-grid">
+                          <label><span>普段使うAI</span><select value={writingProfile.preferredAi} onChange={(event) => patchWritingProfile("preferredAi", event.target.value as AiProvider)}>{(Object.keys(AI_PROVIDER_LABELS) as AiProvider[]).map((key) => <option key={key} value={key}>{AI_PROVIDER_LABELS[key]}</option>)}</select><small>記事作成時によく開くAI</small></label>
+                          <label><span>AIの利用プラン</span><select value={writingProfile.preferredPlan} onChange={(event) => patchWritingProfile("preferredPlan", event.target.value as AiPlan)}>{(Object.keys(AI_PLAN_LABELS) as AiPlan[]).map((key) => <option key={key} value={key}>{AI_PLAN_LABELS[key]}</option>)}</select><small>無料版 / 有料版に合わせて指示量を調整</small></label>
+                          <label><span>主な掲載先</span><select value={writingProfile.preferredPlatform ?? ""} onChange={(event) => patchWritingProfile("preferredPlatform", (event.target.value || null) as PreferredPlatform | null)}><option value="">指定なし</option><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></select><small>普段もっともよく投稿する場所</small></label>
+                          <label>
+                            <span>主なジャンル</span>
+                            <select
+                              value={COMMON_PERSONALIZATION_GENRES.includes(writingProfile.preferredGenre as typeof COMMON_PERSONALIZATION_GENRES[number]) ? writingProfile.preferredGenre : writingProfile.preferredGenre ? "__custom__" : ""}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                if (value === "__custom__") {
+                                  if (COMMON_PERSONALIZATION_GENRES.includes(writingProfile.preferredGenre as typeof COMMON_PERSONALIZATION_GENRES[number])) patchWritingProfile("preferredGenre", "");
+                                } else {
+                                  patchWritingProfile("preferredGenre", value);
+                                }
+                              }}
+                            >
+                              <option value="">指定なし</option>
+                              {COMMON_PERSONALIZATION_GENRES.map((genre) => <option key={genre} value={genre}>{genre}</option>)}
+                              <option value="__custom__">その他・自由入力</option>
+                            </select>
+                            <small>よく扱うテーマを選択</small>
+                          </label>
+                          {(!writingProfile.preferredGenre || !COMMON_PERSONALIZATION_GENRES.includes(writingProfile.preferredGenre as typeof COMMON_PERSONALIZATION_GENRES[number])) && (
+                            <label className="personalization-custom-genre">
+                              <span>ジャンルを自由入力</span>
+                              <input maxLength={100} value={writingProfile.preferredGenre} onChange={(event) => patchWritingProfile("preferredGenre", event.target.value)} placeholder="例: 動画編集、VTuber運営、Web制作" />
+                              <small>一覧にない場合だけ入力してください。</small>
+                            </label>
+                          )}
+                        </div>
+                      </section>
 
-                      <label className="personalization-check"><input type="checkbox" checked={writingProfile.avoidHype} onChange={(event) => patchWritingProfile("avoidHype", event.target.checked)} /><span><strong>煽り表現を特に避ける</strong><small>成果保証・過度な期待・強すぎる販売表現を避ける方向へ寄せます。</small></span></label>
+                      <section className="personalization-choice-section">
+                        <div className="personalization-choice-head">
+                          <span>STEP 2</span>
+                          <div>
+                            <strong>文章の書き方</strong>
+                            <small>難しい設定名を覚える必要はありません。完成文をどう見せたいかだけ選びます。</small>
+                          </div>
+                        </div>
+                        <div className="personalization-grid">
+                          <label><span>文章の雰囲気</span><select value={writingProfile.tone} onChange={(event) => patchWritingProfile("tone", event.target.value as WritingTone)}><option value="balanced">標準・バランス</option><option value="friendly">やさしく親しみやすい</option><option value="professional">落ち着いた専門的</option><option value="casual">自然な会話調</option></select><small>全体の話し方</small></label>
+                          <label><span>見出しの作り方</span><select value={writingProfile.headingStyle} onChange={(event) => patchWritingProfile("headingStyle", event.target.value as HeadingStyle)}><option value="balanced">標準</option><option value="short">短くシンプル</option><option value="descriptive">具体的・説明型</option></select><small>章タイトルの長さ・具体性</small></label>
+                          <label><span>箇条書きの量</span><select value={writingProfile.listPreference} onChange={(event) => patchWritingProfile("listPreference", event.target.value as ListPreference)}><option value="balanced">必要に応じて</option><option value="low">少なめ・文章中心</option><option value="high">多め・整理重視</option></select><small>手順や要点の見せ方</small></label>
+                          <label><span>最後の行動案内（CTA）</span><select value={writingProfile.ctaStyle} onChange={(event) => patchWritingProfile("ctaStyle", event.target.value as CtaStyle)}><option value="balanced">自然な案内</option><option value="soft">やわらかく提案</option><option value="direct">次の行動を明確に</option></select><small>記事末尾の促し方</small></label>
+                          <label><span>誇張・煽り表現</span><select value={writingProfile.avoidHype ? "avoid" : "standard"} onChange={(event) => patchWritingProfile("avoidHype", event.target.value === "avoid")}><option value="avoid">しっかり避ける</option><option value="standard">通常の安全ルールに任せる</option></select><small>成果保証や強い煽りを抑える度合い</small></label>
+                        </div>
+                      </section>
 
                       <PersonalizationHandoffPanel profile={writingProfile} onChange={patchWritingProfile} />
+
+
 
                       <div className="personalization-learned">
                         <strong>AASが保持している小さな利用傾向</strong>
