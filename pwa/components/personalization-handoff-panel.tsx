@@ -57,8 +57,8 @@ export function PersonalizationHandoffPanel({
           <span>AAS PERSONALIZATION HANDOFF</span>
           <h3 id="personalization-handoff-title">自分の設定をAIへ引き継ぐ</h3>
           <p>
-            AASに自分の文章・回答の好みを保存し、記事プロンプトへ自動反映できます。
-            必要なときはChatGPT・Claude・Geminiへ渡す専用プロンプトもコピーできます。
+            AASに自分の文章・回答の好みを保存できます。個人最適化がONのときはAASの生成プロンプトへ自動反映し、
+            ON/OFFに関係なくChatGPT・Claude・Geminiへ渡す専用プロンプトをコピーできます。
           </p>
         </div>
       </div>
@@ -141,7 +141,7 @@ export function PersonalizationHandoffPanel({
       <div className="personalization-handoff-note">
         <strong>使い方</strong>
         <p>
-          通常はAASが生成する記事・SNSプロンプトへ自動反映されます。別のチャットで最初から自分の設定を渡したい場合だけ、
+          個人最適化がONの場合はAASが生成する記事・SNSプロンプトへ自動反映されます。別のチャットで最初から自分の設定を渡したい場合は、
           上のボタンで引き継ぎプロンプトをコピーし、最初のメッセージとして貼り付けてください。
         </p>
       </div>
