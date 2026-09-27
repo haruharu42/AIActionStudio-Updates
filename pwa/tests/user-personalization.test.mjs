@@ -79,8 +79,9 @@ test("user-authored personalization handoff is cloud-backed prompt-safe and prov
 
   for (const label of [
     "AIへ伝える追加条件",
-    "引き継げるもの",
-    "自動では引き継がれないもの",
+    "① 選ぶ",
+    "② 追加する",
+    "③ 足りない時だけ自由入力",
     "AIに伝えたい執筆上の前提",
     "追加の文章・回答指示",
     "避けたい言葉・表現",
