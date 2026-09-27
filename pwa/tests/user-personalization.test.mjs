@@ -48,6 +48,66 @@ test("personalization settings can be viewed edited saved and reset", async () =
   assert.match(settings, /記事本文・AI回答全文・プロンプト全文/);
 });
 
+
+test("user-authored personalization handoff is cloud-backed prompt-safe and provider-specific", async () => {
+  const [settings, panel, personalization, css, migration] = await Promise.all([
+    read("components/pwa-settings-page.tsx"),
+    read("components/personalization-handoff-panel.tsx"),
+    read("lib/user-personalization.ts"),
+    read("app/phase25-user-personalization.css"),
+    readRepo("supabase/migrations/20260927095219_user_personalization_handoff_v1.sql"),
+  ]);
+
+  assert.match(settings, /PersonalizationHandoffPanel/);
+  assert.match(settings, /自分で入力した追加パーソナライズ/);
+
+  for (const field of ["personaContext", "customInstructions", "avoidPhrases"]) {
+    assert.match(personalization, new RegExp(field));
+  }
+  for (const column of ["persona_context", "custom_instructions", "avoid_phrases"]) {
+    assert.match(personalization, new RegExp(column));
+    assert.match(migration, new RegExp(column));
+  }
+
+  assert.match(personalization, /buildPersonalizationHandoffPrompt/);
+  assert.match(personalization, /AAS パーソナライズ引き継ぎ/);
+  assert.match(personalization, /ユーザーが明示した追加パーソナライズ/);
+  assert.match(personalization, /記載されていない個人情報・経験・実績・感情は推測して補わない/);
+  assert.match(personalization, /メモリやカスタム指示へ自動登録する依頼ではありません/);
+  assert.match(personalization, /メモリやプロフィールへ自動登録する依頼ではありません/);
+  assert.match(personalization, /パーソナライズ設定へ自動登録する依頼ではありません/);
+
+  for (const label of [
+    "自分の設定をAIへ引き継ぐ",
+    "引き継げるもの",
+    "自動では引き継がれないもの",
+    "AIに伝えたい執筆上の前提",
+    "追加の文章・回答指示",
+    "避けたい言葉・表現",
+    "ChatGPT用をコピー",
+    "Claude用をコピー",
+    "Gemini用をコピー",
+  ]) {
+    assert.match(panel, new RegExp(label));
+  }
+
+  for (const secret of ["パスワード", "APIキー", "アクセストークン", "認証コード", "クレジットカード"]) {
+    assert.match(panel, new RegExp(secret));
+  }
+  assert.match(panel, /一時チャットではパーソナライズされた回答は利用できません/);
+  assert.match(panel, /シークレットチャットでは既存メモリを使いません/);
+  assert.match(panel, /AASの設定がChatGPTのメモリやカスタム指示へ自動登録されるわけではありません/);
+
+  assert.match(migration, /char_length\(persona_context\) <= 1200/);
+  assert.match(migration, /char_length\(custom_instructions\) <= 2400/);
+  assert.match(migration, /char_length\(avoid_phrases\) <= 1200/);
+  assert.doesNotMatch(migration, /service[_-]?role|security definer/i);
+
+  assert.match(css, /\.personalization-handoff/);
+  assert.match(css, /\.personalization-provider-handoff/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.personalization-provider-handoff/);
+});
+
 test("prompt builder applies provider plan and optional user preferences", async () => {
   const personalization = await read("lib/user-personalization.ts");
   const creator = await read("lib/phase11-create.ts");
