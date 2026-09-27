@@ -47,7 +47,14 @@ test("service worker never caches auth callbacks, remote Supabase traffic, or pe
   assert.match(worker, /url\.searchParams\.has\("code"\)/);
   assert.match(worker, /url\.searchParams\.has\("access_token"\)/);
   assert.match(worker, /url\.searchParams\.has\("refresh_token"\)/);
-  assert.match(worker, /aas-pwa-phase17-prod-v2/);
+  assert.match(worker, /aas-pwa-phase17-prod-v2-runtime-v7-branding/);
+  assert.match(worker, /const FRESH_BRANDING_ASSETS = new Set/);
+  assert.match(worker, /"\/manifest\.webmanifest"/);
+  assert.match(worker, /"\/icon-192\.png"/);
+  assert.match(worker, /"\/icon-512\.png"/);
+  assert.match(worker, /FRESH_BRANDING_ASSETS\.has\(url\.pathname\)/);
+  assert.doesNotMatch(worker, /const APP_SHELL = \[[\s\S]*?"\/manifest\.webmanifest"/);
+  assert.doesNotMatch(worker, /const APP_SHELL = \[[\s\S]*?"\/icon-192\.png"/);
   assert.doesNotMatch(worker, /const APP_SHELL = \[\s*["']\/["']/);
   assert.doesNotMatch(worker, /supabase\.co/);
 });
