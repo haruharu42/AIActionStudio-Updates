@@ -1081,3 +1081,243 @@
     white-space: normal;
   }
 }
+
+
+/* Screenshot vision for social promotion */
+.admin-promo-screenshot-analyzer {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0 22px;
+  border: 1px solid #d8e5f4;
+  border-radius: 18px;
+  background: #f9fcff;
+  padding: 16px;
+}
+
+.admin-promo-screenshot-analyzer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.admin-promo-screenshot-analyzer-head h3 {
+  margin: 3px 0 6px;
+  color: #203b59;
+  font-size: 18px;
+}
+
+.admin-promo-screenshot-analyzer-head p {
+  margin: 0;
+  color: #667d98;
+  line-height: 1.65;
+}
+
+.admin-promo-screenshot-analyzer-head > strong {
+  flex: 0 0 auto;
+  border: 1px solid #b9d8ef;
+  border-radius: 999px;
+  background: #eef8ff;
+  color: #3471a8;
+  padding: 7px 10px;
+  font-size: 10px;
+}
+
+.admin-promo-screenshot-drop {
+  display: grid;
+  gap: 8px;
+  border: 1px dashed #abc9e5;
+  border-radius: 15px;
+  background: #fff;
+  padding: 14px;
+}
+
+.admin-promo-screenshot-drop > span {
+  color: #294d70;
+  font-weight: 850;
+}
+
+.admin-promo-screenshot-drop input[type="file"] {
+  width: 100%;
+  min-height: 42px;
+}
+
+.admin-promo-screenshot-drop small,
+.admin-promo-screenshot-cost-note {
+  color: #72879e;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.admin-promo-screenshot-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-promo-screenshot-preview-grid article {
+  overflow: hidden;
+  border: 1px solid #dce7f2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.admin-promo-screenshot-preview-grid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: contain;
+  background: #eef4fa;
+}
+
+.admin-promo-screenshot-preview-grid article > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 8px;
+  align-items: center;
+  padding: 9px 10px 10px;
+}
+
+.admin-promo-screenshot-preview-grid strong,
+.admin-promo-screenshot-preview-grid small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-promo-screenshot-preview-grid small {
+  color: #76889d;
+  font-size: 9px;
+}
+
+.admin-promo-screenshot-preview-grid button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  border: 1px solid #e4cfd4;
+  border-radius: 9px;
+  background: #fff8f9;
+  color: #ae5362;
+  padding: 7px 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-promo-screenshot-analyzer-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-promo-screenshot-analyzer-actions button {
+  min-height: 42px;
+  border-radius: 11px;
+  padding: 9px 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.admin-promo-screenshot-message {
+  margin: 0;
+  border-radius: 11px;
+  background: #edf7ff;
+  color: #2e6ca8;
+  padding: 10px 12px;
+  line-height: 1.6;
+}
+
+.admin-promo-screenshot-analysis-result {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #cfe0f0;
+  border-radius: 15px;
+  background: #fff;
+  padding: 14px;
+}
+
+.admin-promo-screenshot-analysis-result > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-promo-screenshot-analysis-result > div:first-child > span {
+  color: #557899;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.admin-promo-screenshot-analysis-result > div:first-child > strong {
+  color: #274865;
+  line-height: 1.6;
+}
+
+.admin-promo-screenshot-analysis-result > div:first-child > small {
+  color: #8392a4;
+}
+
+.admin-promo-screenshot-warning {
+  border: 1px solid #efc9a9;
+  border-radius: 12px;
+  background: #fff9ef;
+  color: #855827;
+  padding: 11px 12px;
+}
+
+.admin-promo-screenshot-warning ul {
+  margin: 7px 0 0;
+  padding-left: 20px;
+}
+
+.admin-promo-screenshot-analysis-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-promo-screenshot-analysis-list article {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #e0e9f2;
+  border-radius: 12px;
+  background: #fbfdff;
+  padding: 10px 11px;
+}
+
+.admin-promo-screenshot-analysis-list article > span {
+  color: #597c9d;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.admin-promo-screenshot-analysis-list article > strong {
+  color: #294966;
+}
+
+.admin-promo-screenshot-analysis-list p {
+  margin: 0;
+  color: #657b91;
+  line-height: 1.55;
+}
+
+.admin-promo-screenshot-analysis-list small {
+  color: #71859b;
+}
+
+@media (max-width: 680px) {
+  .admin-promo-screenshot-analyzer-head {
+    display: grid;
+  }
+
+  .admin-promo-screenshot-analyzer-head > strong {
+    justify-self: start;
+  }
+
+  .admin-promo-screenshot-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-promo-screenshot-analyzer-actions {
+    display: grid;
+  }
+
+  .admin-promo-screenshot-analyzer-actions button {
+    width: 100%;
+  }
+}
