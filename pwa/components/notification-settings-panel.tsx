@@ -42,7 +42,7 @@ export function NotificationSettingsPanel() {
     const client = getSupabaseClient();
     void Promise.all([
       getNotificationPreferences(client),
-      browserPushSubscriptionActive(),
+      browserPushSubscriptionActive(client),
     ]).then(
       ([next, currentDeviceEnabled]) => {
         if (!active) return;
