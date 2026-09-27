@@ -1306,7 +1306,7 @@ body.aas-crystal-theme .auth-character-visual {
     url("/aas-login-tile-2.svg?v=20260927-hq-v1"),
     url("/aas-login-tile-3.svg?v=20260927-hq-v1"),
     url("/aas-login-tile-4.svg?v=20260927-hq-v1");
-  background-size: 50% 50%;
+  background-size: 50.8% 50.8%;
   background-position: left top, right top, left bottom, right bottom;
   background-repeat: no-repeat;
   filter:
@@ -1587,7 +1587,7 @@ body.aas-crystal-theme .status-card::after {
     min-height: 0;
     margin: -24px auto -8px;
     transform: none;
-    background-size: 50% 50%;
+    background-size: 50.8% 50.8%;
     background-position: left top, right top, left bottom, right bottom;
     background-repeat: no-repeat;
     -webkit-mask-image: radial-gradient(ellipse 78% 80% at 50% 50%, #000 0 58%, rgb(0 0 0 / 90%) 72%, transparent 100%);
