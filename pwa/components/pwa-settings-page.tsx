@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { useAppFeatureAccess } from "@/components/feature-access-gate";
+import { HomeWidgetCustomizer } from "@/components/home-widget-customizer";
 import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
 import { NotificationSettingsPanel } from "@/components/notification-settings-panel";
 import { WorkspacePresetSettings } from "@/features/presets/workspace-preset-settings";
@@ -29,7 +30,7 @@ import {
   type WritingTone,
 } from "@/lib/user-personalization";
 
-type SettingsSection = "preset" | "navigation" | "notifications" | "personalization" | "account";
+type SettingsSection = "preset" | "home" | "navigation" | "notifications" | "personalization" | "account";
 
 function SettingsAccordion({
   id,
@@ -186,6 +187,19 @@ export function PwaSettingsPage() {
               onOpen={toggleSection}
             >
               <WorkspacePresetSettings />
+            </SettingsAccordion>
+
+            <SettingsAccordion
+              id="home"
+              icon="▦"
+              title="ホーム画面"
+              description="ウィジェットの並び順・表示・横幅をPC/スマホ別に変更"
+              open={openSection === "home"}
+              onOpen={toggleSection}
+            >
+              {profile
+                ? <HomeWidgetCustomizer userId={profile.id} />
+                : <div className="persistent-settings-status">ホーム配置を読み込んでいます…</div>}
             </SettingsAccordion>
 
             <SettingsAccordion
