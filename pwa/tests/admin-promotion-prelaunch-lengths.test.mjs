@@ -84,6 +84,12 @@ test("promotion UI is channel-first and keeps advanced settings collapsed", asyn
 
   assert.match(page, /AdminPromotionChannelBuilder/);
   assert.match(page, /詳細設定・キャンペーン・製品情報/);
+  assert.doesNotMatch(page, /OPTIONAL ADJUSTMENT/);
+  assert.doesNotMatch(page, /詳細調整（必要な場合だけ）/);
+  assert.doesNotMatch(page, /目的別プリセット/);
+  assert.doesNotMatch(page, /admin-promo-quick-start/);
+  assert.doesNotMatch(page, /QUICK_PRESETS/);
+  assert.doesNotMatch(css, /admin-promo-quick-(?:start|head|grid|note)/);
   assert.doesNotMatch(page, /AdminPromotionThreeStep/);
   assert.match(channelBuilder, /まず、投稿する場所を選ぶ/);
   assert.match(channelBuilder, /どこでプロモーションしますか？/);
