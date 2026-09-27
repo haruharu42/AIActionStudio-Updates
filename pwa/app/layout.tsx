@@ -68,9 +68,9 @@ export const metadata: Metadata = {
     "aas-build-sha": process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev",
   },
   icons: {
-    icon: "/icon-192.png",
-    shortcut: "/icon-192.png",
-    apple: "/icon-192.png",
+    icon: "/icon-192.png?v=20260927-axia-v2",
+    shortcut: "/icon-192.png?v=20260927-axia-v2",
+    apple: "/icon-192.png?v=20260927-axia-v2",
   },
 };
 
