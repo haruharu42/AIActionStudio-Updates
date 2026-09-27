@@ -7,6 +7,10 @@ import {
   type AdminSocialPlatform,
 } from "@/lib/admin-promotion";
 import { buildUserPromptContext, getRuntimeWritingProfile } from "@/lib/user-personalization";
+import {
+  buildPromotionScreenshotPromptContext,
+  type PromotionScreenshotAnalysis,
+} from "@/lib/promotion-screenshot-analysis";
 
 export type AdminPromotionChannel =
   | "note"
@@ -25,6 +29,7 @@ export type AdminChannelPromotionInput = {
   cta: string;
   variants: number;
   targetChars: number;
+  screenshotAnalysis?: PromotionScreenshotAnalysis | null;
 };
 
 export type AdminPromotionChannelMeta = {
@@ -118,6 +123,7 @@ function buildChannelPrompt(
     purpose: input.purpose,
   }).promptBlock;
   const optimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
+  const screenshotContext = buildPromotionScreenshotPromptContext(input.screenshotAnalysis ?? null);
 
   return `${spec.role}
 AI Action Studio（AAS）について、${spec.label}で実際に公開できる完成度までプロモーション素材を作成してください。
@@ -137,7 +143,7 @@ CTA: ${input.cta || "要確認"}
 【この媒体専用の戦略】
 ${spec.strategy}
 
-${knowledge}${optimization ? `\n\n${optimization}` : ""}
+${knowledge}${optimization ? `\n\n${optimization}` : ""}${screenshotContext ? `\n\n${screenshotContext}` : ""}
 
 【確認済み製品情報】
 ${factsBlock(facts)}
@@ -148,6 +154,9 @@ ${spec.screenshot}
 - ユーザー本人がAASを開いて撮影する前提にする。
 - AAS ID、メールアドレス、請求情報、アクセストークン、個人通知、内部エラーなど公開不要の情報は写さない。
 - スクショが不要な場合は無理に入れず「不要」と判断する。
+- 「アップロード済みスクリーンショット解析」がある場合、その解析から確認できた内容を優先して使う。
+- 画像だけでは裏付けられない主張は、本文・投稿文で事実として断定しない。
+- 解析で機密・個人情報の注意が出ている画像は、公開前に必ず隠す・トリミングする指示を入れる。
 
 【出力】
 ${spec.output}
