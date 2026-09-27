@@ -20,6 +20,32 @@ export type AdminPromotionChannel =
   | "threads"
   | "instagram";
 
+export type AdminSocialHumanity = "human" | "natural" | "polished" | "mechanical";
+export type AdminSocialEmojiLevel = "none" | "few" | "standard" | "many";
+export type AdminSocialTone = "soft" | "casual" | "standard" | "business" | "energetic";
+
+const SOCIAL_HUMANITY_INSTRUCTIONS: Record<AdminSocialHumanity, string> = {
+  human: "人が実際に書いたような自然な間・言い回し・文の長短を使う。テンプレ感や同じ語尾の連続を避ける。ただし架空の体験談・感情・実績・反応は作らない。",
+  natural: "自然で読みやすい日本語にする。過度に整えすぎず、適度な文の揺らぎを残す。AIらしい定型句や不自然な言い換えを避ける。",
+  polished: "読みやすく整理された文章にする。文法・構成を整え、簡潔で安定した表現を優先する。",
+  mechanical: "感情表現を抑え、事実・機能・手順を短く明確に並べる。装飾的な言い回しや会話的な余韻を減らす。",
+};
+
+const SOCIAL_EMOJI_INSTRUCTIONS: Record<AdminSocialEmojiLevel, string> = {
+  none: "絵文字は使わない。",
+  few: "絵文字は必要な箇所だけ0〜2個程度に抑える。毎行には付けない。",
+  standard: "読みやすさを損なわない範囲で適度に絵文字を使う。意味のない連続使用はしない。",
+  many: "投稿の雰囲気を明るくするため絵文字をやや多めに使う。ただし1文ごとの乱用や同じ絵文字の連打は避ける。",
+};
+
+const SOCIAL_TONE_INSTRUCTIONS: Record<AdminSocialTone, string> = {
+  soft: "やわらかく親しみやすい口調。押し売り感を抑え、読者へ話しかける距離感にする。",
+  casual: "カジュアルで会話的な口調。短い文や自然な区切りを使う。",
+  standard: "中立で読みやすい標準的な口調。くだけすぎず堅すぎない。",
+  business: "落ち着いたビジネス調。感情表現を控え、信頼感と明確さを優先する。",
+  energetic: "前向きで熱量のある口調。ただし煽り・誇張・過剰な感嘆符は避ける。",
+};
+
 export type AdminChannelPromotionInput = {
   channel: AdminPromotionChannel;
   phase: string;
@@ -29,6 +55,9 @@ export type AdminChannelPromotionInput = {
   cta: string;
   variants: number;
   targetChars: number;
+  socialHumanity?: AdminSocialHumanity;
+  socialEmojiLevel?: AdminSocialEmojiLevel;
+  socialTone?: AdminSocialTone;
   screenshotAnalysis?: PromotionScreenshotAnalysis | null;
   directScreenshotAttachment?: boolean;
 };
@@ -128,6 +157,15 @@ function buildChannelPrompt(
   const screenshotContext = directScreenshotMode
     ? ""
     : buildPromotionScreenshotPromptContext(input.screenshotAnalysis ?? null);
+  const socialStyle = spec.label === "X" || spec.label === "Threads" || spec.label === "Instagram"
+    ? [
+        `文章の人間味: ${SOCIAL_HUMANITY_INSTRUCTIONS[input.socialHumanity ?? "natural"]}`,
+        `絵文字: ${SOCIAL_EMOJI_INSTRUCTIONS[input.socialEmojiLevel ?? "few"]}`,
+        `口調・温度感: ${SOCIAL_TONE_INSTRUCTIONS[input.socialTone ?? "soft"]}`,
+        "人間味を出す場合も、架空の体験談・感想・利用者の反応・運営者の気持ちは作らない。",
+        "選択した表現設定より、確認済み事実・媒体ルール・誇張禁止を優先する。",
+      ].join("\n")
+    : "";
 
   const screenshotPolicy = directScreenshotMode
     ? `- このプロンプトと同じChatGPTチャットへ、ユーザーが紹介したいスクリーンショットを直接添付する。
@@ -159,7 +197,7 @@ ${spec.label}
 目的: ${input.purpose}
 想定読者: ${input.audience || facts.targetAudience || "要確認"}
 特に紹介したい内容: ${input.focus || "製品全体"}
-CTA: ${input.cta || "要確認"}
+CTA: ${input.cta || "要確認"}${socialStyle ? `\n\n【SNS表現設定】\n${socialStyle}` : ""}
 
 【この媒体専用の戦略】
 ${spec.strategy}
@@ -180,6 +218,7 @@ ${spec.output}
 - 同じ説明を繰り返さない。
 - 販売前なら購入可能と誤認させない。
 - 確認していない成果・売上・PV・レビュー・体験談を作らない。
+- SNSでは選択された「人間味・絵文字量・口調」を守りつつ、同じ語尾・定型句・過剰な絵文字連打を避ける。
 - 最後に事実関係、読みやすさ、媒体適合、CTA、スクショ位置を自己点検し、修正済みの完成版だけを出す。`;
 }
 
