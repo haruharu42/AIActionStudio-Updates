@@ -84,12 +84,12 @@ test("user-authored personalization handoff is cloud-backed prompt-safe and prov
     "AIに伝えたい執筆上の前提",
     "追加の文章・回答指示",
     "避けたい言葉・表現",
-    "ChatGPT用をコピー",
-    "Claude用をコピー",
-    "Gemini用をコピー",
   ]) {
     assert.match(panel, new RegExp(label));
   }
+
+  assert.match(panel, /AI_PROVIDER_LABELS\[provider\]\}用をコピー/);
+  assert.match(panel, /Object\.keys\(PROVIDER_GUIDANCE\)/);
 
   for (const secret of ["パスワード", "APIキー", "アクセストークン", "認証コード", "クレジットカード"]) {
     assert.match(panel, new RegExp(secret));
