@@ -109,6 +109,26 @@ test("settings support in-app, push, and per-category notification switches", as
   assert.match(client, /serviceWorker\.register\("\/sw\.js"/);
 });
 
+test("push enablement is scoped to the current device while the server keeps an aggregate flag", async () => {
+  const [panel, client, migration] = await Promise.all([
+    readPwa("components/notification-settings-panel.tsx"),
+    readPwa("lib/notifications.ts"),
+    readRepo("supabase/migrations/20260927110715_notification_device_push_state_v2.sql"),
+  ]);
+
+  assert.match(client, /browserPushSubscriptionActive/);
+  assert.match(client, /pushManager\.getSubscription\(\)/);
+  assert.match(panel, /devicePushEnabled/);
+  assert.match(panel, /setDevicePushEnabled\(false\)/);
+  assert.match(panel, /setDevicePushEnabled\(true\)/);
+  assert.match(panel, /他の端末の通知設定は変更しません/);
+  assert.doesNotMatch(panel, /pushEnabled: false/);
+  assert.doesNotMatch(panel, /pushEnabled: true/);
+  assert.match(migration, /where s\.user_id=v_user and s\.enabled=true/);
+  assert.match(migration, /push_enabled=v_push_enabled/);
+  assert.match(migration, /pref\.push_enabled is distinct from exists/);
+});
+
 test("service worker displays Push notifications and opens the AAS destination", async () => {
   const sw = await readPwa("public/sw.js");
 
