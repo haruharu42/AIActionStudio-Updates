@@ -41,8 +41,11 @@ export function HomeWidgetCustomizer({ userId }: { userId: string }) {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setMessage("");
+    queueMicrotask(() => {
+      if (!active) return;
+      setLoading(true);
+      setMessage("");
+    });
     void loadHomeWidgetPreferences(getSupabaseClient(), userId).then(
       (value) => {
         if (!active) return;
