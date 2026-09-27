@@ -114,7 +114,7 @@ test("signed-out auth and access surfaces use the Axia and Rumo crystal design",
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-visual \{[\s\S]*position: relative;[\s\S]*width: min\(94vw, 560px\);[\s\S]*background-size: 51.5% 51.4%;/);
   assert.match(layout, /"aas-build-sha"/);
   assert.match(config, /NEXT_PUBLIC_AAS_BUILD_SHA/);
-  assert.match(sw, /runtime-v9-hq-overlap/);
+  assert.match(sw, /runtime-v10-axia-icon/);
 });
 
 test("shared header exposes build identity for live deployment verification", async () => {
