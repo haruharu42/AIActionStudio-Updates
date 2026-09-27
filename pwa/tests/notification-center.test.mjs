@@ -144,7 +144,7 @@ test("service worker displays Push notifications and opens the AAS destination",
   assert.match(sw, /showNotification/);
   assert.match(sw, /addEventListener\("notificationclick"/);
   assert.match(sw, /clients\.openWindow/);
-  assert.match(sw, /icon: "\/aas-app-icon\.svg\?v=20260927-rumo-v1"/);
+  assert.match(sw, /icon: "\/aas-axia-icon-512\.png\?v=20260928-axia-v1"/);
 });
 
 test("admin notification management supports all, tester, and admin audiences", async () => {
