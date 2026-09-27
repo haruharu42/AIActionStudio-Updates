@@ -171,6 +171,7 @@ test("personalization UI is dropdown-first with addable presets and free input",
   assert.match(css, /\.personalization-preset-chips/);
   assert.match(css, /\.personalization-custom-add/);
   assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.personalization-preset-add/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.personalization-preset-builder-head small[\s\S]*?font-size: 11px/);
 });
 
 test("prompt builder applies provider plan and optional user preferences", async () => {
