@@ -58,8 +58,11 @@ export function SalesReleasePreflightPanel({
         },
       );
     } catch {
-      setMfaCheckFailed(true);
-      setVerifiedMfaCount(null);
+      queueMicrotask(() => {
+        if (!active) return;
+        setMfaCheckFailed(true);
+        setVerifiedMfaCount(null);
+      });
     }
     return () => {
       active = false;
