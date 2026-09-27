@@ -1,12 +1,16 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v7-branding";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v8-hq-branding";
 const APP_SHELL = [
   "/offline.html",
   "/favicon.svg",
 ];
 const FRESH_BRANDING_ASSETS = new Set([
   "/manifest.webmanifest",
-  "/icon-192.png",
-  "/icon-512.png",
+  "/aas-app-icon.svg",
+  "/aas-login-hero-hq.svg",
+  "/aas-login-tile-1.svg",
+  "/aas-login-tile-2.svg",
+  "/aas-login-tile-3.svg",
+  "/aas-login-tile-4.svg",
 ]);
 
 function freshRequest(request) {
@@ -120,8 +124,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: "/icon-192.png?v=20260927-axia-v2",
-      badge: "/icon-192.png?v=20260927-axia-v2",
+      icon: "/aas-app-icon.svg?v=20260927-rumo-v1",
+      badge: "/aas-app-icon.svg?v=20260927-rumo-v1",
       tag: notificationId > 0 ? "aas-notification-" + notificationId : undefined,
       renotify: false,
       data: { href, notificationId },
