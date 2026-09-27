@@ -165,71 +165,124 @@ function openAiProvider(app: AiAppLink): void {
   openWebApp(app);
 }
 
-function showChatGptUsageGuide(app: AiAppLink): void {
-  document.getElementById("aas-chatgpt-usage-guide")?.remove();
+type AiUsageGuide = {
+  eyebrow: string;
+  title: string;
+  intro: string;
+  regularTitle: string;
+  regularText: string;
+  temporaryTitle: string;
+  temporaryText: string;
+  temporaryNote: string;
+  stepsTitle: string;
+  stepsText: string;
+};
+
+const AI_USAGE_GUIDES: Record<AiAppKey, AiUsageGuide> = {
+  chatgpt: {
+    eyebrow: "CHATGPT GUIDE",
+    title: "ChatGPTは通常チャット・一時チャットのどちらでも使えます",
+    intro: "用途に合わせて選んでください。AASから一時チャットを自動選択することはできないため、ChatGPT側で開始方法を選びます。",
+    regularTitle: "通常チャット",
+    regularText: "あとで続きから作業したい記事、シリーズ記事、継続して育てる内容に向いています。",
+    temporaryTitle: "一時チャット",
+    temporaryText: "履歴へ残さず単発で記事を作りたい時に使えます。既存の好みを反映したい場合は、会話開始前に「パーソナライズあり」を選んでください。",
+    temporaryNote: "パーソナライズありでは既存のメモリ・カスタム指示等を利用できますが、一時チャット中はメモリを新規作成・更新しません。開始後はパーソナライズ設定を変更できません。",
+    stepsTitle: "一時チャットで使う場合",
+    stepsText: "ChatGPTを開く → 一時チャットを選ぶ → 必要なら「パーソナライズあり」を選ぶ → AASでコピーしたプロンプトを貼り付ける",
+  },
+  claude: {
+    eyebrow: "CLAUDE GUIDE",
+    title: "Claudeは通常チャット・シークレットチャットを使い分けできます",
+    intro: "用途に合わせて選んでください。AASからシークレットチャットを自動選択することはできないため、Claude側で開始方法を選びます。",
+    regularTitle: "通常チャット",
+    regularText: "履歴やClaudeのメモリを活用しながら、あとで続きを行いたい記事・長文作成に向いています。",
+    temporaryTitle: "シークレットチャット",
+    temporaryText: "履歴やClaudeのメモリへ残さず、単発で作業したい時に使えます。既存のClaudeメモリはシークレットチャットでは使用されません。",
+    temporaryNote: "カスタムスタイルや個人設定などのプロフィール情報は利用できます。シークレットチャットは通常チャットへ変換・保存できないため、必要な完成文はAASへ戻す前にコピーしてください。",
+    stepsTitle: "シークレットチャットで使う場合",
+    stepsText: "Claudeを開く → 新規チャット画面のゴーストアイコンでシークレットモードを有効化 → AASでコピーしたプロンプトを貼り付ける",
+  },
+  gemini: {
+    eyebrow: "GEMINI GUIDE",
+    title: "Geminiは通常チャット・一時チャットを使い分けできます",
+    intro: "用途に合わせて選んでください。AASから一時チャットを自動選択することはできないため、Gemini側で開始方法を選びます。",
+    regularTitle: "通常チャット",
+    regularText: "利用可能な場合、過去チャットや接続したGoogleサービス等を使ったパーソナライズを活用しながら継続作業できます。",
+    temporaryTitle: "一時チャット",
+    temporaryText: "最近のチャットやGemini Apps Activityへ残さず、単発で使いたい時に向いています。一時チャットではパーソナライズされた回答は利用できません。",
+    temporaryNote: "一時チャットの内容は将来のパーソナライズ用情報として保存されません。Gemsや、一時チャットでは利用できない接続サービス等がある点にも注意してください。",
+    stepsTitle: "一時チャットで使う場合",
+    stepsText: "Geminiを開く → 一時チャットを選ぶ → AASでコピーしたプロンプトを貼り付ける",
+  },
+};
+
+function showAiUsageGuide(app: AiAppLink): void {
+  document.getElementById("aas-ai-usage-guide")?.remove();
+  const guide = AI_USAGE_GUIDES[app.key];
 
   const backdrop = document.createElement("div");
-  backdrop.id = "aas-chatgpt-usage-guide";
-  backdrop.className = "chatgpt-usage-backdrop";
+  backdrop.id = "aas-ai-usage-guide";
+  backdrop.className = "ai-usage-backdrop";
 
   const dialog = document.createElement("div");
-  dialog.className = "chatgpt-usage-dialog";
+  dialog.className = "ai-usage-dialog";
   dialog.setAttribute("role", "dialog");
   dialog.setAttribute("aria-modal", "true");
-  dialog.setAttribute("aria-label", "ChatGPTを使う前の案内");
+  dialog.setAttribute("aria-label", `${app.name}を使う前の案内`);
 
   const eyebrow = document.createElement("span");
-  eyebrow.className = "chatgpt-usage-eyebrow";
-  eyebrow.textContent = "CHATGPT GUIDE";
+  eyebrow.className = "ai-usage-eyebrow";
+  eyebrow.textContent = guide.eyebrow;
 
   const title = document.createElement("strong");
-  title.textContent = "ChatGPTは通常チャット・一時チャットのどちらでも使えます";
+  title.textContent = guide.title;
 
   const intro = document.createElement("p");
-  intro.textContent = "用途に合わせて選んでください。AASから一時チャットを自動選択することはできないため、ChatGPT側で開始方法を選びます。";
+  intro.textContent = guide.intro;
 
   const choices = document.createElement("div");
-  choices.className = "chatgpt-usage-choices";
+  choices.className = "ai-usage-choices";
 
   const normal = document.createElement("section");
-  normal.className = "chatgpt-usage-choice";
+  normal.className = "ai-usage-choice";
   const normalTitle = document.createElement("strong");
-  normalTitle.textContent = "通常チャット";
+  normalTitle.textContent = guide.regularTitle;
   const normalText = document.createElement("p");
-  normalText.textContent = "あとで続きから作業したい記事、シリーズ記事、継続して育てる内容に向いています。";
+  normalText.textContent = guide.regularText;
   normal.append(normalTitle, normalText);
 
   const temporary = document.createElement("section");
-  temporary.className = "chatgpt-usage-choice recommended";
+  temporary.className = "ai-usage-choice recommended";
   const temporaryTitle = document.createElement("strong");
-  temporaryTitle.textContent = "一時チャット";
+  temporaryTitle.textContent = guide.temporaryTitle;
   const temporaryText = document.createElement("p");
-  temporaryText.textContent = "履歴へ残さず単発で記事を作りたい時に使えます。既存の好みを反映したい場合は、会話開始前に「パーソナライズあり」を選んでください。";
+  temporaryText.textContent = guide.temporaryText;
   const temporaryNote = document.createElement("small");
-  temporaryNote.textContent = "パーソナライズありでは既存のメモリ・カスタム指示等を利用できますが、一時チャット中はメモリを新規作成・更新しません。開始後はパーソナライズ設定を変更できません。";
+  temporaryNote.textContent = guide.temporaryNote;
   temporary.append(temporaryTitle, temporaryText, temporaryNote);
 
   choices.append(normal, temporary);
 
   const steps = document.createElement("div");
-  steps.className = "chatgpt-usage-steps";
+  steps.className = "ai-usage-steps";
   const stepsTitle = document.createElement("strong");
-  stepsTitle.textContent = "一時チャットで使う場合";
+  stepsTitle.textContent = guide.stepsTitle;
   const stepsText = document.createElement("p");
-  stepsText.textContent = "ChatGPTを開く → 一時チャットを選ぶ → 必要なら「パーソナライズあり」を選ぶ → AASでコピーしたプロンプトを貼り付ける";
+  stepsText.textContent = guide.stepsText;
   steps.append(stepsTitle, stepsText);
 
   const actions = document.createElement("div");
-  actions.className = "chatgpt-usage-actions";
+  actions.className = "ai-usage-actions";
 
   const openButton = document.createElement("button");
   openButton.type = "button";
-  openButton.className = "chatgpt-usage-primary";
-  openButton.textContent = "ChatGPTを開く";
+  openButton.className = "ai-usage-primary";
+  openButton.textContent = `${app.name}を開く`;
 
   const cancelButton = document.createElement("button");
   cancelButton.type = "button";
-  cancelButton.className = "chatgpt-usage-cancel";
+  cancelButton.className = "ai-usage-cancel";
   cancelButton.textContent = "キャンセル";
 
   const cleanup = () => backdrop.remove();
@@ -255,21 +308,13 @@ function showChatGptUsageGuide(app: AiAppLink): void {
 /**
  * Open an AI provider without embedding API credentials.
  *
- * ChatGPT always shows a short guide first so users can choose between a
- * regular chat and a temporary chat intentionally. Android keeps the one-tap
- * package intent with an official Google Play fallback. iPhone/iPad cannot
- * reliably expose installed-app state to a PWA, so AAS presents an explicit
- * app/Web choice with no timer and no automatic App Store redirect. Desktop
- * browsers open the provider Web app separately.
+ * Every supported provider shows a short provider-specific guide before
+ * leaving AAS so users can intentionally choose regular vs temporary/private
+ * chat behavior. Android keeps the package intent with an official store
+ * fallback. iPhone/iPad cannot reliably expose installed-app state to a PWA,
+ * so AAS presents an explicit app/Web choice after the guide.
  */
 export function launchAiApp(key: AiAppKey): void {
   if (typeof window === "undefined") return;
-  const app = AI_APP_LINKS[key];
-
-  if (key === "chatgpt") {
-    showChatGptUsageGuide(app);
-    return;
-  }
-
-  openAiProvider(app);
+  showAiUsageGuide(AI_APP_LINKS[key]);
 }
