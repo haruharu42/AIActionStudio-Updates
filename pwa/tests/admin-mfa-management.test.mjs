@@ -29,6 +29,11 @@ test("admin security route is protected by shared admin layout and supports back
   assert.match(page, /このMFA認証器を削除しますか/);
   assert.doesNotMatch(page.match(/const verifyEnrollment = async \(\) => \{[\s\S]*?const removeFactor/)?.[0] ?? "", /このMFA認証器を削除しますか/);
   assert.match(page, /主端末とは別/);
+  assert.match(page, /確認済みMFAがありません/);
+  assert.match(page, /本番販売前にTOTP認証器を1個以上登録/);
+  assert.match(page, /verifiedFactors\.length === 0 \? "MFA認証器を追加" : "予備認証器を追加"/);
+  assert.match(page, /AAS PWA Admin MFA 1/);
+  assert.match(page, /MFAを有効化/);
 });
 
 test("PWA admin section copy no longer advertises Windows entitlement management", async () => {
