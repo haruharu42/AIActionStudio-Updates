@@ -9,6 +9,12 @@ import {
   type AdminSocialLengthPlan,
   type AdminSocialPlatform,
 } from "@/lib/admin-promotion";
+import {
+  SOCIAL_EMOJI_OPTIONS,
+  SOCIAL_HUMANITY_OPTIONS,
+  SOCIAL_TONE_OPTIONS,
+  type AdminSocialWritingStyle,
+} from "@/lib/social-writing-style";
 
 const SOCIAL_PLATFORM_OPTIONS: readonly { key: AdminSocialPlatform; label: string }[] = [
   { key: "x", label: "X" },
@@ -92,6 +98,50 @@ export function SelectWithCustomField({
       placeholder={placeholder}
       customPlaceholder={customPlaceholder}
     />
+  );
+}
+
+export function SocialWritingStyleSettings({
+  value,
+  onChange,
+}: {
+  value: AdminSocialWritingStyle;
+  onChange: (value: AdminSocialWritingStyle) => void;
+}) {
+  const humanityLabels = Object.fromEntries(SOCIAL_HUMANITY_OPTIONS.map((item) => [item.value, item.label]));
+  const emojiLabels = Object.fromEntries(SOCIAL_EMOJI_OPTIONS.map((item) => [item.value, item.label]));
+  const toneLabels = Object.fromEntries(SOCIAL_TONE_OPTIONS.map((item) => [item.value, item.label]));
+
+  return (
+    <div className="admin-promo-social-style">
+      <div className="admin-promo-social-style-head">
+        <strong>SNSの文章表現</strong>
+        <small>投稿文の雰囲気を選べます。未確認の体験談や実績は作りません。</small>
+      </div>
+      <div className="admin-promo-social-style-grid">
+        <SelectField
+          label="文章の人間味"
+          value={value.humanity}
+          onChange={(humanity) => onChange({ ...value, humanity: humanity as AdminSocialWritingStyle["humanity"] })}
+          options={SOCIAL_HUMANITY_OPTIONS.map((item) => item.value)}
+          optionLabels={humanityLabels}
+        />
+        <SelectField
+          label="絵文字"
+          value={value.emojiLevel}
+          onChange={(emojiLevel) => onChange({ ...value, emojiLevel: emojiLevel as AdminSocialWritingStyle["emojiLevel"] })}
+          options={SOCIAL_EMOJI_OPTIONS.map((item) => item.value)}
+          optionLabels={emojiLabels}
+        />
+        <SelectField
+          label="口調・温度感"
+          value={value.tone}
+          onChange={(tone) => onChange({ ...value, tone: tone as AdminSocialWritingStyle["tone"] })}
+          options={SOCIAL_TONE_OPTIONS.map((item) => item.value)}
+          optionLabels={toneLabels}
+        />
+      </div>
+    </div>
   );
 }
 
