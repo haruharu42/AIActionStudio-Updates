@@ -58,6 +58,60 @@ test("SNS promotion exposes per-platform length presets including paid X long po
   assert.match(fields, /YouTube Shortsはタイトル100文字以内/);
 });
 
+
+test("all promotion SNS flows share humanity emoji and tone controls without inventing experiences", async () => {
+  const [style, channelLib, channelBuilder, adminLib, page, fields, css] = await Promise.all([
+    read("lib/social-writing-style.ts"),
+    read("lib/admin-promotion-channel.ts"),
+    read("components/admin-promotion/admin-promotion-channel-builder.tsx"),
+    read("lib/admin-promotion.ts"),
+    read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-fields.tsx"),
+    read("app/phase24-admin-promotion.css"),
+  ]);
+
+  assert.match(style, /AdminSocialHumanity = "human" \| "natural" \| "polished" \| "mechanical"/);
+  assert.match(style, /人間味強め/);
+  assert.match(style, /機械的・簡潔/);
+  assert.match(style, /絵文字は使わない/);
+  assert.match(style, /絵文字は必要な箇所だけ0〜2個程度/);
+  assert.match(style, /絵文字をやや多め/);
+  assert.match(style, /やわらかく親しみやすい口調/);
+  assert.match(style, /落ち着いたビジネス調/);
+  assert.match(style, /架空の体験談・感想・利用者の反応・運営者の気持ちは作らない/);
+  assert.match(style, /buildSocialWritingStylePrompt/);
+
+  assert.match(fields, /SocialWritingStyleSettings/);
+  assert.match(fields, /label="文章の人間味"/);
+  assert.match(fields, /label="絵文字"/);
+  assert.match(fields, /label="口調・温度感"/);
+  assert.match(fields, /optionLabels\?/);
+
+  assert.match(channelBuilder, /SocialWritingStyleSettings value=\{socialStyle\}/);
+  assert.match(channelLib, /socialStyle\?: AdminSocialWritingStyle/);
+  assert.match(channelLib, /buildSocialWritingStylePrompt\(input\.socialStyle\)/);
+  assert.match(channelLib, /【SNS表現設定】/);
+  assert.match(channelLib, /buildAdminChannelDirectScreenshotPrompt[\s\S]*?\.\.\.input/);
+
+  assert.match(adminLib, /AdminSocialPromotionInput[\s\S]*?socialStyle\?: AdminSocialWritingStyle/);
+  assert.match(adminLib, /AdminCampaignInput[\s\S]*?socialStyle\?: AdminSocialWritingStyle/);
+  assert.match(adminLib, /AdminPreviewPromotionInput[\s\S]*?socialStyle\?: AdminSocialWritingStyle/);
+  assert.match(adminLib, /buildAdminSocialPromotionPrompt[\s\S]*?buildSocialWritingStylePrompt\(input\.socialStyle\)/);
+  assert.match(adminLib, /buildAdminCampaignPrompt[\s\S]*?buildSocialWritingStylePrompt\(input\.socialStyle\)/);
+  assert.match(adminLib, /buildAdminPreviewPromotionPrompt[\s\S]*?buildSocialWritingStylePrompt\(input\.socialStyle\)/);
+
+  assert.match(page, /<option value="tiktok">TikTok<\/option>/);
+  assert.match(page, /<option value="youtube">YouTube Shorts<\/option>/);
+  assert.ok((page.match(/<SocialWritingStyleSettings value=\{advancedSocialStyle\}/g) ?? []).length >= 3);
+  assert.match(page, /buildAdminSocialPromotionPrompt[\s\S]*?socialStyle: advancedSocialStyle/);
+  assert.match(page, /buildAdminCampaignPrompt\(facts, \{ \.\.\.campaign, socialLengths, socialStyle: advancedSocialStyle \}\)/);
+  assert.match(page, /buildAdminPreviewPromotionPrompt\(facts, \{ \.\.\.preview, socialLengths, socialStyle: advancedSocialStyle \}\)/);
+
+  assert.match(css, /\.admin-promo-social-style/);
+  assert.match(css, /\.admin-promo-social-style-grid/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.admin-promo-social-style-grid/);
+});
+
 test("campaign and preview prompts inherit the same SNS length plan", async () => {
   const [lib, page] = await Promise.all([
     read("lib/admin-promotion.ts"),
