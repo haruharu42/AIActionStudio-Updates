@@ -1473,3 +1473,121 @@
     width: 100%;
   }
 }
+
+
+/* Direct ChatGPT screenshot handoff (no AAS image API) */
+.admin-promo-direct-screenshot {
+  margin: 14px 0 22px;
+  border: 1px solid #d7e3ef;
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.admin-promo-direct-screenshot > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  cursor: pointer;
+  padding: 14px 16px;
+  list-style: none;
+}
+
+.admin-promo-direct-screenshot > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-promo-direct-screenshot > summary > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-promo-direct-screenshot > summary span {
+  border: 1px solid #c6dff2;
+  border-radius: 999px;
+  background: #eef8ff;
+  color: #3471a8;
+  padding: 5px 8px;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.admin-promo-direct-screenshot > summary strong {
+  color: #264866;
+  font-size: 15px;
+}
+
+.admin-promo-direct-screenshot > summary small {
+  color: #768a9f;
+  text-align: right;
+}
+
+.admin-promo-direct-screenshot-body {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #e3ebf3;
+  background: #f9fcff;
+  padding: 15px 16px 16px;
+}
+
+.admin-promo-direct-screenshot-body > p,
+.admin-promo-direct-screenshot-body > small {
+  margin: 0;
+  color: #687f96;
+  line-height: 1.65;
+}
+
+.admin-promo-direct-screenshot-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-promo-direct-screenshot-actions button {
+  min-height: 42px;
+  border-radius: 11px;
+  padding: 9px 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.admin-promo-direct-screenshot-body pre {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid #dfe8f1;
+  border-radius: 12px;
+  background: #fff;
+  color: #334f69;
+  padding: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+@media (max-width: 680px) {
+  .admin-promo-direct-screenshot > summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-promo-direct-screenshot > summary > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-promo-direct-screenshot > summary small {
+    text-align: left;
+  }
+
+  .admin-promo-direct-screenshot-actions {
+    display: grid;
+  }
+
+  .admin-promo-direct-screenshot-actions button {
+    width: 100%;
+  }
+}
