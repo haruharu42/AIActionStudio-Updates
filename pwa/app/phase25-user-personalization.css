@@ -840,6 +840,32 @@
   .personalization-provider-handoff button {
     width: 100%;
   }
+
+  .personalization-handoff-head p,
+  .personalization-handoff-scope p,
+  .personalization-handoff-warning p,
+  .personalization-handoff-note p,
+  .personalization-preset-builder-head small,
+  .personalization-custom-add label > span,
+  .personalization-preset-empty,
+  .personalization-preset-notice,
+  .personalization-provider-handoff article p,
+  .personalization-provider-handoff article small {
+    font-size: 11px;
+  }
+
+  .personalization-preset-add select,
+  .personalization-custom-add input,
+  .personalization-provider-details > summary,
+  .personalization-provider-handoff article strong,
+  .personalization-preset-add button,
+  .personalization-custom-add > button {
+    font-size: 12px;
+  }
+
+  .personalization-preset-chips > span {
+    font-size: 10px;
+  }
 }
 
 /* Home widget customizer */
