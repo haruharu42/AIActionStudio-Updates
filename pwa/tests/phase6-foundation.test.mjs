@@ -95,3 +95,17 @@ test("registration legal links use first-party routes and current support guidan
   assert.match(aiTerms, /\/support/);
   assert.match(support, /SupportRequestPage/);
 });
+
+test("auth errors explain weak and leaked passwords before the generic password fallback", async () => {
+  const phase6 = await read("lib/phase6-access.ts");
+  const leakedIndex = phase6.indexOf("漏洩済みパスワードとして検出");
+  const weakIndex = phase6.indexOf("パスワードの強度条件を満たしていません");
+  const genericIndex = phase6.indexOf("パスワードを確認してください");
+  assert.ok(leakedIndex >= 0);
+  assert.ok(weakIndex >= 0);
+  assert.ok(genericIndex >= 0);
+  assert.ok(leakedIndex < genericIndex);
+  assert.ok(weakIndex < genericIndex);
+  assert.match(phase6, /pwned/);
+  assert.match(phase6, /weak password/);
+});
