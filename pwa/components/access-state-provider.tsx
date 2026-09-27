@@ -15,6 +15,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { getSupabaseClient } from "@/lib/supabase";
 import { createSessionRequestLoader } from "@/lib/session-request-loader";
+import {
+  createDefaultWritingProfile,
+  loadWritingProfile,
+  setRuntimeWritingProfile,
+} from "@/lib/user-personalization";
 
 export type SharedAccessState =
   | AccessState
@@ -146,6 +151,30 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [loadAccessStateOnce]);
+
+  const runtimeProfileUserId = state.kind === "ready" ? state.profile.id : "";
+
+  useEffect(() => {
+    let active = true;
+    if (!client || !runtimeProfileUserId) {
+      setRuntimeWritingProfile(null);
+      return () => { active = false; };
+    }
+
+    void loadWritingProfile(client, runtimeProfileUserId).then(
+      (profile) => {
+        if (active) setRuntimeWritingProfile(profile);
+      },
+      () => {
+        if (active) setRuntimeWritingProfile(createDefaultWritingProfile(runtimeProfileUserId));
+      },
+    );
+
+    return () => {
+      active = false;
+      setRuntimeWritingProfile(null);
+    };
+  }, [client, runtimeProfileUserId]);
 
   const value = useMemo<AccessStateContextValue>(
     () => ({ state, client, refresh }),
