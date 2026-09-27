@@ -6,31 +6,34 @@ import { fileURLToPath } from "node:url";
 
 const pwaRoot = fileURLToPath(new URL("..", import.meta.url));
 
-test("AAS uses the Rumo SVG for installed and browser app icons", async () => {
-  const [iconSvg, manifestRaw, layout] = await Promise.all([
-    readFile(path.join(pwaRoot, "public/aas-app-icon.svg"), "utf8"),
+test("AAS uses the high-resolution Axia PNG for installed, desktop, and mobile icons", async () => {
+  const [iconPng, manifestRaw, layout] = await Promise.all([
+    readFile(path.join(pwaRoot, "public/aas-axia-icon-512.png")),
     readFile(path.join(pwaRoot, "public/manifest.webmanifest"), "utf8"),
     readFile(path.join(pwaRoot, "app/layout.tsx"), "utf8"),
   ]);
 
-  assert.match(iconSvg, /AI Action Studio ルーモ アイコン/);
-  assert.match(iconSvg, /data:image\/webp;base64,/);
-  assert.ok(iconSvg.length > 20_000);
+  assert.equal(iconPng[0], 0x89);
+  assert.equal(iconPng.subarray(1, 4).toString("ascii"), "PNG");
+  assert.ok(iconPng.byteLength > 50_000);
 
   const manifest = JSON.parse(manifestRaw);
   assert.equal(manifest.name, "AI Action Studio");
   assert.equal(manifest.background_color, "#f6f9ff");
   assert.equal(manifest.theme_color, "#f6f9ff");
-  assert.ok(manifest.icons.some((icon) =>
-    icon.src === "/aas-app-icon.svg?v=20260927-rumo-v1"
-    && icon.sizes === "any"
-    && icon.type === "image/svg+xml"
-    && icon.purpose.includes("maskable")
-  ));
+  assert.deepEqual(manifest.icons, [
+    {
+      src: "/aas-axia-icon-512.png?v=20260928-axia-v1",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any",
+    },
+  ]);
 
-  assert.match(layout, /manifest:\s*"\/manifest\.webmanifest\?v=20260927-rumo-v1"/);
-  assert.match(layout, /icon:\s*"\/aas-app-icon\.svg\?v=20260927-rumo-v1"/);
-  assert.match(layout, /shortcut:\s*"\/aas-app-icon\.svg\?v=20260927-rumo-v1"/);
-  assert.match(layout, /apple:\s*"\/aas-app-icon\.svg\?v=20260927-rumo-v1"/);
-  assert.doesNotMatch(layout, /icon-192\.png\?v=20260927-axia-v2/);
+  assert.match(layout, /manifest:\s*"\/manifest\.webmanifest\?v=20260928-axia-v1"/);
+  assert.match(layout, /icon:\s*"\/aas-axia-icon-512\.png\?v=20260928-axia-v1"/);
+  assert.match(layout, /shortcut:\s*"\/aas-axia-icon-512\.png\?v=20260928-axia-v1"/);
+  assert.match(layout, /apple:\s*"\/aas-axia-icon-512\.png\?v=20260928-axia-v1"/);
+  assert.doesNotMatch(layout, /aas-app-icon\.svg/);
+  assert.doesNotMatch(manifestRaw, /rumo-v1/);
 });
