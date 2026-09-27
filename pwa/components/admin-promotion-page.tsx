@@ -28,13 +28,11 @@ import {
   PREVIEW_UPDATE_OPTIONS,
   PROMOTION_PHASE_OPTIONS,
   PURPOSE_OPTIONS,
-  QUICK_PRESETS,
   RELEASE_STAGE_OPTIONS,
   SUPPORT_OPTIONS,
   TESTED_PLATFORM_OPTIONS,
   TESTING_STATUS_OPTIONS,
   type Mode,
-  type QuickPresetKey,
 } from "@/components/admin-promotion/admin-promotion-options";
 import {
   ADMIN_PRODUCT_FACTS_STORAGE_KEY,
@@ -56,7 +54,6 @@ export function AdminPromotionPage() {
   const { state } = useSharedAccessState();
   const { preference: workspacePreference } = useWorkspacePreset();
   const [mode, setMode] = useState<Mode>("preview");
-  const [quickPreset, setQuickPreset] = useState<QuickPresetKey>("");
   const [message, setMessage] = useState("");
   const [facts, setFacts] = useState<AdminProductFacts>(DEFAULT_ADMIN_PRODUCT_FACTS);
   const [socialLengths, setSocialLengths] = useState<AdminSocialLengthPlan>({ ...DEFAULT_SOCIAL_LENGTH_PLAN });
@@ -172,99 +169,6 @@ export function AdminPromotionPage() {
     },
     [facts, preview, socialLengths, workspacePreference],
   );
-  const applyQuickPreset = (presetKey: QuickPresetKey) => {
-    setQuickPreset(presetKey);
-    switch (presetKey) {
-      case "prelaunch-test":
-        setMode("preview");
-        setPreview((current) => ({
-          ...current,
-          updateType: "note実運用テスト報告",
-          testedPlatform: "note",
-          audience: "副業初心者",
-          channels: "note, X, Instagram, Threads",
-          cta: "フォローして続報を待ってもらう",
-        }));
-        break;
-      case "development-update":
-        setMode("preview");
-        setPreview((current) => ({
-          ...current,
-          updateType: "開発進捗の共有",
-          testedPlatform: "PWA版",
-          audience: "AIをすでに使っている人",
-          channels: "X, Instagram, Threads",
-          cta: "開発状況を見てもらう",
-        }));
-        break;
-      case "release-preview":
-        setMode("preview");
-        setPreview((current) => ({
-          ...current,
-          updateType: "正式公開予告",
-          testedPlatform: "PWA版",
-          audience: "副業初心者",
-          channels: "note, X, Instagram, Threads",
-          cta: "公開予定を知らせる",
-        }));
-        break;
-      case "sales-launch":
-        setMode("campaign");
-        setCampaign((current) => ({
-          ...current,
-          campaignName: "AAS 販売開始",
-          phase: "販売開始後",
-          goal: "販売開始・認知拡大",
-          audience: "副業初心者",
-          channels: "note, X, Instagram, Threads",
-          offer: "新規販売開始",
-          cta: "販売URLへ誘導",
-        }));
-        break;
-      case "product-faq":
-        setMode("article");
-        setArticle((current) => ({
-          ...current,
-          platform: "note",
-          phase: "販売開始後",
-          purpose: "FAQ・不安解消",
-          audience: "副業初心者",
-          focus: "製品全体",
-          cta: "詳細記事へ誘導",
-        }));
-        break;
-      case "sns-quick":
-        setMode("social");
-        setSocial((current) => ({
-          ...current,
-          platform: "x",
-          phase: "開発中・進捗共有",
-          purpose: "開発進捗の共有",
-          audience: "AIをすでに使っている人",
-          focus: "製品全体",
-          cta: "フォローを促す",
-          variants: 3,
-        }));
-        break;
-      case "update-campaign":
-        setMode("campaign");
-        setCampaign((current) => ({
-          ...current,
-          campaignName: "AAS アップデート告知",
-          phase: "アップデート告知",
-          goal: "アップデート周知",
-          audience: "AIをすでに使っている人",
-          channels: "note, X, Instagram, Threads",
-          offer: "アップデート記念",
-          cta: "詳細記事へ誘導",
-        }));
-        break;
-      default:
-        break;
-    }
-    if (presetKey) setMessage("おすすめ設定を反映しました。必要な項目だけ下で調整してください。");
-  };
-
   const updateSocialLength = (platform: AdminSocialPlatform, presetId: string, targetChars: number) => {
     setSocialPresetIds((current) => ({ ...current, [platform]: presetId }));
     setSocialLengths((current) => ({ ...current, [platform]: sanitizeSocialTargetChars(targetChars) }));
@@ -320,34 +224,6 @@ export function AdminPromotionPage() {
       <details className="admin-promo-advanced">
         <summary>詳細設定・キャンペーン・製品情報</summary>
         <div className="admin-promo-advanced-body">
-      <section className="admin-promo-quick-start" aria-label="詳細調整">
-        <div className="admin-promo-quick-head">
-          <div><p className="eyebrow">OPTIONAL ADJUSTMENT</p><h2>詳細調整（必要な場合だけ）</h2><p>上の3ステップで自動設定したあと、作成内容や目的を変えたい場合だけ使います。迷ったら触らなくて大丈夫です。</p></div>
-          <Link href="/admin/sales">現在の販売設定を確認 →</Link>
-        </div>
-        <div className="admin-promo-quick-grid">
-          <label className="admin-promo-field">
-            <span>作成内容を変更</span>
-            <select
-              value={mode}
-              onChange={(event) => {
-                setMode(event.target.value as Mode);
-                setQuickPreset("");
-              }}
-            >
-              {MODES.map((item) => <option key={item.key} value={item.key}>{item.label} — {item.description}</option>)}
-            </select>
-          </label>
-          <label className="admin-promo-field">
-            <span>目的別プリセット</span>
-            <select value={quickPreset} onChange={(event) => applyQuickPreset(event.target.value as QuickPresetKey)}>
-              {QUICK_PRESETS.map((item) => <option key={item.key || "custom"} value={item.key}>{item.label} — {item.description}</option>)}
-            </select>
-          </label>
-        </div>
-        <p className="admin-promo-quick-note">初心者は上の3ステップだけで開始できます。ここは再調整用です。自由入力が必要なのは、確認済みのテスト内容・URL・価格など事実情報だけです。</p>
-      </section>
-
       {mode === "product" && (
         <section className="admin-promo-panel">
           <div className="admin-promo-section-title"><div><p className="eyebrow">PRODUCT FACTS</p><h2>製品情報管理</h2></div><button type="button" onClick={saveFacts}>この端末に保存</button></div>
