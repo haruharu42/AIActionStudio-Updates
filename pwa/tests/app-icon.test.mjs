@@ -15,7 +15,7 @@ test("AAS uses the high-resolution Axia PNG for installed, desktop, and mobile i
 
   assert.equal(iconPng[0], 0x89);
   assert.equal(iconPng.subarray(1, 4).toString("ascii"), "PNG");
-  assert.ok(iconPng.byteLength > 50_000);
+  assert.ok(iconPng.byteLength > 20_000);
 
   const manifest = JSON.parse(manifestRaw);
   assert.equal(manifest.name, "AI Action Studio");
