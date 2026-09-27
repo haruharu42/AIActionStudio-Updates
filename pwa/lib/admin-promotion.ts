@@ -1,5 +1,9 @@
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
 import { buildUserPromptContext, getRuntimeWritingProfile } from "@/lib/user-personalization";
+import {
+  buildSocialWritingStylePrompt,
+  type AdminSocialWritingStyle,
+} from "@/lib/social-writing-style";
 
 export type AdminSocialPlatform = "x" | "instagram" | "threads" | "tiktok" | "youtube";
 
@@ -69,6 +73,7 @@ export type AdminSocialPromotionInput = {
   variants: number;
   lengthPresetId: string;
   targetChars: number;
+  socialStyle?: AdminSocialWritingStyle;
 };
 
 export type AdminSocialLengthPlan = Record<AdminSocialPlatform, number>;
@@ -82,6 +87,7 @@ export type AdminCampaignInput = {
   offer: string;
   cta: string;
   socialLengths: AdminSocialLengthPlan;
+  socialStyle?: AdminSocialWritingStyle;
 };
 
 export type AdminPreviewPromotionInput = {
@@ -93,6 +99,7 @@ export type AdminPreviewPromotionInput = {
   channels: string;
   cta: string;
   socialLengths: AdminSocialLengthPlan;
+  socialStyle?: AdminSocialWritingStyle;
 };
 
 export type SocialLengthPreset = {
@@ -356,6 +363,7 @@ export function buildAdminSocialPromotionPrompt(
     purpose: input.purpose,
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
+  const socialStyle = buildSocialWritingStylePrompt(input.socialStyle);
 
   return `あなたはSNSプロモーション担当者です。
 AI Action Studioについて、現在の発信フェーズに合ったSNS投稿素材を作成してください。販売前なら、実運用テスト・開発状況・公開予定の共有として作り、購入可能と誤認させないでください。
@@ -375,6 +383,9 @@ CTA: ${input.cta || facts.salesUrl || "要確認"}
 文字数メモ: ${preset?.note || "指定文字数を上限目安として自然に収める"}
 媒体ルール: ${platformRule[input.platform]}
 
+【SNS表現設定】
+${socialStyle}
+
 ${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
@@ -387,6 +398,8 @@ ${factsBlock(facts)}
 - 販売前なら「テスト中」「準備中」「公開予定」など事実に合う表現を使い、販売URLが空なら購入CTAを作らない。
 - ハッシュタグは必要な媒体だけ、過剰に付けない。
 - 画像・動画が有効な場合は、投稿素材の構図案または画像生成プロンプトも付ける。
+- 選択された人間味・絵文字量・口調を守り、同じ語尾・定型句・過剰な絵文字連打を避ける。
+- 人間味を出すために架空の体験談・感情・利用者反応を作らない。
 - 確認が必要な情報は最後に「公開前チェック」として分離する。`;
 }
 
@@ -400,6 +413,7 @@ export function buildAdminCampaignPrompt(
     purpose: input.goal,
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
+  const socialStyle = buildSocialWritingStylePrompt(input.socialStyle);
   return `あなたはAI Action Studioのプロモーション設計担当者です。
 販売開始後だけでなく、販売前の実運用テスト・開発進捗・公開予告も含めて、記事とSNSを連動させた発信計画を設計してください。
 
@@ -416,6 +430,9 @@ CTA: ${input.cta || facts.salesUrl || "要確認"}
 
 【SNS文字数設定】
 ${socialLengthPlanBlock(input.socialLengths)}
+
+【SNS表現設定】
+${socialStyle}
 
 ${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
@@ -444,6 +461,7 @@ export function buildAdminPreviewPromotionPrompt(
     purpose: input.updateType,
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
+  const socialStyle = buildSocialWritingStylePrompt(input.socialStyle);
   return `あなたはAI Action Studioの開発・公開予告コンテンツ担当者です。
 まだ販売前の段階で、運営者自身が行っている実運用テストや開発進捗、今後の公開予定を誠実に伝えるコンテンツを作成してください。
 
@@ -461,6 +479,9 @@ CTA: ${input.cta || "続報を待ってもらう"}
 
 【SNS文字数設定】
 ${socialLengthPlanBlock(input.socialLengths)}
+
+【SNS表現設定】
+${socialStyle}
 
 ${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
