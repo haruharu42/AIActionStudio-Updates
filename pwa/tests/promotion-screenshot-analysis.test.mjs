@@ -10,7 +10,7 @@ const readPwa = (relative) => readFile(path.join(pwaRoot, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
 test("promotion screenshot vision stays admin-only, ephemeral, prompt-aware, and independently controlled", async () => {
-  const [builder, analyzer, lib, channel, edge, css, migration] = await Promise.all([
+  const [builder, analyzer, lib, channel, edge, css, migration, indexMigration] = await Promise.all([
     readPwa("components/admin-promotion/admin-promotion-channel-builder.tsx"),
     readPwa("components/admin-promotion/admin-promotion-screenshot-analyzer.tsx"),
     readPwa("lib/promotion-screenshot-analysis.ts"),
@@ -18,6 +18,7 @@ test("promotion screenshot vision stays admin-only, ephemeral, prompt-aware, and
     readRepo("supabase/functions/promotion-screenshot-analyzer/index.ts"),
     readPwa("app/phase24-admin-promotion.css"),
     readRepo("supabase/migrations/20260927062909_promotion_screenshot_analysis_settings_v1.sql"),
+    readRepo("supabase/migrations/20260927063533_promotion_screenshot_analysis_updated_by_index_v1.sql"),
   ]);
 
   assert.match(builder, /AdminPromotionScreenshotAnalyzer/);
@@ -76,6 +77,7 @@ test("promotion screenshot vision stays admin-only, ephemeral, prompt-aware, and
   assert.match(migration, /active admin required/);
   assert.match(migration, /grant execute on function public\.get_promotion_screenshot_analysis_worker_config\(\) to service_role/);
   assert.match(migration, /revoke all on table public\.promotion_screenshot_analysis_settings from public, anon, authenticated/);
+  assert.match(indexMigration, /promotion_screenshot_analysis_settings_updated_by_idx/);
 
   assert.doesNotMatch(
     [builder, analyzer, lib, channel].join("\n"),
