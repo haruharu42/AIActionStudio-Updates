@@ -1,4 +1,4 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v8-hq-branding";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v9-hq-overlap";
 const APP_SHELL = [
   "/offline.html",
   "/favicon.svg",
