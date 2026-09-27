@@ -26,6 +26,9 @@ import {
   buildAdminChannelDirectScreenshotPrompt,
   buildAdminChannelPromotionPrompt,
   type AdminPromotionChannel,
+  type AdminSocialEmojiLevel,
+  type AdminSocialHumanity,
+  type AdminSocialTone,
 } from "@/lib/admin-promotion-channel";
 import type { PromotionScreenshotAnalysis, PromotionScreenshotChannel } from "@/lib/promotion-screenshot-analysis";
 import { launchAiApp } from "@/lib/ai-app-links";
@@ -58,6 +61,9 @@ export function AdminPromotionChannelBuilder({
   const initialLength = defaultSocialLengthPreset("x");
   const [lengthPresetId, setLengthPresetId] = useState(initialLength.id);
   const [targetChars, setTargetChars] = useState(initialLength.targetChars);
+  const [socialHumanity, setSocialHumanity] = useState<AdminSocialHumanity>("natural");
+  const [socialEmojiLevel, setSocialEmojiLevel] = useState<AdminSocialEmojiLevel>("few");
+  const [socialTone, setSocialTone] = useState<AdminSocialTone>("soft");
   const [screenshotAnalysis, setScreenshotAnalysis] = useState<PromotionScreenshotAnalysis | null>(null);
 
   const meta = ADMIN_PROMOTION_CHANNELS[channel];
@@ -73,9 +79,12 @@ export function AdminPromotionChannelBuilder({
       cta,
       variants,
       targetChars,
+      socialHumanity,
+      socialEmojiLevel,
+      socialTone,
       screenshotAnalysis,
     }),
-    [facts, channel, phase, purpose, audience, focus, cta, variants, targetChars, screenshotAnalysis],
+    [facts, channel, phase, purpose, audience, focus, cta, variants, targetChars, socialHumanity, socialEmojiLevel, socialTone, screenshotAnalysis],
   );
 
   const directScreenshotPrompt = useMemo(
@@ -89,9 +98,12 @@ export function AdminPromotionChannelBuilder({
           cta,
           variants,
           targetChars,
+          socialHumanity,
+          socialEmojiLevel,
+          socialTone,
         })
       : "",
-    [facts, channel, meta.kind, phase, purpose, audience, focus, cta, variants, targetChars],
+    [facts, channel, meta.kind, phase, purpose, audience, focus, cta, variants, targetChars, socialHumanity, socialEmojiLevel, socialTone],
   );
 
   const selectChannel = (next: AdminPromotionChannel) => {
@@ -239,6 +251,53 @@ export function AdminPromotionChannelBuilder({
           )}
         </div>
         {socialPlatform && renderLengthSetting(socialPlatform)}
+        {socialPlatform && (
+          <div className="admin-promo-social-style">
+            <div className="admin-promo-social-style-head">
+              <strong>SNSの文章表現</strong>
+              <small>投稿文の雰囲気を選べます。未確認の体験談や実績は作りません。</small>
+            </div>
+            <div className="admin-promo-social-style-grid">
+              <SelectField
+                label="文章の人間味"
+                value={socialHumanity}
+                onChange={(value) => setSocialHumanity(value as AdminSocialHumanity)}
+                options={["human", "natural", "polished", "mechanical"]}
+                optionLabels={{
+                  human: "人間味強め",
+                  natural: "自然",
+                  polished: "整った文章",
+                  mechanical: "機械的・簡潔",
+                }}
+              />
+              <SelectField
+                label="絵文字"
+                value={socialEmojiLevel}
+                onChange={(value) => setSocialEmojiLevel(value as AdminSocialEmojiLevel)}
+                options={["none", "few", "standard", "many"]}
+                optionLabels={{
+                  none: "なし",
+                  few: "少なめ",
+                  standard: "標準",
+                  many: "多め",
+                }}
+              />
+              <SelectField
+                label="口調・温度感"
+                value={socialTone}
+                onChange={(value) => setSocialTone(value as AdminSocialTone)}
+                options={["soft", "casual", "standard", "business", "energetic"]}
+                optionLabels={{
+                  soft: "やわらかい",
+                  casual: "カジュアル",
+                  standard: "標準",
+                  business: "ビジネス",
+                  energetic: "熱量高め",
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {meta.kind === "social" && socialPlatform && (
