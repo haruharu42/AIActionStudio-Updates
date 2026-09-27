@@ -66,9 +66,10 @@ test("admin can audit access-code redemption without exposing private contact or
 });
 
 test("PWA access-code page uses sales terminology and PWA-only device guidance", async () => {
-  const [page, api] = await Promise.all([
+  const [page, api, css] = await Promise.all([
     read("components/phase9-invite-page.tsx"),
     read("lib/phase9-invite.ts"),
+    read("app/phase9-11.css"),
   ]);
 
   assert.match(page, /PWA利用コード/);
@@ -82,6 +83,8 @@ test("PWA access-code page uses sales terminology and PWA-only device guidance",
   assert.match(page, /autoCorrect="off"/);
   assert.match(page, /spellCheck=\{false\}/);
   assert.match(page, /enterKeyHint="done"/);
+  assert.match(css, /\.route-field input,[\s\S]*?font-size: 16px;/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.route-meta \{[\s\S]*?grid-template-columns: 1fr;/);
   assert.doesNotMatch(page, /Windows利用権/);
   assert.match(api, /この利用コードは使用できません/);
   assert.match(api, /access code redemption is disabled/);
