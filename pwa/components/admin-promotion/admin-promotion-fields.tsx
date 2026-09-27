@@ -46,12 +46,14 @@ export function SelectField({
   value,
   onChange,
   options,
+  optionLabels,
   placeholder = "選択してください",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: readonly string[];
+  optionLabels?: Readonly<Record<string, string>>;
   placeholder?: string;
 }) {
   return (
@@ -59,7 +61,7 @@ export function SelectField({
       <span>{label}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">{placeholder}</option>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+        {options.map((option) => <option key={option} value={option}>{optionLabels?.[option] ?? option}</option>)}
       </select>
     </label>
   );
