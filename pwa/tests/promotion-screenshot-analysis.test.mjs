@@ -9,7 +9,7 @@ const repoRoot = path.resolve(pwaRoot, "..");
 const readPwa = (relative) => readFile(path.join(pwaRoot, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
-test("promotion screenshot vision stays admin-only, ephemeral, and prompt-aware", async () => {
+test("promotion screenshot vision stays admin-only, ephemeral, prompt-aware, and preview-safe", async () => {
   const [builder, analyzer, lib, channel, edge, css] = await Promise.all([
     readPwa("components/admin-promotion/admin-promotion-channel-builder.tsx"),
     readPwa("components/admin-promotion/admin-promotion-screenshot-analyzer.tsx"),
