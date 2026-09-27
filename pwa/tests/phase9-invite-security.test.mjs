@@ -74,6 +74,14 @@ test("PWA access-code page uses sales terminology and PWA-only device guidance",
   assert.match(page, /PWA利用コード/);
   assert.match(page, /利用コードを登録/);
   assert.match(page, /PC・スマホ・タブレットで共通/);
+  assert.match(page, /const inFlight = useRef\(false\)/);
+  assert.match(page, /if \(inFlight\.current \|\| !client\) return/);
+  assert.match(page, /inFlight\.current = true/);
+  assert.match(page, /inFlight\.current = false/);
+  assert.match(page, /autoCapitalize="none"/);
+  assert.match(page, /autoCorrect="off"/);
+  assert.match(page, /spellCheck=\{false\}/);
+  assert.match(page, /enterKeyHint="done"/);
   assert.doesNotMatch(page, /Windows利用権/);
   assert.match(api, /この利用コードは使用できません/);
   assert.match(api, /access code redemption is disabled/);
