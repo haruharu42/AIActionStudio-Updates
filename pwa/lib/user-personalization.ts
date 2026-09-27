@@ -201,7 +201,9 @@ export async function saveWritingProfile(
     .select("user_id,personalization_enabled,preferred_ai,preferred_plan,tone,heading_style,list_preference,cta_style,avoid_hype,preferred_platform,preferred_genre,persona_context,custom_instructions,avoid_phrases,article_count,platform_counts,genre_counts,subgenre_counts,article_type_counts,age_group_counts,target_length_counts,preset_counts,last_article_type,last_generation_mode,last_used_at,updated_at")
     .single();
   if (error || !data) throw new Error("あなた向け最適化の設定を保存できませんでした。");
-  return parseProfile(profile.userId, data);
+  const saved = parseProfile(profile.userId, data);
+  runtimeProfile = saved;
+  return saved;
 }
 
 export async function resetWritingProfile(
@@ -211,7 +213,7 @@ export async function resetWritingProfile(
   const { error } = await client.from("user_writing_profiles").delete().eq("user_id", userId);
   if (error) throw new Error("あなた向け最適化の設定をリセットできませんでした。");
   const profile = createDefaultWritingProfile(userId);
-  if (runtimeProfile?.userId === userId) runtimeProfile = profile;
+  runtimeProfile = profile;
   return profile;
 }
 

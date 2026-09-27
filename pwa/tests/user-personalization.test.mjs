@@ -55,8 +55,26 @@ test("personalization settings can be viewed edited saved and reset", async () =
   assert.match(accessProvider, /setRuntimeWritingProfile\(profile\)/);
   assert.match(accessProvider, /createDefaultWritingProfile/);
   assert.match(accessProvider, /runtimeProfileUserId/);
+  assert.match(accessProvider, /runtimeProfileReadyUserId/);
+  assert.match(accessProvider, /runtimeProfilePending/);
+  assert.match(accessProvider, /runtimeProfilePending \? null : children/);
 });
 
+
+
+test("personalization runtime survives route changes and core save reset operations", async () => {
+  const [accessProvider, personalization, article] = await Promise.all([
+    read("components/access-state-provider.tsx"),
+    read("lib/user-personalization.ts"),
+    read("components/phase11-create-page.tsx"),
+  ]);
+
+  assert.match(accessProvider, /setRuntimeProfileReadyUserId\(runtimeProfileUserId\)/);
+  assert.match(accessProvider, /state\.kind === "ready"[\s\S]*?runtimeProfileReadyUserId !== state\.profile\.id/);
+  assert.match(personalization, /const saved = parseProfile\(profile\.userId, data\);[\s\S]*?runtimeProfile = saved;[\s\S]*?return saved;/);
+  assert.match(personalization, /const profile = createDefaultWritingProfile\(userId\);[\s\S]*?runtimeProfile = profile;[\s\S]*?return profile;/);
+  assert.doesNotMatch(article, /setRuntimePlatformAccountDesigns\(null\);\s*setRuntimeWritingProfile\(null\);/);
+});
 
 test("user-authored personalization handoff is cloud-backed prompt-safe and provider-specific", async () => {
   const [settings, panel, personalization, css, migration] = await Promise.all([

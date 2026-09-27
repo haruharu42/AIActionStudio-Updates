@@ -173,7 +173,6 @@ export function Phase11CreatePage() {
     return () => {
       active = false;
       setRuntimePlatformAccountDesigns(null);
-      setRuntimeWritingProfile(null);
     };
   }, [accessOwnerId, accessState.kind, client]);
 

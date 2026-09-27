@@ -38,6 +38,7 @@ const BACKGROUND_RECHECK_MIN_INTERVAL_MS = 30_000;
 export function AccessStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SharedAccessState>({ kind: "loading" });
   const [client, setClient] = useState<SupabaseClient | null>(null);
+  const [runtimeProfileReadyUserId, setRuntimeProfileReadyUserId] = useState("");
   const requestLoaderRef = useRef(createSessionRequestLoader(loadAccessState));
 
   const loadAccessStateOnce = useCallback((activeClient: SupabaseClient) => {
@@ -158,15 +159,27 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
     let active = true;
     if (!client || !runtimeProfileUserId) {
       setRuntimeWritingProfile(null);
+      queueMicrotask(() => {
+        if (active) setRuntimeProfileReadyUserId("");
+      });
       return () => { active = false; };
     }
 
+    setRuntimeWritingProfile(null);
+    queueMicrotask(() => {
+      if (active) setRuntimeProfileReadyUserId("");
+    });
+
     void loadWritingProfile(client, runtimeProfileUserId).then(
       (profile) => {
-        if (active) setRuntimeWritingProfile(profile);
+        if (!active) return;
+        setRuntimeWritingProfile(profile);
+        setRuntimeProfileReadyUserId(runtimeProfileUserId);
       },
       () => {
-        if (active) setRuntimeWritingProfile(createDefaultWritingProfile(runtimeProfileUserId));
+        if (!active) return;
+        setRuntimeWritingProfile(createDefaultWritingProfile(runtimeProfileUserId));
+        setRuntimeProfileReadyUserId(runtimeProfileUserId);
       },
     );
 
@@ -181,7 +194,14 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
     [state, client, refresh],
   );
 
-  return <AccessStateContext.Provider value={value}>{children}</AccessStateContext.Provider>;
+  const runtimeProfilePending = state.kind === "ready"
+    && runtimeProfileReadyUserId !== state.profile.id;
+
+  return (
+    <AccessStateContext.Provider value={value}>
+      {runtimeProfilePending ? null : children}
+    </AccessStateContext.Provider>
+  );
 }
 
 export function useSharedAccessState(): AccessStateContextValue {
