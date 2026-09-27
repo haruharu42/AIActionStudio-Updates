@@ -23,10 +23,12 @@ import {
 } from "@/lib/admin-promotion";
 import {
   ADMIN_PROMOTION_CHANNELS,
+  buildAdminChannelDirectScreenshotPrompt,
   buildAdminChannelPromotionPrompt,
   type AdminPromotionChannel,
 } from "@/lib/admin-promotion-channel";
 import type { PromotionScreenshotAnalysis, PromotionScreenshotChannel } from "@/lib/promotion-screenshot-analysis";
+import { launchAiApp } from "@/lib/ai-app-links";
 
 const CHANNEL_ORDER: AdminPromotionChannel[] = [
   "note",
@@ -74,6 +76,22 @@ export function AdminPromotionChannelBuilder({
       screenshotAnalysis,
     }),
     [facts, channel, phase, purpose, audience, focus, cta, variants, targetChars, screenshotAnalysis],
+  );
+
+  const directScreenshotPrompt = useMemo(
+    () => meta.kind === "social"
+      ? buildAdminChannelDirectScreenshotPrompt(facts, {
+          channel,
+          phase,
+          purpose,
+          audience,
+          focus,
+          cta,
+          variants,
+          targetChars,
+        })
+      : "",
+    [facts, channel, meta.kind, phase, purpose, audience, focus, cta, variants, targetChars],
   );
 
   const selectChannel = (next: AdminPromotionChannel) => {
@@ -235,6 +253,37 @@ export function AdminPromotionChannelBuilder({
             onAnalysisChange={setScreenshotAnalysis}
           />
         </>
+      )}
+
+      {meta.kind === "social" && (
+        <details className="admin-promo-direct-screenshot">
+          <summary>
+            <div>
+              <span>API不要</span>
+              <strong>ChatGPTへスクショを直接渡す</strong>
+            </div>
+            <small>AAS側の画像解析APIを使わない方法</small>
+          </summary>
+          <div className="admin-promo-direct-screenshot-body">
+            <p>
+              ① 下の専用プロンプトをコピー → ② ChatGPTを開く → ③ 紹介したいスクショを同じチャットへ添付 →
+              ④ プロンプトを送信、の順で使います。
+            </p>
+            <div className="admin-promo-direct-screenshot-actions">
+              <button type="button" className="primary-action" onClick={() => onCopy(directScreenshotPrompt)}>
+                ChatGPT直接添付用プロンプトをコピー
+              </button>
+              <button type="button" className="secondary-action" onClick={() => launchAiApp("chatgpt")}>
+                ChatGPTを開く
+              </button>
+            </div>
+            <pre>{directScreenshotPrompt}</pre>
+            <small>
+              この方法ではAASのOpenAI APIキー・画像解析APIを使いません。スクショはChatGPT側へ直接添付してください。
+              ChatGPT側の利用条件・プラン上限は、利用中のChatGPTプランに従います。
+            </small>
+          </div>
+        </details>
       )}
 
       <div className="admin-promo-channel-step">
