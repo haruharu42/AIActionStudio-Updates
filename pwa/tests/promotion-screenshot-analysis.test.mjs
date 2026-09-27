@@ -82,6 +82,6 @@ test("promotion screenshot vision stays admin-only, ephemeral, prompt-aware, and
 
   assert.doesNotMatch(
     [builder, analyzer, lib, channel].join("\n"),
-    /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS|api_key|authorization:\s*"Bearer"/i,
+    /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS|vault\.decrypted_secrets|authorization:\s*"Bearer"/i,
   );
 });
