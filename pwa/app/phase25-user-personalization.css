@@ -264,11 +264,52 @@
   line-height: 1.6;
 }
 
+.personalization-choice-section {
+  margin-top: 18px;
+  border: 1px solid #dfe8f3;
+  border-radius: 16px;
+  background: #fbfdff;
+  padding: 14px;
+}
+
+.personalization-choice-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.personalization-choice-head > span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #eaf3ff;
+  color: #2c70c9;
+  padding: 5px 8px;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .06em;
+}
+
+.personalization-choice-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.personalization-choice-head strong {
+  color: #294561;
+  font-size: 12px;
+}
+
+.personalization-choice-head small {
+  color: #7388a5;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
 .personalization-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 14px;
 }
 
 .personalization-grid label {
@@ -280,6 +321,16 @@
   color: #45607f;
   font-size: 9px;
   font-weight: 800;
+}
+
+.personalization-grid label > small {
+  color: #8193aa;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.personalization-custom-genre {
+  grid-column: 1 / -1;
 }
 
 .personalization-grid select,
@@ -511,37 +562,184 @@
 
 .personalization-handoff-fields {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
-.personalization-handoff-fields label {
+.personalization-preset-builder {
   display: grid;
-  gap: 6px;
+  gap: 10px;
+  border: 1px solid #dce7f4;
+  border-radius: 14px;
+  background: #fff;
+  padding: 13px;
 }
 
-.personalization-handoff-fields label > span {
-  color: #45607f;
+.personalization-preset-builder-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.personalization-preset-builder-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.personalization-preset-builder-head strong {
+  color: #294d72;
+  font-size: 11px;
+}
+
+.personalization-preset-builder-head small {
+  color: #798ca4;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.personalization-preset-builder-head > span {
+  border-radius: 999px;
+  background: #f0f5fb;
+  color: #6d829d;
+  padding: 4px 7px;
+  font-size: 8px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.personalization-preset-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.personalization-preset-add select,
+.personalization-custom-add input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #cfdaea;
+  border-radius: 11px;
+  background: #f9fbff;
+  color: #203552;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 10px;
+}
+
+.personalization-preset-add button,
+.personalization-custom-add > button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 11px;
+  background: #1976f3;
+  color: #fff;
+  padding: 9px 13px;
   font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.personalization-preset-add button:disabled,
+.personalization-custom-add > button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.personalization-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.personalization-preset-chips > span {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid #cfe0f3;
+  border-radius: 999px;
+  background: #f1f7ff;
+  color: #315d91;
+  padding: 6px 7px 6px 9px;
+  font-size: 8px;
+}
+
+.personalization-preset-chips b {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-weight: 800;
 }
 
-.personalization-handoff-fields textarea {
-  width: 100%;
-  resize: vertical;
-  border: 1px solid #cfdaea;
-  border-radius: 12px;
-  background: #fff;
-  color: #203552;
-  padding: 10px 11px;
-  font: inherit;
-  font-size: 10px;
-  line-height: 1.65;
+.personalization-preset-chips button {
+  display: grid;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #dcecff;
+  color: #35679e;
+  font-size: 11px;
+  cursor: pointer;
 }
 
-.personalization-handoff-fields label > small {
-  justify-self: end;
+.personalization-preset-empty {
+  margin: 0;
   color: #8a9bb1;
   font-size: 8px;
+}
+
+.personalization-custom-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  border-top: 1px dashed #dce5ef;
+  padding-top: 10px;
+}
+
+.personalization-custom-add label {
+  display: grid;
+  gap: 5px;
+}
+
+.personalization-custom-add label > span {
+  color: #627891;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.personalization-preset-notice {
+  margin: 0;
+  border-radius: 9px;
+  background: #fff6e9;
+  color: #9b6424;
+  padding: 7px 9px;
+  font-size: 8px;
+}
+
+.personalization-provider-details {
+  border: 1px solid #dce7f4;
+  border-radius: 13px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.personalization-provider-details > summary {
+  cursor: pointer;
+  padding: 12px 13px;
+  color: #31506f;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.personalization-provider-details[open] > summary {
+  border-bottom: 1px solid #e1eaf4;
+}
+
+.personalization-provider-details .personalization-provider-handoff {
+  padding: 10px;
 }
 
 .personalization-handoff-warning {
@@ -623,6 +821,16 @@
 @media (max-width: 650px) {
   .personalization-handoff-scope {
     grid-template-columns: 1fr;
+  }
+
+  .personalization-preset-add,
+  .personalization-custom-add {
+    grid-template-columns: 1fr;
+  }
+
+  .personalization-preset-add button,
+  .personalization-custom-add > button {
+    width: 100%;
   }
 
   .personalization-provider-handoff article {
