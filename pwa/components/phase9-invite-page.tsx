@@ -98,7 +98,7 @@ export function Phase9InvitePage() {
                 enterKeyHint="done"
               />
             </label>
-            {message && <div className={success ? "route-notice" : "route-notice error"}>{message}</div>}
+            {message && <div className={success ? "route-notice" : "route-notice error"} role="status">{message}</div>}
             <button className="primary-action" type="button" disabled={busy || !code.trim()} onClick={() => void redeem()}>
               {busy ? "確認中…" : "利用コードを登録"}
             </button>
