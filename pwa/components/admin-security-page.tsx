@@ -83,7 +83,9 @@ export function AdminSecurityPage() {
       const client = getSupabaseClient();
       const { data, error } = await client.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: `AAS PWA Admin Backup ${verifiedFactors.length + 1}`,
+        friendlyName: verifiedFactors.length === 0
+          ? "AAS PWA Admin MFA 1"
+          : `AAS PWA Admin Backup ${verifiedFactors.length + 1}`,
       });
       if (error) throw error;
       setEnrollment({ factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret });
@@ -132,7 +134,11 @@ export function AdminSecurityPage() {
       if (verifyError) throw verifyError;
       setEnrollment(null);
       setCode("");
-      setMessage("予備MFA認証器を追加しました。主端末とは別の安全な場所で保管してください。");
+      setMessage(
+        verifiedFactors.length === 0
+          ? "MFA認証器を有効化しました。販売開始前に、紛失対策として予備認証器も追加してください。"
+          : "予備MFA認証器を追加しました。主端末とは別の安全な場所で保管してください。",
+      );
       await loadFactors();
     } catch {
       setErrorMessage("MFAコードを確認できませんでした。新しいコードで再試行してください。");
@@ -182,12 +188,17 @@ export function AdminSecurityPage() {
             <h2>登録済み認証器</h2>
           </div>
           <button className="primary-action" type="button" disabled={busy || loading || enrollment !== null} onClick={() => void beginBackupEnrollment()}>
-            予備認証器を追加
+            {verifiedFactors.length === 0 ? "MFA認証器を追加" : "予備認証器を追加"}
           </button>
         </div>
 
         <p className="trial-admin-note">Supabaseには復旧コードがないため、主端末とは別の端末・認証アプリにも予備TOTPを登録しておくことを推奨します。</p>
         {loading && <p className="route-notice">認証器を確認しています…</p>}
+        {!loading && verifiedFactors.length === 0 && (
+          <p className="route-notice error">
+            確認済みMFAがありません。本番販売前にTOTP認証器を1個以上登録してください。登録後、紛失対策として予備認証器も追加してください。
+          </p>
+        )}
         {!loading && verifiedFactors.length === 1 && <p className="route-notice">現在、確認済みMFAは1個です。紛失に備えて予備認証器を追加してください。</p>}
         {!loading && verifiedFactors.length >= 2 && <p className="route-notice">確認済みMFAが{verifiedFactors.length}個あります。予備認証器が利用できます。</p>}
 
@@ -218,11 +229,15 @@ export function AdminSecurityPage() {
         <section className="admin-panel">
           <div className="admin-panel-heading">
             <div>
-              <p className="eyebrow">BACKUP TOTP</p>
-              <h2>予備認証器を登録</h2>
+              <p className="eyebrow">{verifiedFactors.length === 0 ? "ADMIN TOTP" : "BACKUP TOTP"}</p>
+              <h2>{verifiedFactors.length === 0 ? "MFA認証器を登録" : "予備認証器を登録"}</h2>
             </div>
           </div>
-          <p className="trial-admin-note">主に使っている端末とは別の認証アプリでQRコードを読み取ってください。</p>
+          <p className="trial-admin-note">
+            {verifiedFactors.length === 0
+              ? "認証アプリでQRコードを読み取り、最初の管理者MFAを登録してください。"
+              : "主に使っている端末とは別の認証アプリでQRコードを読み取ってください。"}
+          </p>
           <div style={{ display: "grid", gap: 14, maxWidth: 520 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={enrollment.qrCode} alt="AAS管理者予備MFA登録用QRコード" style={{ width: 220, maxWidth: "100%", background: "white", padding: 8, borderRadius: 10 }} />
@@ -235,7 +250,9 @@ export function AdminSecurityPage() {
               <input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
             </label>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button className="primary-action" type="button" disabled={busy} onClick={() => void verifyEnrollment()}>{busy ? "確認しています…" : "予備MFAを有効化"}</button>
+              <button className="primary-action" type="button" disabled={busy} onClick={() => void verifyEnrollment()}>
+                {busy ? "確認しています…" : verifiedFactors.length === 0 ? "MFAを有効化" : "予備MFAを有効化"}
+              </button>
               <button type="button" disabled={busy} onClick={() => void cancelEnrollment()}>キャンセル</button>
             </div>
           </div>
