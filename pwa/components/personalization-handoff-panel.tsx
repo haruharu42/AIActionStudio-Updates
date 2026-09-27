@@ -22,7 +22,7 @@ const PROVIDER_GUIDANCE: Record<AiProvider, { title: string; detail: string; cau
   },
   gemini: {
     title: "Geminiへ引き継ぐ",
-    detail: "一時チャットではパーソナライズされた回答を利用できません。AASの引き継ぎプロンプトを貼ると、アカウントのパーソナライズではなく、この会話の明示指示として設定を渡せます。",
+    detail: "一時チャットではパーソナライズされた回答は利用できません。AASの引き継ぎプロンプトを貼ると、アカウントのパーソナライズではなく、この会話の明示指示として設定を渡せます。",
     caution: "Gemini側のPersonal Intelligenceや保存済み指示へAASが自動登録することはありません。",
   },
 };
