@@ -105,13 +105,13 @@ test("signed-out auth and access surfaces use the Axia and Rumo crystal design",
   assert.match(css, /auth-character-visual/);
   assert.match(css, /url\("\/aas-login-tile-1\.svg\?v=20260927-hq-v1"\)/);
   assert.match(css, /url\("\/aas-login-tile-4\.svg\?v=20260927-hq-v1"\)/);
-  assert.match(css, /background-size: 50% 50%/);
+  assert.match(css, /background-size: 50.8% 50.8%/);
   assert.match(css, /mask-image: radial-gradient\(ellipse 76% 78% at 52% 52%/);
   assert.match(css, /auth-character-visual::before/);
   assert.match(css, /auth-character-visual::after/);
   assert.match(css, /status-card::after/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-stage/);
-  assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-visual \{[\s\S]*position: relative;[\s\S]*width: min\(94vw, 560px\);[\s\S]*background-size: 50% 50%;/);
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-visual \{[\s\S]*position: relative;[\s\S]*width: min\(94vw, 560px\);[\s\S]*background-size: 50.8% 50.8%;/);
   assert.match(layout, /"aas-build-sha"/);
   assert.match(config, /NEXT_PUBLIC_AAS_BUILD_SHA/);
   assert.match(sw, /runtime-v8-hq-branding/);
