@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { redeemPwaInvite } from "@/lib/phase9-invite";
@@ -18,6 +18,7 @@ export function Phase9InvitePage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const inFlight = useRef(false);
 
   const state = useMemo<State>(() => {
     if (accessState.kind === "loading") return { kind: "loading" };
@@ -37,7 +38,8 @@ export function Phase9InvitePage() {
   }, [accessState]);
 
   const redeem = async () => {
-    if (!client) return;
+    if (inFlight.current || !client) return;
+    inFlight.current = true;
     setBusy(true);
     setMessage("");
     setSuccess(false);
@@ -54,6 +56,7 @@ export function Phase9InvitePage() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "利用コードの利用に失敗しました。");
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -79,7 +82,17 @@ export function Phase9InvitePage() {
             </dl>
             <label className="route-field">
               <span>利用コード</span>
-              <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autoComplete="off" />
+              <input
+                value={code}
+                onChange={(event) => setCode(event.target.value)}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="text"
+                enterKeyHint="done"
+              />
             </label>
             {message && <div className={success ? "route-notice" : "route-notice error"}>{message}</div>}
             <button className="primary-action" type="button" disabled={busy || !code.trim()} onClick={() => void redeem()}>
