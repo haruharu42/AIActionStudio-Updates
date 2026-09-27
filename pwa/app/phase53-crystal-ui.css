@@ -1521,14 +1521,32 @@ body.aas-crystal-theme .status-card::after {
 
   body.aas-crystal-theme .auth-character-stage {
     min-height: 410px;
+    display: grid;
     grid-template-columns: 1fr;
     align-items: start;
+    overflow: hidden;
+  }
+
+  body.aas-crystal-theme .auth-character-stage::before {
+    width: min(760px, 132vw);
+    left: 2%;
+    top: 56%;
+    transform: translateY(-50%);
+    opacity: .84;
+  }
+
+  body.aas-crystal-theme .auth-character-stage::after {
+    left: -8%;
+    right: -8%;
+    bottom: -12%;
+    height: 34%;
   }
 
   body.aas-crystal-theme .auth-character-copy {
+    width: 100%;
     max-width: 100%;
     padding: 18px 5px 0;
-    z-index: 3;
+    z-index: 5;
   }
 
   body.aas-crystal-theme .auth-character-copy h1 {
@@ -1554,12 +1572,14 @@ body.aas-crystal-theme .status-card::after {
   }
 
   body.aas-crystal-theme .auth-character-visual {
+    position: relative;
+    inset: auto;
     min-height: 260px;
     margin-top: -38px;
     background-position: center bottom;
     background-size: contain;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14% 95%);
-    mask-image: linear-gradient(to bottom, transparent 0%, #000 14% 95%);
+    -webkit-mask-image: radial-gradient(ellipse 76% 78% at 50% 50%, #000 0 58%, rgb(0 0 0 / 88%) 72%, transparent 100%);
+    mask-image: radial-gradient(ellipse 76% 78% at 50% 50%, #000 0 58%, rgb(0 0 0 / 88%) 72%, transparent 100%);
   }
 
   body.aas-crystal-theme .auth-character-label {
