@@ -15,11 +15,12 @@ export function CommerceAccessCodePanel({ enabled }: { enabled: boolean }) {
   const inFlight = useRef(false);
 
   const profile = useMemo(() => {
-    if (state.kind === "entitlement_denied" || state.kind === "pending") return state.profile;
+    if (state.kind === "ready" || state.kind === "entitlement_denied" || state.kind === "pending") return state.profile;
     return null;
   }, [state]);
 
   if (!enabled || !profile || profile.role !== "user") return null;
+  if (state.kind === "ready" && !success) return null;
 
   const redeem = async () => {
     if (inFlight.current) return;
