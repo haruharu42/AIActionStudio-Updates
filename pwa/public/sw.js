@@ -1,11 +1,11 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v9-hq-overlap";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v10-axia-icon";
 const APP_SHELL = [
   "/offline.html",
   "/favicon.svg",
 ];
 const FRESH_BRANDING_ASSETS = new Set([
   "/manifest.webmanifest",
-  "/aas-app-icon.svg",
+  "/aas-axia-icon-512.png",
   "/aas-login-hero-hq.svg",
   "/aas-login-tile-1.svg",
   "/aas-login-tile-2.svg",
@@ -124,8 +124,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: "/aas-app-icon.svg?v=20260927-rumo-v1",
-      badge: "/aas-app-icon.svg?v=20260927-rumo-v1",
+      icon: "/aas-axia-icon-512.png?v=20260928-axia-v1",
+      badge: "/aas-axia-icon-512.png?v=20260928-axia-v1",
       tag: notificationId > 0 ? "aas-notification-" + notificationId : undefined,
       renotify: false,
       data: { href, notificationId },
