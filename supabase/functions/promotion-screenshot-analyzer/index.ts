@@ -172,13 +172,14 @@ async function activeAdminFromRequest(req: Request) {
 }
 
 async function loadAiConfig() {
-  const result = await adminDb.rpc("get_knowledge_automation_worker_ai_config");
+  const result = await adminDb.rpc("get_promotion_screenshot_analysis_worker_config");
   if (result.error) throw new Error("AI configuration unavailable.");
   const config = asRecord(result.data) ?? {};
   return {
     enabled: config.enabled === true,
     provider: cleanText(config.provider, 40),
     model: cleanText(config.model, 120),
+    maxImages: Math.max(1, Math.min(MAX_IMAGES, Number(config.max_images ?? MAX_IMAGES) || MAX_IMAGES)),
     apiKey: cleanText(config.api_key, 500),
   };
 }
@@ -288,9 +289,12 @@ Deno.serve(async (req: Request) => {
     const config = await loadAiConfig();
     if (!config.enabled || config.provider !== "openai" || !config.apiKey || !config.model) {
       return json({
-        error: "画像解析AIは現在OFFです。管理者のAI設定でOpenAI APIキーを登録し、AI enrichmentを有効にすると利用できます。",
+        error: "画像解析AIは現在OFFまたはAPIキー未設定です。販売プロモーションセンターの「画像解析AI設定」から有効化してください。",
         code: "vision_not_configured",
       }, 409);
+    }
+    if (images.length > config.maxImages) {
+      return json({ error: `現在の管理設定では一度に最大${config.maxImages}枚まで解析できます。` }, 400);
     }
 
     const raw = await callOpenAi(config.apiKey, config.model, channel, images);
