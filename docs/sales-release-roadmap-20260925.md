@@ -31,7 +31,7 @@ Completed:
 
 Remaining:
 
-- [ ] Enable Supabase Auth leaked-password protection if the Supabase project plan supports it (Pro+); this is an Auth setting, not a SQL migration. Live Security Advisor re-check on 2026-09-27 still reports `auth_leaked_password_protection` WARN, so Dashboard confirmation/action remains required.
+- [ ] Decide whether to upgrade Supabase before broad public account creation. Live organization check on 2026-09-27 shows the current Supabase plan is Free, while leaked-password protection is available on Pro and above. Security Advisor therefore still reports `auth_leaked_password_protection` WARN; there is no SQL migration that can enable it on the current plan. If the plan is upgraded, enable it in Auth settings and re-run the advisor.
 - [x] Keep first-factor enrollment and AAL2 challenge UI implemented in `AdminRouteGuard`; the production enforcement switch remains intentionally OFF during development.
 - [x] Add a clear zero-MFA warning/first-factor flow to Admin Security and show the current admin MFA state in Sales Center pre-sale review.
 - [ ] Enroll at least one verified TOTP on the active admin before enabling AAL2 enforcement. Live DB re-check on 2026-09-27: 1 active admin, 0 active admins with a verified MFA factor.
