@@ -171,7 +171,7 @@ test("tools hub exposes grouped supporting routes while article creation keeps i
 test("service worker fetches current UI assets before cache fallback and purges older cache generations", async () => {
   const sw = await read("public/sw.js");
 
-  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v7-branding/);
+  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v8-hq-branding/);
   assert.match(sw, /FRESH_BRANDING_ASSETS\.has\(url\.pathname\)[\s\S]*networkFirst\(request\)/);
   assert.match(sw, /new Request\(request, \{ cache: "no-store" \}\)/);
   assert.match(sw, /keys\.filter\(\(key\) => key !== CACHE_NAME\)/);
