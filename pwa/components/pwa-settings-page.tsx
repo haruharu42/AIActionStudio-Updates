@@ -8,6 +8,7 @@ import { useAppFeatureAccess } from "@/components/feature-access-gate";
 import { HomeWidgetCustomizer } from "@/components/home-widget-customizer";
 import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
 import { NotificationSettingsPanel } from "@/components/notification-settings-panel";
+import { PersonalizationHandoffPanel } from "@/components/personalization-handoff-panel";
 import { WorkspacePresetSettings } from "@/features/presets/workspace-preset-settings";
 import { signOutCurrentBrowser } from "@/lib/auth-session";
 import { readMobileNavAlways, writeMobileNavAlways } from "@/lib/mobile-nav-preference";
@@ -142,7 +143,7 @@ export function PwaSettingsPage() {
   };
 
   const resetPersonalization = async () => {
-    if (!writingProfile || !window.confirm("AI設定・文章の好み・集計された利用傾向をリセットしますか？")) return;
+    if (!writingProfile || !window.confirm("AI設定・文章の好み・自分で入力した追加パーソナライズ・集計された利用傾向をリセットしますか？")) return;
     setWritingBusy(true);
     setWritingMessage("");
     try {
@@ -292,6 +293,8 @@ export function PwaSettingsPage() {
                       </div>
 
                       <label className="personalization-check"><input type="checkbox" checked={writingProfile.avoidHype} onChange={(event) => patchWritingProfile("avoidHype", event.target.checked)} /><span><strong>煽り表現を特に避ける</strong><small>成果保証・過度な期待・強すぎる販売表現を避ける方向へ寄せます。</small></span></label>
+
+                      <PersonalizationHandoffPanel profile={writingProfile} onChange={patchWritingProfile} />
 
                       <div className="personalization-learned">
                         <strong>AASが保持している小さな利用傾向</strong>
