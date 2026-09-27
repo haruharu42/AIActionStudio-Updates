@@ -12,10 +12,10 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/aas-app-icon.svg?v=20260927-rumo-v1",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/aas-axia-icon-512.png?v=20260928-axia-v1",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
