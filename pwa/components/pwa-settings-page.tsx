@@ -21,6 +21,7 @@ import {
   resetWritingProfile,
   saveWritingProfile,
   summarizeWritingProfile,
+  setRuntimeWritingProfile,
   type AiPlan,
   type AiProvider,
   type CtaStyle,
@@ -145,6 +146,7 @@ export function PwaSettingsPage() {
     try {
       const saved = await saveWritingProfile(getSupabaseClient(), writingProfile);
       setWritingProfile(saved);
+      setRuntimeWritingProfile(saved);
       setWritingMessage("あなた向け最適化の設定をクラウドへ保存しました。");
     } catch (error) {
       setWritingMessage(error instanceof Error ? error.message : "あなた向け最適化の設定を保存できませんでした。");
@@ -160,6 +162,7 @@ export function PwaSettingsPage() {
     try {
       const reset = await resetWritingProfile(getSupabaseClient(), writingProfile.userId);
       setWritingProfile(reset);
+      setRuntimeWritingProfile(reset);
       setWritingMessage("あなた向け最適化を初期状態へリセットしました。");
     } catch (error) {
       setWritingMessage(error instanceof Error ? error.message : "あなた向け最適化をリセットできませんでした。");
