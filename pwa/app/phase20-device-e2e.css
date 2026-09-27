@@ -773,6 +773,35 @@
   line-height: 1.65;
 }
 
+.ai-usage-handoff {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #cfe0f4;
+  border-radius: 13px;
+  background: #f4f9ff;
+  padding: 11px 12px;
+}
+
+.ai-usage-handoff strong {
+  color: #31506f;
+  font-size: 11px;
+}
+
+.ai-usage-handoff p {
+  margin: 0;
+  color: #687d99;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.ai-usage-handoff a {
+  width: fit-content;
+  color: #176bd9;
+  font-size: 10px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .ai-usage-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
