@@ -7,6 +7,7 @@ import {
   SelectField,
   SelectWithCustomField,
 } from "@/components/admin-promotion/admin-promotion-fields";
+import { AdminPromotionScreenshotAnalyzer } from "@/components/admin-promotion/admin-promotion-screenshot-analyzer";
 import {
   AUDIENCE_OPTIONS,
   CTA_OPTIONS,
@@ -25,6 +26,7 @@ import {
   buildAdminChannelPromotionPrompt,
   type AdminPromotionChannel,
 } from "@/lib/admin-promotion-channel";
+import type { PromotionScreenshotAnalysis } from "@/lib/promotion-screenshot-analysis";
 
 const CHANNEL_ORDER: AdminPromotionChannel[] = [
   "note",
@@ -54,6 +56,7 @@ export function AdminPromotionChannelBuilder({
   const initialLength = defaultSocialLengthPreset("x");
   const [lengthPresetId, setLengthPresetId] = useState(initialLength.id);
   const [targetChars, setTargetChars] = useState(initialLength.targetChars);
+  const [screenshotAnalysis, setScreenshotAnalysis] = useState<PromotionScreenshotAnalysis | null>(null);
 
   const meta = ADMIN_PROMOTION_CHANNELS[channel];
   const socialPlatform = meta.socialPlatform;
@@ -68,8 +71,9 @@ export function AdminPromotionChannelBuilder({
       cta,
       variants,
       targetChars,
+      screenshotAnalysis,
     }),
-    [facts, channel, phase, purpose, audience, focus, cta, variants, targetChars],
+    [facts, channel, phase, purpose, audience, focus, cta, variants, targetChars, screenshotAnalysis],
   );
 
   const selectChannel = (next: AdminPromotionChannel) => {
@@ -77,6 +81,7 @@ export function AdminPromotionChannelBuilder({
     setChannel(next);
     setPurpose(nextMeta.defaultPurpose);
     setCta(nextMeta.defaultCta);
+    setScreenshotAnalysis(null);
 
     if (nextMeta.socialPlatform) {
       const preset = defaultSocialLengthPreset(nextMeta.socialPlatform);
@@ -218,9 +223,25 @@ export function AdminPromotionChannelBuilder({
         {socialPlatform && renderLengthSetting(socialPlatform)}
       </div>
 
+      {meta.kind === "social" && socialPlatform && (
+        <>
+          <div className="admin-promo-channel-step">
+            <div><span>③</span><strong>紹介したいスクショを追加（任意）</strong></div>
+            <p>アップロードした実画面をAASが読み取り、画像から確認できる事実・訴求ポイント・隠すべき情報をSNS専用プロンプトへ反映します。</p>
+          </div>
+          <AdminPromotionScreenshotAnalyzer
+            key={channel}
+            channel={socialPlatform}
+            onAnalysisChange={setScreenshotAnalysis}
+          />
+        </>
+      )}
+
       <div className="admin-promo-channel-step">
-        <div><span>③</span><strong>プロンプトをコピーしてAIへ渡す</strong></div>
-        <p>スクリーンショットは自分で撮影します。記事系は本文中の最適位置へ挿入マーカーを入れ、SNS系は必要な添付画像・撮影画面・順番まで指示します。</p>
+        <div><span>{meta.kind === "social" ? "④" : "③"}</span><strong>プロンプトをコピーしてAIへ渡す</strong></div>
+        <p>{meta.kind === "social"
+          ? "解析済みスクショがある場合は、その画面内容と添付順まで含めた専用プロンプトになります。スクショなしでも従来どおり作成できます。"
+          : "スクリーンショットは自分で撮影します。記事系は本文中の最適位置へ挿入マーカーを入れ、必要な画面・撮影範囲・挿入位置を指示します。"}</p>
       </div>
 
       <PromptOutput
