@@ -55,5 +55,6 @@ test("AI launch explains provider-specific regular and temporary/private chat be
   assert.match(css, /\.ai-usage-choices/);
   assert.match(css, /\.ai-usage-handoff/);
   assert.match(css, /@media \(max-width: 600px\)[\s\S]*?\.ai-usage-choices/);
+  assert.match(css, /@media \(max-width: 600px\)[\s\S]*?\.ai-usage-choice > p,[\s\S]*?font-size: 12px/);
   assert.doesNotMatch(css, /\.chatgpt-usage-/);
 });
