@@ -428,92 +428,6 @@
 }
 
 
-/* 2026-09-25 dropdown-first refresh for the AAS sales/promotion center. */
-.admin-promo-quick-start {
-  display: grid;
-  gap: 12px;
-  border: 1px solid #bed7f5;
-  border-radius: 18px;
-  background: linear-gradient(145deg, #f8fbff, #eef6ff);
-  padding: 16px;
-  box-shadow: 0 12px 30px rgb(38 104 176 / 8%);
-}
-
-.admin-promo-quick-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.admin-promo-quick-head > div {
-  min-width: 0;
-  flex: 1 1 360px;
-}
-
-.admin-promo-quick-head h2 {
-  margin: 2px 0 0;
-  color: #173f6f;
-  font-size: 19px;
-}
-
-.admin-promo-quick-head p:last-child {
-  margin: 5px 0 0;
-  color: #69819f;
-  font-size: 9px;
-  line-height: 1.65;
-}
-
-.admin-promo-quick-head > a {
-  border: 1px solid #b9d1ee;
-  border-radius: 10px;
-  background: #fff;
-  color: #276bb8;
-  padding: 9px 11px;
-  font-size: 8px;
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.admin-promo-quick-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.admin-promo-quick-grid .admin-promo-field {
-  margin: 0;
-}
-
-.admin-promo-quick-grid select {
-  min-height: 48px;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.admin-promo-quick-note {
-  margin: 0;
-  border-top: 1px solid #d9e7f6;
-  color: #6d8199;
-  padding-top: 10px;
-  font-size: 8px;
-  line-height: 1.65;
-}
-
-@media (max-width: 720px) {
-  .admin-promo-quick-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-promo-quick-head > a {
-    width: 100%;
-    box-sizing: border-box;
-    text-align: center;
-  }
-}
-
-
 /* 2026-09-25 three-step promotion auto setup. */
 .admin-promo-three-step {
   display: grid;
@@ -1045,7 +959,6 @@
   padding: 14px;
 }
 
-.admin-promo-advanced-body .admin-promo-quick-start,
 .admin-promo-advanced-body .admin-promo-panel {
   width: 100%;
   margin-left: 0;
