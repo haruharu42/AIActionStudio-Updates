@@ -76,7 +76,8 @@ test("PWA access-code page uses sales terminology and PWA-only device guidance",
   assert.match(page, /利用コードを登録/);
   assert.match(page, /PC・スマホ・タブレットで共通/);
   assert.match(page, /const inFlight = useRef\(false\)/);
-  assert.match(page, /if \(inFlight\.current \|\| !client\) return/);
+  assert.match(page, /if \(inFlight\.current\) return/);
+  assert.match(page, /if \(!client\)[\s\S]*?アカウント接続を確認できません/);
   assert.match(page, /inFlight\.current = true/);
   assert.match(page, /inFlight\.current = false/);
   assert.match(page, /autoCapitalize="none"/);
