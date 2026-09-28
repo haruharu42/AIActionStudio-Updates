@@ -348,7 +348,7 @@ begin
          public_sales_approved_at = null,
          public_sales_approved_by = null,
          updated_at = now(),
-         updated_by = v_user_id
+         updated_by = (select auth.uid())
    where id = 1;
 end;
 $function$;
