@@ -228,5 +228,7 @@ export function applyAasAdminNoteProfilePreset(profile: NoteOperationProfile): N
     monetizationStyle: "other",
     customMonetizationStyle: AAS_ADMIN_NOTE_PROFILE_PRESET.monetization,
     operationGoal: "growth",
+    articleGenre: "AI副業",
+    articleSubgenre: "AIツール活用",
   };
 }
