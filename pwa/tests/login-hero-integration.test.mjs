@@ -20,6 +20,7 @@ test("login hero renders as one masked composition on desktop and mobile", async
   assert.match(css, /ellipse 68% 73% at 52% 51%/);
   assert.doesNotMatch(css, /url\("\/aas-login-tile-1\.svg\?v=/);
   assert.doesNotMatch(css, /background-position: left top, right top, left bottom, right bottom/);
+  assert.doesNotMatch(css, /51\.5% 51\.4%/);
 
   assert.match(hero, /viewBox="0 0 690 750"/);
   for (const tile of [1, 2, 3, 4]) {
