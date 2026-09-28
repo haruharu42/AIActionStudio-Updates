@@ -79,6 +79,7 @@ test("notification center can list and mark notifications read", async () => {
     readPwa("lib/notifications.ts"),
   ]);
 
+  assert.match(route, /Phase15MemberGate/);
   assert.match(route, /NotificationsPage/);
   assert.match(page, /アップデート、メンテナンス、Knowledge更新/);
   assert.match(page, /すべて既読/);
