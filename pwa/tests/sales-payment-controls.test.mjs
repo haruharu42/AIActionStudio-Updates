@@ -214,51 +214,61 @@ test("external-sales readiness is isolated and does not treat it as full product
 });
 
 
-test("sales center groups legal support and access-code review without auto-approving launch", async () => {
-  const [page, preflight, css] = await Promise.all([
+test("sales center groups legal support, DB readiness, and explicit public approval", async () => {
+  const [page, preflight, readinessClient, approvalMigration, css] = await Promise.all([
     readPwa("components/sales-settings-admin-page.tsx"),
     readPwa("components/admin-sales/sales-release-preflight-panel.tsx"),
+    readPwa("lib/sales-launch-readiness.ts"),
+    readRepo("supabase/migrations/20260928035030_commerce_public_sales_approval_v1.sql"),
     readPwa("app/phase32-sales-settings.css"),
   ]);
 
   assert.match(page, /SalesReleasePreflightPanel/);
   assert.match(preflight, /販売前チェック/);
-  assert.match(preflight, /利用コードの発行・使用履歴を確認/);
-  assert.match(preflight, /href="\/admin\/users"/);
-  assert.match(preflight, /auth\.mfa\.listFactors\(\)/);
+  assert.match(preflight, /loadSalesLaunchReadiness/);
+  assert.match(preflight, /loadPublicSalesApproval/);
+  assert.match(preflight, /setPublicSalesApproval/);
+  assert.match(preflight, /販売開始保留/);
+  assert.match(preflight, /自動確認は通過/);
+  assert.match(preflight, /販売用の利用コード/);
+  assert.match(preflight, /販売者情報/);
   assert.match(preflight, /管理者MFA/);
-  assert.match(preflight, /verifiedMfaCount/);
-  assert.match(preflight, /href="\/admin\/security"/);
   assert.match(preflight, /漏洩パスワード保護/);
-  assert.match(preflight, /要Dashboard確認/);
+  assert.match(preflight, /href="\/admin\/security"/);
+  assert.match(preflight, /href="\/admin\/users"/);
+  assert.match(preflight, /公開販売の最終承認/);
+  assert.match(preflight, /公開販売：ロック中/);
+  assert.match(preflight, /公開販売を承認する/);
+  assert.match(preflight, /公開販売を停止する/);
+  assert.match(preflight, /手動確認項目を確認済み/);
+  assert.match(preflight, /persistedAutomatedReady/);
+  assert.match(preflight, /hasUnsavedChanges/);
+  assert.match(preflight, /販売設定または販売者情報を変更すると承認は自動解除/);
   for (const route of ["/commercial-transactions", "/terms", "/privacy", "/ai-terms", "/support"]) {
     assert.ok(preflight.includes(route), `missing pre-sale review route: ${route}`);
   }
-  assert.match(preflight, /要人確認/);
-  assert.match(preflight, /「販売可能」の自動判定にはしません/);
-  assert.match(preflight, /価格・返金条件・販売者情報・サポート方針・公開段階は自動確定しません/);
-  assert.match(preflight, /未保存の販売設定/);
-  assert.match(preflight, /販売開始保留/);
-  assert.match(preflight, /自動確認は通過/);
-  assert.match(preflight, /fetchCommerceConfig/);
-  assert.match(preflight, /legalReady/);
-  assert.match(preflight, /販売者情報/);
-  assert.match(preflight, /admin_list_pwa_invites/);
-  assert.match(preflight, /usableInviteCount/);
-  assert.match(preflight, /entitlement_expires_at/);
-  assert.match(preflight, /entitlementExpiresAt > now/);
-  assert.match(preflight, /購入者へ渡せる有効な利用コードがありません/);
-  assert.match(preflight, /販売用の利用コード/);
-  assert.match(preflight, /automatedBlockers/);
-  assert.match(preflight, /active管理者に確認済みMFAがありません/);
-  assert.match(preflight, /解消するまで販売開始扱いにしないでください/);
+
+  assert.match(readinessClient, /admin_get_sales_launch_readiness/);
+  assert.match(readinessClient, /admin_get_public_sales_approval/);
+  assert.match(readinessClient, /admin_set_public_sales_approval/);
+  assert.match(readinessClient, /sales launch readiness requirements not met/);
+
+  assert.match(approvalMigration, /public_sales_approved boolean not null default false/);
+  assert.match(approvalMigration, /admin_set_public_sales_approval/);
+  assert.match(approvalMigration, /admin_get_sales_launch_readiness/);
+  assert.match(approvalMigration, /service_get_sales_launch_runtime/);
+  assert.match(approvalMigration, /grant execute on function public\.service_get_sales_launch_runtime\(\) to service_role/);
+  assert.match(approvalMigration, /public_sales_approved = false/);
+  assert.match(approvalMigration, /public_sales_approved_at = null/);
+  assert.match(approvalMigration, /public_sales_approved_by = null/);
+
   assert.match(css, /\.sales-release-gate/);
-  assert.match(css, /\.sales-release-gate\.blocked/);
-  assert.match(css, /\.sales-release-gate\.review/);
-  assert.match(css, /\.sales-release-preflight-grid/);
+  assert.match(css, /\.sales-public-approval/);
+  assert.match(css, /\.sales-public-approval\.locked/);
+  assert.match(css, /\.sales-public-approval\.approved/);
+  assert.match(css, /\.sales-manual-approval-check/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.sales-release-preflight-grid/);
 });
-
 
 test("access-code purchase flow owns its own request state", async () => {
   const [plans, accessCode, commerceCss] = await Promise.all([
@@ -326,5 +336,9 @@ test("external purchase URL is HTTPS-only and credential-free before rendering a
   assert.match(plans, /externalPurchaseUrl && \(/);
   assert.match(workerSales, /function safeExternalSalesUrl/);
   assert.match(workerSales, /parsed\.protocol !== "https:" \|\| parsed\.username \|\| parsed\.password/);
-  assert.match(workerSales, /externalSalesUrl: safeExternalSalesUrl\(row\.external_sales_url\)/);
+  assert.match(workerSales, /service_get_sales_launch_runtime/);
+  assert.match(workerSales, /runtime\.approved/);
+  assert.match(workerSales, /runtime\.externalRouteReady/);
+  assert.match(workerSales, /runtime\.stripeRouteReady/);
+  assert.match(workerSales, /externalSalesUrl: externalSalesEnabled \? externalSalesUrl : ""/);
 });
