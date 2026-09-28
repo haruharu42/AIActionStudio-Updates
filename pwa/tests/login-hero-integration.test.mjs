@@ -24,7 +24,7 @@ test("login hero renders as one masked composition on desktop and mobile", async
 
   assert.match(hero, /viewBox="0 0 690 750"/);
   assert.doesNotMatch(hero, /aas-login-tile-/);
-  assert.equal((hero.match(/data:image\\/webp;base64,/g) ?? []).length, 4);
+  assert.equal((hero.match(new RegExp("data:image/webp;base64,", "g")) ?? []).length, 4);
   assert.match(hero, /id="aas-right-seam-mask"/);
   assert.match(hero, /id="aas-bottom-seam-mask"/);
   assert.match(hero, /x="335" y="0" width="355" height="385"/);
