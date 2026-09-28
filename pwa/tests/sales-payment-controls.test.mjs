@@ -112,6 +112,8 @@ test("plans and access-code UI obey PWA-only public sales settings", async () =>
 
   assert.match(plans, /fetchPublicSalesSettings/);
   assert.match(plans, /safeExternalSalesUrl/);
+  assert.match(plans, /config\?\.legalReady === true/);
+  assert.match(plans, /販売者情報・公開サポート等の販売前情報が未完了/);
   assert.match(plans, /externalPurchaseUrl/);
   assert.match(plans, /外部販売ページで購入する/);
   assert.match(plans, /購入ページURLが未設定/);
@@ -144,7 +146,9 @@ test("commercial transaction copy follows the active sales mode and exposes a su
   assert.match(page, /stripeSalesEnabled/);
   assert.match(page, /externalSalesEnabled/);
   assert.match(page, /safeExternalSalesUrl/);
-  assert.match(page, /externalSalesReady/);
+  assert.match(page, /externalSalesBlockedByLegal/);
+  assert.match(page, /externalSalesReady = externalSalesEnabled && config\?\.legalReady === true/);
+  assert.match(page, /販売者情報・公開サポート等の販売前情報が未完了/);
   assert.match(page, /購入ページURLが未設定/);
   assert.match(page, /AAS内のStripe新規購入は停止しています/);
   assert.match(page, /外部販売ページで案内する支払方法/);
@@ -316,6 +320,7 @@ test("external purchase URL is HTTPS-only and credential-free before rendering a
   assert.match(settings, /export function safeExternalSalesUrl/);
   assert.match(settings, /parsed\.protocol !== "https:" \|\| parsed\.username \|\| parsed\.password/);
   assert.match(settings, /認証情報を含まない https:\/\//);
+  assert.match(plans, /salesSettings\?\.externalSalesEnabled && config\?\.legalReady === true/);
   assert.match(plans, /safeExternalSalesUrl\(salesSettings\.externalSalesUrl\)/);
   assert.match(plans, /externalPurchaseUrl && \(/);
   assert.match(workerSales, /function safeExternalSalesUrl/);
