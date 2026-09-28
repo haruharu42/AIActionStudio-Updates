@@ -240,7 +240,7 @@ export function Phase11CreatePage() {
     articleDraft,
     draft.magazineEnabled ? magazinePlan : undefined,
   );
-  const imagePrompts = buildImagePromptPlan({
+  const imagePromptInput = {
     title: draft.title,
     theme: draft.theme || draft.title,
     publicationTarget: draft.publicationTarget,
@@ -253,8 +253,9 @@ export function Phase11CreatePage() {
     inlineEnabled: draft.inlineEnabled,
     inlineCount: draft.inlineCount,
     imageStyle: draft.imageStyle,
-  });
-  const combinedImagePrompt = useMemo(() => buildCombinedImagePrompt(imagePrompts), [imagePrompts]);
+  };
+  const imagePrompts = buildImagePromptPlan(imagePromptInput);
+  const combinedImagePrompt = buildCombinedImagePrompt(imagePrompts, imagePromptInput);
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
