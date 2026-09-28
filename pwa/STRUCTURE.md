@@ -34,6 +34,10 @@ AI Action Studio PWA keeps responsibilities separated so UI changes, business lo
 - `lib/phase11-create.ts`: article creation business/persistence contract.
 - `lib/phase11-wizard-progress.ts`: browser progress persistence; restored data must pass `parseStoredArticleDraft` before use.
 - `lib/phase6-access.ts`: product access orchestration, including optional free-trial bootstrap, built on the shared access-control boundary.
+- `lib/session-request-loader.ts`: deduplicates access checks within one auth session and discards responses/errors invalidated by sign-out or account changes.
+- `lib/note-schedule-persistence.ts`: validates replacement inputs and calls the owner-checked atomic schedule RPC. Never restore the old browser-side delete/insert fallback.
+- `lib/csv-records.ts`: parses CSV records including quoted newlines; no UI or database dependency.
+- `lib/notification-path.ts`: validates root-relative notification destinations. The standalone service worker applies the same boundary again on click, including notifications created by older versions.
 
 ## Rules for new work
 

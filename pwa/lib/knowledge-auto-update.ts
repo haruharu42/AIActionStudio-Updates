@@ -57,6 +57,47 @@ export type KnowledgeRefreshPublishResult = {
   changeDetails: KnowledgeRefreshDiff;
 };
 
+export type KnowledgeRefreshBundle = {
+  summary: string;
+  knowledge_rules: unknown[];
+  prompt_optimizations: unknown[];
+};
+
+export type KnowledgeAutomationCandidateAction = "new" | "update" | "recheck" | "retire";
+export type KnowledgeAutomationCandidateStatus = "pending" | "approved" | "rejected" | "converted";
+
+export type KnowledgeAutomationStatus = {
+  enabled: boolean;
+  checkIntervalHours: number;
+  maxSourcesPerRun: number;
+  trackedSources: number;
+  dueSources: number;
+  pendingCandidates: number;
+  approvedCandidates: number;
+  lastWorkerInvokedAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string;
+  latestRunId: number | null;
+  latestRunStatus: string;
+  latestRunStartedAt: string | null;
+  latestRunCompletedAt: string | null;
+  latestRunSourcesChecked: number;
+  latestRunCandidatesCreated: number;
+};
+
+export type KnowledgeAutomationSource = {
+  id: number;
+  sourceUrl: string;
+  tasks: string[];
+  sourceKind: string;
+  enabled: boolean;
+  lastCheckedAt: string | null;
+  nextCheckAt: string | null;
+  lastHttpStatus: number | null;
+  consecutiveFailures: number;
+  lastError: string;
+};
+
 export type KnowledgeProductionHealth = {
   activeKnowledge: number;
   activePromptOptimizations: number;
@@ -70,162 +111,25 @@ export type KnowledgeProductionHealth = {
   lastPromptCheckedAt: string | null;
 };
 
-export type KnowledgeRefreshBundle = {
-  summary: string;
-  knowledge_rules: unknown[];
-  prompt_optimizations: unknown[];
-};
-
-export type KnowledgeQualityIssue = {
-  code: string;
-  itemType: "bundle" | "knowledge" | "prompt";
-  key: string;
-  message: string;
-};
-
-export type KnowledgeQualityStats = {
-  knowledgeCount: number;
-  promptCount: number;
-  sourceUrlCount: number;
-  taskReferenceCount: number;
-};
-
-export type KnowledgeQualityReport = {
-  valid: boolean;
-  blocking: KnowledgeQualityIssue[];
-  warnings: KnowledgeQualityIssue[];
-  stats: KnowledgeQualityStats;
-};
-
-export type StablePromotionTaskReport = {
-  task: string;
-  selectedCount: number;
-  corePass: boolean;
-  supportPass: boolean;
-  topTaskSpecific: boolean;
-  missingSourceCount: number;
-  staleSourceCount: number;
-};
-
-export type StablePromotionReport = {
-  valid: boolean;
-  blocking: KnowledgeQualityIssue[];
-  tasks: StablePromotionTaskReport[];
-  staleDays: number;
-};
-
-export type StableReleaseQueueItem = {
-  itemType: "knowledge" | "prompt";
-  key: string;
-  label: string;
-  changeType: "new" | "updated";
-  state: "ready" | "waiting" | "blocked";
-  stateReason: string;
-  stableAvailableAt: string | null;
-  sourceCheckedAt: string | null;
-};
-
-export type StableReleaseQueue = {
-  readyCount: number;
-  waitingCount: number;
-  blockedCount: number;
-  knowledgeReadyCount: number;
-  promptReadyCount: number;
-  nextReadyAt: string | null;
-  items: StableReleaseQueueItem[];
-};
-
-export type StableReleasePreparation = {
-  requestId: number;
-  knowledgeCount: number;
-  promptCount: number;
-  bundle: KnowledgeRefreshBundle;
-};
-
-export type SourceFreshnessState = "fresh" | "due" | "stale" | "missing";
-
-export type SourceFreshnessQueueItem = {
-  itemType: "knowledge" | "prompt";
-  key: string;
-  label: string;
-  state: SourceFreshnessState;
-  releaseChannel: "both" | "fresh_first";
-  catalogVersion: number;
-  sourceCheckedAt: string | null;
-  sourceUrls: string[];
-  ageDays: number | null;
-  staleAt: string | null;
-  payload: Record<string, unknown>;
-};
-
-export type SourceFreshnessQueue = {
-  warningDays: number;
-  staleDays: number;
-  missingCount: number;
-  staleCount: number;
-  dueCount: number;
-  freshCount: number;
-  nextDueAt: string | null;
-  items: SourceFreshnessQueueItem[];
-};
-
-export type SourceFreshnessPreparation = {
-  requestId: number;
-  itemCount: number;
-  missingCount: number;
-  staleCount: number;
-  dueCount: number;
-  staleDays: number;
-  warningDays: number;
-  items: SourceFreshnessQueueItem[];
-};
-
-export type SourceRecheckOutcome = "unchanged" | "changed" | "unreachable" | "removed";
-
-export type SourceRecheckReceipt = {
-  id: number;
-  itemType: "knowledge" | "prompt";
-  itemKey: string;
-  catalogVersion: number;
-  sourceUrl: string;
-  outcome: SourceRecheckOutcome;
-  notes: string;
-  requestId: number | null;
-  checkedAt: string;
-  completedCycle: boolean;
-};
-
-export type SourceRecheckReceiptResult = {
-  receiptId: number;
-  itemType: "knowledge" | "prompt";
-  itemKey: string;
-  outcome: SourceRecheckOutcome;
-  checkedSourceCount: number;
-  totalSourceCount: number;
-  remainingSourceCount: number;
-  completedCycle: boolean;
-  followupRequestId: number | null;
-};
-
-export type SourceRiskDomain = {
-  domain: string;
-  itemCount: number;
-  urlCount: number;
-};
-
-export type SourceRiskItem = {
+export type KnowledgeSourceRiskItem = {
   itemType: "knowledge" | "prompt";
   key: string;
   label: string;
   catalogVersion: number;
-  releaseChannel: "both" | "fresh_first";
+  releaseChannel: string;
   sourceCheckedAt: string | null;
   sourceCount: number;
   domainCount: number;
   sourceUrls: string[];
 };
 
-export type SourceRiskReport = {
+export type KnowledgeSourceRiskDomain = {
+  domain: string;
+  itemCount: number;
+  urlCount: number;
+};
+
+export type KnowledgeSourceRiskReport = {
   itemCount: number;
   knowledgeCount: number;
   promptCount: number;
@@ -236,29 +140,61 @@ export type SourceRiskReport = {
   uniqueDomainCount: number;
   topDomainItemCount: number;
   topDomainSharePercent: number;
-  domains: SourceRiskDomain[];
-  reviewItems: SourceRiskItem[];
+  domains: KnowledgeSourceRiskDomain[];
+  reviewItems: KnowledgeSourceRiskItem[];
 };
 
-export type SourceDiversityResearchItem = {
-  itemType: "knowledge" | "prompt";
-  key: string;
-  label: string;
-  catalogVersion: number;
-  sourceCheckedAt: string | null;
-  sourceUrls: string[];
-  sourceCount: number;
-  domainCount: number;
-  domains: string[];
-  payload: Record<string, unknown>;
-};
-
-export type SourceDiversityResearchPreparation = {
+export type SourceDiversityResearchResult = {
   requestId: number;
   itemCount: number;
   singleSourceCount: number;
   singleDomainCount: number;
-  items: SourceDiversityResearchItem[];
+};
+
+export type KnowledgeAutomationAiConfig = {
+  enabled: boolean;
+  provider: "openai";
+  model: string;
+  maxCandidatesPerRun: number;
+  apiKeyConfigured: boolean;
+};
+
+export type KnowledgeAutomationAiConfigUpdate = {
+  enabled: boolean;
+  provider: "openai";
+  model: string;
+  maxCandidatesPerRun: number;
+  apiKey?: string;
+};
+
+export type KnowledgeAutomationCandidate = {
+  id: number;
+  candidateAction: KnowledgeAutomationCandidateAction;
+  existingItemType: "knowledge" | "prompt" | null;
+  existingItemKey: string;
+  matchedTasks: string[];
+  sourceUrl: string;
+  sourceTitle: string;
+  sourceExcerpt: string;
+  sourceHttpStatus: number | null;
+  currentPayload: Record<string, unknown> | null;
+  proposedPayload: Record<string, unknown> | null;
+  researchPrompt: string;
+  confidence: number;
+  reason: string;
+  status: KnowledgeAutomationCandidateStatus;
+  reviewNotes: string;
+  detectedAt: string;
+  reviewedAt: string | null;
+  analysisStatus: "pending" | "completed" | "failed";
+  analysisDecision: "" | "no_change" | "new" | "update" | "recheck" | "retire";
+  proposalItemType: "knowledge" | "prompt" | null;
+  analysisProvider: string;
+  analysisModel: string;
+  analysisReason: string;
+  analysisError: string;
+  verifiedSourceUrls: string[];
+  analyzedAt: string | null;
 };
 
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
@@ -272,283 +208,6 @@ export function emptyKnowledgeRefreshDiff(): KnowledgeRefreshDiff {
 function asNumber(value: unknown, fallback = 0): number {
   const number = typeof value === "number" ? value : Number(value);
   return Number.isFinite(number) ? number : fallback;
-}
-
-function parseQualityIssue(raw: unknown): KnowledgeQualityIssue | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const value = raw as Record<string, unknown>;
-  const itemType = value.item_type === "knowledge" || value.item_type === "prompt" ? value.item_type : "bundle";
-  const message = typeof value.message === "string" ? value.message : "";
-  if (!message) return null;
-  return {
-    code: typeof value.code === "string" ? value.code : "",
-    itemType,
-    key: typeof value.key === "string" ? value.key : "",
-    message,
-  };
-}
-
-export function parseKnowledgeQualityReport(raw: unknown): KnowledgeQualityReport {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("品質ゲートの応答形式が不正です。");
-  }
-  const value = raw as Record<string, unknown>;
-  const stats = value.stats && typeof value.stats === "object" && !Array.isArray(value.stats)
-    ? value.stats as Record<string, unknown>
-    : {};
-  const blocking = Array.isArray(value.blocking)
-    ? value.blocking.map(parseQualityIssue).filter((item): item is KnowledgeQualityIssue => Boolean(item))
-    : [];
-  const warnings = Array.isArray(value.warnings)
-    ? value.warnings.map(parseQualityIssue).filter((item): item is KnowledgeQualityIssue => Boolean(item))
-    : [];
-  return {
-    valid: value.valid === true && blocking.length === 0,
-    blocking,
-    warnings,
-    stats: {
-      knowledgeCount: Math.max(0, asNumber(stats.knowledge_count)),
-      promptCount: Math.max(0, asNumber(stats.prompt_count)),
-      sourceUrlCount: Math.max(0, asNumber(stats.source_url_count)),
-      taskReferenceCount: Math.max(0, asNumber(stats.task_reference_count)),
-    },
-  };
-}
-
-export function parseStablePromotionReport(raw: unknown): StablePromotionReport {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("Stable昇格ゲートの応答形式が不正です。");
-  }
-  const value = raw as Record<string, unknown>;
-  const blocking = Array.isArray(value.blocking)
-    ? value.blocking.map(parseQualityIssue).filter((item): item is KnowledgeQualityIssue => Boolean(item))
-    : [];
-  const tasks = Array.isArray(value.tasks)
-    ? value.tasks.flatMap((rawTask): StablePromotionTaskReport[] => {
-      if (!rawTask || typeof rawTask !== "object" || Array.isArray(rawTask)) return [];
-      const task = rawTask as Record<string, unknown>;
-      if (typeof task.task !== "string" || !task.task) return [];
-      return [{
-        task: task.task,
-        selectedCount: Math.max(0, asNumber(task.selected_count)),
-        corePass: task.core_pass === true,
-        supportPass: task.support_pass === true,
-        topTaskSpecific: task.top_task_specific === true,
-        missingSourceCount: Math.max(0, asNumber(task.missing_source_count)),
-        staleSourceCount: Math.max(0, asNumber(task.stale_source_count)),
-      }];
-    })
-    : [];
-  return {
-    valid: value.valid === true && blocking.length === 0,
-    blocking,
-    tasks,
-    staleDays: Math.max(1, asNumber(value.stale_days, 90)),
-  };
-}
-
-function parseStableReleaseQueueItem(raw: unknown): StableReleaseQueueItem | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const value = raw as Record<string, unknown>;
-  if (typeof value.key !== "string" || !value.key) return null;
-  const state = value.state === "waiting" || value.state === "blocked" ? value.state : "ready";
-  return {
-    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
-    key: value.key,
-    label: typeof value.label === "string" ? value.label : value.key,
-    changeType: value.change_type === "new" ? "new" : "updated",
-    state,
-    stateReason: typeof value.state_reason === "string" ? value.state_reason : "",
-    stableAvailableAt: typeof value.stable_available_at === "string" ? value.stable_available_at : null,
-    sourceCheckedAt: typeof value.source_checked_at === "string" ? value.source_checked_at : null,
-  };
-}
-
-export function parseStableReleaseQueue(raw: unknown): StableReleaseQueue {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("Stable昇格候補の応答形式が不正です。");
-  }
-  const value = raw as Record<string, unknown>;
-  return {
-    readyCount: Math.max(0, asNumber(value.ready_count)),
-    waitingCount: Math.max(0, asNumber(value.waiting_count)),
-    blockedCount: Math.max(0, asNumber(value.blocked_count)),
-    knowledgeReadyCount: Math.max(0, asNumber(value.knowledge_ready_count)),
-    promptReadyCount: Math.max(0, asNumber(value.prompt_ready_count)),
-    nextReadyAt: typeof value.next_ready_at === "string" ? value.next_ready_at : null,
-    items: Array.isArray(value.items)
-      ? value.items.map(parseStableReleaseQueueItem).filter((item): item is StableReleaseQueueItem => Boolean(item))
-      : [],
-  };
-}
-
-function parseSourceFreshnessItem(raw: unknown): SourceFreshnessQueueItem | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const value = raw as Record<string, unknown>;
-  if (typeof value.key !== "string" || !value.key) return null;
-  const state: SourceFreshnessState =
-    value.state === "missing" || value.state === "stale" || value.state === "due"
-      ? value.state
-      : "fresh";
-  const payload = value.payload && typeof value.payload === "object" && !Array.isArray(value.payload)
-    ? value.payload as Record<string, unknown>
-    : {};
-  return {
-    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
-    key: value.key,
-    label: typeof value.label === "string" ? value.label : value.key,
-    state,
-    releaseChannel: value.release_channel === "both" ? "both" : "fresh_first",
-    catalogVersion: Math.max(1, asNumber(value.catalog_version, 1)),
-    sourceCheckedAt: typeof value.source_checked_at === "string" ? value.source_checked_at : null,
-    sourceUrls: Array.isArray(value.source_urls)
-      ? value.source_urls.filter((url): url is string => typeof url === "string" && /^https:\/\//i.test(url))
-      : [],
-    ageDays: value.age_days === null || value.age_days === undefined ? null : Math.max(0, asNumber(value.age_days)),
-    staleAt: typeof value.stale_at === "string" ? value.stale_at : null,
-    payload,
-  };
-}
-
-export function parseSourceFreshnessQueue(raw: unknown): SourceFreshnessQueue {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("根拠鮮度キューの応答形式が不正です。");
-  }
-  const value = raw as Record<string, unknown>;
-  return {
-    warningDays: Math.max(1, asNumber(value.warning_days, 30)),
-    staleDays: Math.max(2, asNumber(value.stale_days, 90)),
-    missingCount: Math.max(0, asNumber(value.missing_count)),
-    staleCount: Math.max(0, asNumber(value.stale_count)),
-    dueCount: Math.max(0, asNumber(value.due_count)),
-    freshCount: Math.max(0, asNumber(value.fresh_count)),
-    nextDueAt: typeof value.next_due_at === "string" ? value.next_due_at : null,
-    items: Array.isArray(value.items)
-      ? value.items.map(parseSourceFreshnessItem).filter((item): item is SourceFreshnessQueueItem => Boolean(item))
-      : [],
-  };
-}
-
-function parseSourceFreshnessPreparation(raw: unknown): SourceFreshnessPreparation {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("根拠再確認の準備結果が不正です。");
-  }
-  const value = raw as Record<string, unknown>;
-  return {
-    requestId: Math.max(1, asNumber(value.request_id, 1)),
-    itemCount: Math.max(0, asNumber(value.item_count)),
-    missingCount: Math.max(0, asNumber(value.missing_count)),
-    staleCount: Math.max(0, asNumber(value.stale_count)),
-    dueCount: Math.max(0, asNumber(value.due_count)),
-    staleDays: Math.max(2, asNumber(value.stale_days, 90)),
-    warningDays: Math.max(1, asNumber(value.warning_days, 30)),
-    items: Array.isArray(value.items)
-      ? value.items.map(parseSourceFreshnessItem).filter((item): item is SourceFreshnessQueueItem => Boolean(item))
-      : [],
-  };
-}
-
-function parseSourceRiskDomain(raw: unknown): SourceRiskDomain | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const value = raw as Record<string, unknown>;
-  if (typeof value.domain !== "string" || !value.domain) return null;
-  return {
-    domain: value.domain,
-    itemCount: Math.max(0, asNumber(value.item_count)),
-    urlCount: Math.max(0, asNumber(value.url_count)),
-  };
-}
-
-function parseSourceRiskItem(raw: unknown): SourceRiskItem | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const value = raw as Record<string, unknown>;
-  if (typeof value.key !== "string" || !value.key) return null;
-  return {
-    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
-    key: value.key,
-    label: typeof value.label === "string" ? value.label : value.key,
-    catalogVersion: Math.max(1, asNumber(value.catalog_version, 1)),
-    releaseChannel: value.release_channel === "both" ? "both" : "fresh_first",
-    sourceCheckedAt: typeof value.source_checked_at === "string" ? value.source_checked_at : null,
-    sourceCount: Math.max(0, asNumber(value.source_count)),
-    domainCount: Math.max(0, asNumber(value.domain_count)),
-    sourceUrls: Array.isArray(value.source_urls)
-      ? value.source_urls.filter((url): url is string => typeof url === "string" && /^https:\/\//i.test(url))
-      : [],
-  };
-}
-
-export function parseSourceRiskReport(raw: unknown): SourceRiskReport {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("根拠分散レポートの応答形式が不正です。");
-  }
-  const value = raw as Record<string, unknown>;
-  return {
-    itemCount: Math.max(0, asNumber(value.item_count)),
-    knowledgeCount: Math.max(0, asNumber(value.knowledge_count)),
-    promptCount: Math.max(0, asNumber(value.prompt_count)),
-    zeroSourceCount: Math.max(0, asNumber(value.zero_source_count)),
-    singleSourceCount: Math.max(0, asNumber(value.single_source_count)),
-    singleDomainCount: Math.max(0, asNumber(value.single_domain_count)),
-    multiDomainCount: Math.max(0, asNumber(value.multi_domain_count)),
-    uniqueDomainCount: Math.max(0, asNumber(value.unique_domain_count)),
-    topDomainItemCount: Math.max(0, asNumber(value.top_domain_item_count)),
-    topDomainSharePercent: Math.max(0, asNumber(value.top_domain_share_percent)),
-    domains: Array.isArray(value.domains)
-      ? value.domains.map(parseSourceRiskDomain).filter((item): item is SourceRiskDomain => Boolean(item))
-      : [],
-    reviewItems: Array.isArray(value.review_items)
-      ? value.review_items.map(parseSourceRiskItem).filter((item): item is SourceRiskItem => Boolean(item))
-      : [],
-  };
-}
-
-
-function parseSourceDiversityResearchItem(raw: unknown): SourceDiversityResearchItem | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const value = raw as Record<string, unknown>;
-  if (typeof value.key !== "string" || !value.key) return null;
-  const payload = value.payload && typeof value.payload === "object" && !Array.isArray(value.payload)
-    ? value.payload as Record<string, unknown>
-    : {};
-  return {
-    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
-    key: value.key,
-    label: typeof value.label === "string" ? value.label : value.key,
-    catalogVersion: Math.max(1, asNumber(value.catalog_version, 1)),
-    sourceCheckedAt: typeof value.source_checked_at === "string" ? value.source_checked_at : null,
-    sourceUrls: Array.isArray(value.source_urls)
-      ? value.source_urls.filter((url): url is string => typeof url === "string" && /^https:\/\//i.test(url))
-      : [],
-    sourceCount: Math.max(0, asNumber(value.source_count)),
-    domainCount: Math.max(0, asNumber(value.domain_count)),
-    domains: Array.isArray(value.domains)
-      ? value.domains.filter((domain): domain is string => typeof domain === "string" && Boolean(domain))
-      : [],
-    payload,
-  };
-}
-
-export function parseSourceDiversityResearchPreparation(raw: unknown): SourceDiversityResearchPreparation {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("追加根拠リサーチ準備の応答形式が不正です。");
-  }
-  const value = raw as Record<string, unknown>;
-  return {
-    requestId: Math.max(1, asNumber(value.request_id, 1)),
-    itemCount: Math.max(0, asNumber(value.item_count)),
-    singleSourceCount: Math.max(0, asNumber(value.single_source_count)),
-    singleDomainCount: Math.max(0, asNumber(value.single_domain_count)),
-    items: Array.isArray(value.items)
-      ? value.items.map(parseSourceDiversityResearchItem).filter((item): item is SourceDiversityResearchItem => Boolean(item))
-      : [],
-  };
-}
-
-function isMissingRpcError(error: { code?: string; message?: string } | null | undefined): boolean {
-  if (!error) return false;
-  return error.code === "PGRST202"
-    || /could not find the function|function .* does not exist/i.test(error.message ?? "");
 }
 
 function parseChangeItem(raw: unknown, fallbackType: "knowledge" | "prompt"): KnowledgeRefreshChangeItem | null {
@@ -671,60 +330,6 @@ export async function adminFailKnowledgeRefresh(
   if (error) throw new Error("ナレッジ更新の失敗状態を保存できませんでした。");
 }
 
-export async function adminCancelKnowledgeRefresh(
-  client: SupabaseClient,
-  requestId: number,
-  reason = "管理者が更新を中止しました。",
-): Promise<void> {
-  const { error } = await client.rpc("admin_cancel_knowledge_refresh", {
-    p_request_id: requestId,
-    p_reason: reason.slice(0, 1000),
-  });
-  if (error) throw new Error(error.message || "ナレッジ更新を中止できませんでした。");
-}
-
-export async function adminRetryKnowledgeRefresh(
-  client: SupabaseClient,
-  requestId: number,
-): Promise<number> {
-  const { data, error } = await client.rpc("admin_retry_knowledge_refresh", {
-    p_request_id: requestId,
-  });
-  if (error) throw new Error(error.message || "ナレッジ更新を再試行できませんでした。");
-  const value = typeof data === "number" ? data : Number(data);
-  if (!Number.isFinite(value) || value < 1) throw new Error("再試行した更新IDを確認できませんでした。");
-  return value;
-}
-
-export async function adminRunKnowledgeScheduler(client: SupabaseClient): Promise<void> {
-  const { error } = await client.rpc("admin_run_knowledge_scheduler");
-  if (error) throw new Error(error.message || "Knowledge更新スケジューラを実行できませんでした。");
-}
-
-export async function adminGetKnowledgeProductionHealth(
-  client: SupabaseClient,
-): Promise<KnowledgeProductionHealth> {
-  const { data, error } = await client.rpc("admin_get_knowledge_production_health");
-  if (error) throw new Error("Knowledge / Prompt運用状態を取得できませんでした。");
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row || typeof row !== "object" || Array.isArray(row)) {
-    throw new Error("Knowledge / Prompt運用状態の応答形式が不正です。");
-  }
-  const value = row as Record<string, unknown>;
-  return {
-    activeKnowledge: Math.max(0, asNumber(value.active_knowledge)),
-    activePromptOptimizations: Math.max(0, asNumber(value.active_prompt_optimizations)),
-    pendingRequests: Math.max(0, asNumber(value.pending_requests)),
-    processingRequests: Math.max(0, asNumber(value.processing_requests)),
-    failedRequests: Math.max(0, asNumber(value.failed_requests)),
-    cancelledRequests: Math.max(0, asNumber(value.cancelled_requests)),
-    freshVersion: Math.max(1, asNumber(value.fresh_version, 1)),
-    stableVersion: Math.max(1, asNumber(value.stable_version, 1)),
-    lastKnowledgeCheckedAt: typeof value.last_knowledge_checked_at === "string" ? value.last_knowledge_checked_at : null,
-    lastPromptCheckedAt: typeof value.last_prompt_checked_at === "string" ? value.last_prompt_checked_at : null,
-  };
-}
-
 export async function adminPreviewKnowledgeRefreshBundleDiff(
   client: SupabaseClient,
   bundle: KnowledgeRefreshBundle,
@@ -734,160 +339,9 @@ export async function adminPreviewKnowledgeRefreshBundleDiff(
   return parseKnowledgeRefreshDiff(data);
 }
 
-export async function adminValidateKnowledgeRefreshBundle(
-  client: SupabaseClient,
-  bundle: KnowledgeRefreshBundle,
-): Promise<KnowledgeQualityReport> {
-  const { data, error } = await client.rpc("admin_validate_knowledge_refresh_bundle", { p_bundle: bundle });
-  if (error) throw new Error(error.message || "Knowledge品質ゲートを実行できませんでした。");
-  return parseKnowledgeQualityReport(data);
-}
-
-export async function adminValidateStablePromotionBundle(
-  client: SupabaseClient,
-  bundle: KnowledgeRefreshBundle,
-): Promise<StablePromotionReport> {
-  const { data, error } = await client.rpc("admin_validate_stable_promotion_bundle", { p_bundle: bundle });
-  if (error) throw new Error(error.message || "Stable昇格ゲートを実行できませんでした。");
-  return parseStablePromotionReport(data);
-}
-
-export async function adminGetStableReleaseQueue(
-  client: SupabaseClient,
-): Promise<StableReleaseQueue> {
-  const { data, error } = await client.rpc("admin_get_stable_release_queue");
-  if (error) throw new Error(error.message || "Stable昇格候補を取得できませんでした。");
-  return parseStableReleaseQueue(data);
-}
-
-export async function adminPrepareStableRelease(
-  client: SupabaseClient,
-): Promise<StableReleasePreparation> {
-  const { data, error } = await client.rpc("admin_prepare_stable_release");
-  if (error) throw new Error(error.message || "Stableレビュー候補を準備できませんでした。");
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    throw new Error("Stableレビュー候補の応答形式が不正です。");
-  }
-  const value = data as Record<string, unknown>;
-  const bundle = value.bundle;
-  if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
-    throw new Error("StableレビューBundleを確認できませんでした。");
-  }
-  return {
-    requestId: Math.max(1, asNumber(value.request_id, 1)),
-    knowledgeCount: Math.max(0, asNumber(value.knowledge_count)),
-    promptCount: Math.max(0, asNumber(value.prompt_count)),
-    bundle: bundle as KnowledgeRefreshBundle,
-  };
-}
-
-export async function adminGetSourceFreshnessQueue(
-  client: SupabaseClient,
-  warningDays = 30,
-  staleDays = 90,
-): Promise<SourceFreshnessQueue> {
-  const { data, error } = await client.rpc("admin_get_knowledge_source_freshness_queue", {
-    p_warning_days: Math.max(1, Math.min(89, Math.trunc(warningDays))),
-    p_stale_days: Math.max(2, Math.min(365, Math.trunc(staleDays))),
-  });
-  if (error) throw new Error(error.message || "Knowledge根拠の鮮度を取得できませんでした。");
-  return parseSourceFreshnessQueue(data);
-}
-
-export async function adminPrepareSourceFreshnessRecheck(
-  client: SupabaseClient,
-  limit = 20,
-): Promise<SourceFreshnessPreparation> {
-  const { data, error } = await client.rpc("admin_prepare_knowledge_source_recheck", {
-    p_limit: Math.max(1, Math.min(30, Math.trunc(limit))),
-  });
-  if (error) throw new Error(error.message || "根拠再確認対象を準備できませんでした。");
-  return parseSourceFreshnessPreparation(data);
-}
-
-function asSourceOutcome(value: unknown): SourceRecheckOutcome {
-  return value === "changed" || value === "unreachable" || value === "removed" ? value : "unchanged";
-}
-
-export async function adminRecordSourceRecheckReceipt(
-  client: SupabaseClient,
-  input: {
-    itemType: "knowledge" | "prompt";
-    itemKey: string;
-    sourceUrl: string;
-    outcome: SourceRecheckOutcome;
-    notes?: string;
-    requestId?: number | null;
-  },
-): Promise<SourceRecheckReceiptResult> {
-  const { data, error } = await client.rpc("admin_record_knowledge_source_recheck_receipt", {
-    p_item_type: input.itemType,
-    p_item_key: input.itemKey,
-    p_source_url: input.sourceUrl,
-    p_outcome: input.outcome,
-    p_notes: input.notes ?? "",
-    p_request_id: input.requestId ?? null,
-  });
-  if (error) throw new Error(error.message || "根拠再確認の記録を保存できませんでした。");
-  if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("根拠再確認の応答形式が不正です。");
-  const value = data as Record<string, unknown>;
-  return {
-    receiptId: Math.max(1, asNumber(value.receipt_id, 1)),
-    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
-    itemKey: typeof value.item_key === "string" ? value.item_key : input.itemKey,
-    outcome: asSourceOutcome(value.outcome),
-    checkedSourceCount: Math.max(0, asNumber(value.checked_source_count)),
-    totalSourceCount: Math.max(0, asNumber(value.total_source_count)),
-    remainingSourceCount: Math.max(0, asNumber(value.remaining_source_count)),
-    completedCycle: value.completed_cycle === true,
-    followupRequestId: value.followup_request_id === null || value.followup_request_id === undefined
-      ? null
-      : Math.max(1, asNumber(value.followup_request_id, 1)),
-  };
-}
-
-export async function adminListSourceRecheckReceipts(
-  client: SupabaseClient,
-  limit = 30,
-): Promise<SourceRecheckReceipt[]> {
-  const { data, error } = await client.rpc("admin_list_knowledge_source_recheck_receipts", {
-    p_limit: Math.max(1, Math.min(100, Math.trunc(limit))),
-  });
-  if (error) throw new Error(error.message || "根拠再確認履歴を取得できませんでした。");
-  return (data ?? []).flatMap((raw: Record<string, unknown>): SourceRecheckReceipt[] => {
-    if (typeof raw.item_key !== "string" || typeof raw.source_url !== "string") return [];
-    return [{
-      id: Math.max(1, asNumber(raw.id, 1)),
-      itemType: raw.item_type === "prompt" ? "prompt" : "knowledge",
-      itemKey: raw.item_key,
-      catalogVersion: Math.max(1, asNumber(raw.catalog_version, 1)),
-      sourceUrl: raw.source_url,
-      outcome: asSourceOutcome(raw.outcome),
-      notes: typeof raw.notes === "string" ? raw.notes : "",
-      requestId: raw.request_id === null || raw.request_id === undefined ? null : Math.max(1, asNumber(raw.request_id, 1)),
-      checkedAt: typeof raw.checked_at === "string" ? raw.checked_at : "",
-      completedCycle: raw.completed_cycle === true,
-    }];
-  });
-}
-
-export async function adminGetSourceRiskReport(
-  client: SupabaseClient,
-): Promise<SourceRiskReport> {
-  const { data, error } = await client.rpc("admin_get_knowledge_source_risk_report");
-  if (error) throw new Error(error.message || "Knowledge根拠の分散状況を取得できませんでした。");
-  return parseSourceRiskReport(data);
-}
-
-export async function adminPrepareSourceDiversityResearch(
-  client: SupabaseClient,
-  limit = 12,
-): Promise<SourceDiversityResearchPreparation> {
-  const { data, error } = await client.rpc("admin_prepare_source_diversity_research", {
-    p_limit: Math.max(1, Math.min(30, Math.trunc(limit))),
-  });
-  if (error) throw new Error(error.message || "追加根拠リサーチを準備できませんでした。");
-  return parseSourceDiversityResearchPreparation(data);
+function isMissingRpc(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "PGRST202" || /could not find the function|schema cache/i.test(error.message ?? "");
 }
 
 export async function adminPublishKnowledgeRefreshBundle(
@@ -895,19 +349,16 @@ export async function adminPublishKnowledgeRefreshBundle(
   requestId: number,
   bundle: KnowledgeRefreshBundle,
 ): Promise<KnowledgeRefreshPublishResult> {
-  const args = {
-    p_request_id: requestId,
-    p_bundle: bundle,
-  };
-  const current = await client.rpc("admin_publish_knowledge_refresh_bundle_v4", args);
-  const v3 = current.error && isMissingRpcError(current.error)
-    ? await client.rpc("admin_publish_knowledge_refresh_bundle_v3", args)
-    : current;
-  const response = v3.error && isMissingRpcError(v3.error)
-    ? await client.rpc("admin_publish_knowledge_refresh_bundle_v2", args)
-    : v3;
-  const { data, error } = response;
-  if (error) throw new Error(error.message || "ナレッジ更新Bundleを公開できませんでした。");
+  const args = { p_request_id: requestId, p_bundle: bundle };
+  let response = await client.rpc("admin_publish_knowledge_refresh_bundle_v4", args);
+  if (response.error && isMissingRpc(response.error)) {
+    response = await client.rpc("admin_publish_knowledge_refresh_bundle_v3", args);
+  }
+  if (response.error && isMissingRpc(response.error)) {
+    response = await client.rpc("admin_publish_knowledge_refresh_bundle_v2", args);
+  }
+  if (response.error) throw new Error(response.error.message || "ナレッジ更新Bundleを公開できませんでした。");
+  const data = response.data;
   const row = Array.isArray(data) ? data[0] : data;
   if (!row || typeof row !== "object" || Array.isArray(row)) {
     throw new Error("ナレッジ更新結果を確認できませんでした。");
@@ -921,6 +372,298 @@ export async function adminPublishKnowledgeRefreshBundle(
     changeDetails: parseKnowledgeRefreshDiff(value.change_details),
   };
 }
+
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean)
+    : [];
+}
+
+function asObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+export async function adminGetKnowledgeAutomationStatus(
+  client: SupabaseClient,
+): Promise<KnowledgeAutomationStatus | null> {
+  const { data, error } = await client.rpc("admin_get_knowledge_automation_status");
+  if (error) throw new Error(error.message || "公式ソース自動監視の状態を取得できませんでした。");
+  const raw = Array.isArray(data) ? data[0] : data;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  return {
+    enabled: row.enabled !== false,
+    checkIntervalHours: Math.max(1, asNumber(row.check_interval_hours, 24)),
+    maxSourcesPerRun: Math.max(1, asNumber(row.max_sources_per_run, 12)),
+    trackedSources: Math.max(0, asNumber(row.tracked_sources)),
+    dueSources: Math.max(0, asNumber(row.due_sources)),
+    pendingCandidates: Math.max(0, asNumber(row.pending_candidates)),
+    approvedCandidates: Math.max(0, asNumber(row.approved_candidates)),
+    lastWorkerInvokedAt: typeof row.last_worker_invoked_at === "string" ? row.last_worker_invoked_at : null,
+    lastSuccessAt: typeof row.last_success_at === "string" ? row.last_success_at : null,
+    lastError: typeof row.last_error === "string" ? row.last_error : "",
+    latestRunId: row.latest_run_id === null || row.latest_run_id === undefined ? null : asNumber(row.latest_run_id),
+    latestRunStatus: typeof row.latest_run_status === "string" ? row.latest_run_status : "",
+    latestRunStartedAt: typeof row.latest_run_started_at === "string" ? row.latest_run_started_at : null,
+    latestRunCompletedAt: typeof row.latest_run_completed_at === "string" ? row.latest_run_completed_at : null,
+    latestRunSourcesChecked: Math.max(0, asNumber(row.latest_run_sources_checked)),
+    latestRunCandidatesCreated: Math.max(0, asNumber(row.latest_run_candidates_created)),
+  };
+}
+
+export async function adminListKnowledgeAutomationSources(
+  client: SupabaseClient,
+  limit = 200,
+): Promise<KnowledgeAutomationSource[]> {
+  const { data, error } = await client.rpc("admin_list_knowledge_automation_sources", {
+    p_limit: Math.max(1, Math.min(500, Math.trunc(limit))),
+  });
+  if (error) throw new Error(error.message || "公式ソース監視一覧を取得できませんでした。");
+  return (data ?? []).map((raw: Record<string, unknown>) => ({
+    id: asNumber(raw.id),
+    sourceUrl: typeof raw.source_url === "string" ? raw.source_url : "",
+    tasks: asStringArray(raw.tasks),
+    sourceKind: typeof raw.source_kind === "string" ? raw.source_kind : "official_page",
+    enabled: raw.enabled !== false,
+    lastCheckedAt: typeof raw.last_checked_at === "string" ? raw.last_checked_at : null,
+    nextCheckAt: typeof raw.next_check_at === "string" ? raw.next_check_at : null,
+    lastHttpStatus: raw.last_http_status === null || raw.last_http_status === undefined
+      ? null
+      : asNumber(raw.last_http_status),
+    consecutiveFailures: Math.max(0, asNumber(raw.consecutive_failures)),
+    lastError: typeof raw.last_error === "string" ? raw.last_error : "",
+  }));
+}
+
+export async function adminGetKnowledgeProductionHealth(
+  client: SupabaseClient,
+): Promise<KnowledgeProductionHealth | null> {
+  const { data, error } = await client.rpc("admin_get_knowledge_production_health");
+  if (error) throw new Error(error.message || "Knowledge本番状態を取得できませんでした。");
+  const raw = Array.isArray(data) ? data[0] : data;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  return {
+    activeKnowledge: Math.max(0, asNumber(row.active_knowledge)),
+    activePromptOptimizations: Math.max(0, asNumber(row.active_prompt_optimizations)),
+    pendingRequests: Math.max(0, asNumber(row.pending_requests)),
+    processingRequests: Math.max(0, asNumber(row.processing_requests)),
+    failedRequests: Math.max(0, asNumber(row.failed_requests)),
+    cancelledRequests: Math.max(0, asNumber(row.cancelled_requests)),
+    freshVersion: Math.max(1, asNumber(row.fresh_version, 1)),
+    stableVersion: Math.max(1, asNumber(row.stable_version, 1)),
+    lastKnowledgeCheckedAt: typeof row.last_knowledge_checked_at === "string" ? row.last_knowledge_checked_at : null,
+    lastPromptCheckedAt: typeof row.last_prompt_checked_at === "string" ? row.last_prompt_checked_at : null,
+  };
+}
+
+export async function adminGetKnowledgeSourceRiskReport(
+  client: SupabaseClient,
+): Promise<KnowledgeSourceRiskReport> {
+  const { data, error } = await client.rpc("admin_get_knowledge_source_risk_report");
+  if (error) throw new Error(error.message || "Knowledge根拠リスクを取得できませんでした。");
+  const row = asObject(data) ?? {};
+  const domains = Array.isArray(row.domains) ? row.domains : [];
+  const reviewItems = Array.isArray(row.review_items) ? row.review_items : [];
+  return {
+    itemCount: Math.max(0, asNumber(row.item_count)),
+    knowledgeCount: Math.max(0, asNumber(row.knowledge_count)),
+    promptCount: Math.max(0, asNumber(row.prompt_count)),
+    zeroSourceCount: Math.max(0, asNumber(row.zero_source_count)),
+    singleSourceCount: Math.max(0, asNumber(row.single_source_count)),
+    singleDomainCount: Math.max(0, asNumber(row.single_domain_count)),
+    multiDomainCount: Math.max(0, asNumber(row.multi_domain_count)),
+    uniqueDomainCount: Math.max(0, asNumber(row.unique_domain_count)),
+    topDomainItemCount: Math.max(0, asNumber(row.top_domain_item_count)),
+    topDomainSharePercent: Math.max(0, asNumber(row.top_domain_share_percent)),
+    domains: domains.map((raw) => asObject(raw)).filter((raw): raw is Record<string, unknown> => Boolean(raw)).map((raw) => ({
+      domain: typeof raw.domain === "string" ? raw.domain : "",
+      itemCount: Math.max(0, asNumber(raw.item_count)),
+      urlCount: Math.max(0, asNumber(raw.url_count)),
+    })).filter((item) => item.domain),
+    reviewItems: reviewItems.map((raw) => asObject(raw)).filter((raw): raw is Record<string, unknown> => Boolean(raw)).map((raw): KnowledgeSourceRiskItem => ({
+      itemType: raw.item_type === "prompt" ? "prompt" : "knowledge",
+      key: typeof raw.key === "string" ? raw.key : "",
+      label: typeof raw.label === "string" ? raw.label : "",
+      catalogVersion: Math.max(1, asNumber(raw.catalog_version, 1)),
+      releaseChannel: typeof raw.release_channel === "string" ? raw.release_channel : "",
+      sourceCheckedAt: typeof raw.source_checked_at === "string" ? raw.source_checked_at : null,
+      sourceCount: Math.max(0, asNumber(raw.source_count)),
+      domainCount: Math.max(0, asNumber(raw.domain_count)),
+      sourceUrls: asStringArray(raw.source_urls),
+    })).filter((item) => item.key),
+  };
+}
+
+export async function adminPrepareSourceDiversityResearch(
+  client: SupabaseClient,
+  limit = 12,
+): Promise<SourceDiversityResearchResult> {
+  const { data, error } = await client.rpc("admin_prepare_source_diversity_research", {
+    p_limit: Math.max(1, Math.min(30, Math.trunc(limit))),
+  });
+  if (error) throw new Error(error.message || "追加根拠リサーチを準備できませんでした。");
+  const row = asObject(data);
+  if (!row) throw new Error("追加根拠リサーチ結果を確認できませんでした。");
+  return {
+    requestId: asNumber(row.request_id),
+    itemCount: Math.max(0, asNumber(row.item_count)),
+    singleSourceCount: Math.max(0, asNumber(row.single_source_count)),
+    singleDomainCount: Math.max(0, asNumber(row.single_domain_count)),
+  };
+}
+
+export async function adminListKnowledgeAutomationCandidates(
+  client: SupabaseClient,
+  status: KnowledgeAutomationCandidateStatus | null = "pending",
+  limit = 50,
+): Promise<KnowledgeAutomationCandidate[]> {
+  const args = {
+    p_status: status,
+    p_limit: Math.max(1, Math.min(200, Math.trunc(limit))),
+  };
+  let response = await client.rpc("admin_list_knowledge_automation_candidates_v2", args);
+  if (response.error && isMissingRpc(response.error)) {
+    response = await client.rpc("admin_list_knowledge_automation_candidates", args);
+  }
+  if (response.error) throw new Error(response.error.message || "自動調査候補を取得できませんでした。");
+  return (response.data ?? []).map((raw: Record<string, unknown>) => ({
+    id: asNumber(raw.id),
+    candidateAction:
+      raw.candidate_action === "update" || raw.candidate_action === "recheck" || raw.candidate_action === "retire"
+        ? raw.candidate_action
+        : "new",
+    existingItemType: raw.existing_item_type === "knowledge" || raw.existing_item_type === "prompt"
+      ? raw.existing_item_type
+      : null,
+    existingItemKey: typeof raw.existing_item_key === "string" ? raw.existing_item_key : "",
+    matchedTasks: asStringArray(raw.matched_tasks),
+    sourceUrl: typeof raw.source_url === "string" ? raw.source_url : "",
+    sourceTitle: typeof raw.source_title === "string" ? raw.source_title : "",
+    sourceExcerpt: typeof raw.source_excerpt === "string" ? raw.source_excerpt : "",
+    sourceHttpStatus: raw.source_http_status === null || raw.source_http_status === undefined
+      ? null
+      : asNumber(raw.source_http_status),
+    currentPayload: asObject(raw.current_payload),
+    proposedPayload: asObject(raw.proposed_payload),
+    researchPrompt: typeof raw.research_prompt === "string" ? raw.research_prompt : "",
+    confidence: Math.max(0, Math.min(100, asNumber(raw.confidence, 50))),
+    reason: typeof raw.reason === "string" ? raw.reason : "",
+    status:
+      raw.status === "approved" || raw.status === "rejected" || raw.status === "converted"
+        ? raw.status
+        : "pending",
+    reviewNotes: typeof raw.review_notes === "string" ? raw.review_notes : "",
+    detectedAt: typeof raw.detected_at === "string" ? raw.detected_at : "",
+    reviewedAt: typeof raw.reviewed_at === "string" ? raw.reviewed_at : null,
+    analysisStatus:
+      raw.analysis_status === "completed" || raw.analysis_status === "failed"
+        ? raw.analysis_status
+        : "pending",
+    analysisDecision:
+      raw.analysis_decision === "no_change" || raw.analysis_decision === "new" ||
+      raw.analysis_decision === "update" || raw.analysis_decision === "recheck" ||
+      raw.analysis_decision === "retire"
+        ? raw.analysis_decision
+        : "",
+    proposalItemType: raw.proposal_item_type === "knowledge" || raw.proposal_item_type === "prompt"
+      ? raw.proposal_item_type
+      : null,
+    analysisProvider: typeof raw.analysis_provider === "string" ? raw.analysis_provider : "",
+    analysisModel: typeof raw.analysis_model === "string" ? raw.analysis_model : "",
+    analysisReason: typeof raw.analysis_reason === "string" ? raw.analysis_reason : "",
+    analysisError: typeof raw.analysis_error === "string" ? raw.analysis_error : "",
+    verifiedSourceUrls: asStringArray(raw.verified_source_urls),
+    analyzedAt: typeof raw.analyzed_at === "string" ? raw.analyzed_at : null,
+  }));
+}
+
+export async function adminReviewKnowledgeAutomationCandidate(
+  client: SupabaseClient,
+  candidateId: number,
+  decision: "approved" | "rejected" | "converted",
+  notes = "",
+): Promise<void> {
+  const { error } = await client.rpc("admin_review_knowledge_automation_candidate", {
+    p_candidate_id: candidateId,
+    p_decision: decision,
+    p_notes: notes.slice(0, 2000),
+  });
+  if (error) throw new Error(error.message || "自動調査候補を更新できませんでした。");
+}
+
+export async function adminRequestKnowledgeAutomationRun(client: SupabaseClient): Promise<number> {
+  const { data, error } = await client.rpc("admin_request_knowledge_automation_run");
+  if (error) throw new Error(error.message || "公式ソース自動調査を開始できませんでした。");
+  const id = asNumber(data);
+  if (id < 1) throw new Error("自動調査IDを確認できませんでした。");
+  return id;
+}
+
+export async function adminGetKnowledgeAutomationAiConfig(
+  client: SupabaseClient,
+): Promise<KnowledgeAutomationAiConfig> {
+  const { data, error } = await client.rpc("admin_get_knowledge_automation_ai_config");
+  if (error) throw new Error(error.message || "AI自動解析設定を取得できませんでした。");
+  const raw = Array.isArray(data) ? data[0] : data;
+  const row = asObject(raw);
+  if (!row) {
+    return { enabled:false,provider:"openai",model:"gpt-5.6",maxCandidatesPerRun:6,apiKeyConfigured:false };
+  }
+  return {
+    enabled: row.enabled === true,
+    provider: "openai",
+    model: typeof row.model === "string" && row.model.trim() ? row.model.trim() : "gpt-5.6",
+    maxCandidatesPerRun: Math.max(1,Math.min(20,asNumber(row.max_candidates_per_run,6))),
+    apiKeyConfigured: row.api_key_configured === true,
+  };
+}
+
+export async function adminSetKnowledgeAutomationAiConfig(
+  client: SupabaseClient,
+  config: KnowledgeAutomationAiConfigUpdate,
+): Promise<void> {
+  const { error } = await client.rpc("admin_set_knowledge_automation_ai_config", {
+    p_enabled: config.enabled,
+    p_provider: config.provider,
+    p_model: config.model.trim(),
+    p_max_candidates_per_run: Math.max(1,Math.min(20,Math.trunc(config.maxCandidatesPerRun))),
+    p_api_key: config.apiKey?.trim() || null,
+  });
+  if (error) throw new Error(error.message || "AI自動解析設定を保存できませんでした。");
+}
+
+export async function adminRetryKnowledgeAutomationCandidateAi(
+  client: SupabaseClient,
+  candidateId: number,
+): Promise<void> {
+  const { error } = await client.rpc("admin_retry_knowledge_automation_candidate_ai", {
+    p_candidate_id: candidateId,
+  });
+  if (error) throw new Error(error.message || "AI解析候補を再試行状態へ戻せませんでした。");
+}
+
+export function buildKnowledgeAutomationCandidateBundle(
+  candidate: KnowledgeAutomationCandidate,
+): KnowledgeRefreshBundle | null {
+  if (
+    candidate.analysisStatus !== "completed" ||
+    (candidate.analysisDecision !== "new" && candidate.analysisDecision !== "update") ||
+    !candidate.proposedPayload ||
+    !candidate.proposalItemType
+  ) return null;
+
+  return {
+    summary:
+      `自動公式ソース調査候補 #${candidate.id}: ${candidate.analysisReason || candidate.reason} / ${candidate.sourceUrl}`.slice(0,2000),
+    knowledge_rules: candidate.proposalItemType === "knowledge" ? [candidate.proposedPayload] : [],
+    prompt_optimizations: candidate.proposalItemType === "prompt" ? [candidate.proposedPayload] : [],
+  };
+}
+
 
 export function parseKnowledgeRefreshBundle(text: string): KnowledgeRefreshBundle {
   const raw: unknown = JSON.parse(text);
@@ -1035,6 +778,11 @@ ${rollout}
 - 業務効率化・SOP化 → sidejob_efficiency
 - AI副業選定 → sidejob_planning
 - 1つの変更を無関係な全タスクへ広げない。影響するタスクだけ指定する。
+- 副業Knowledgeはタスク単位の一般論だけで終わらせず、媒体・用途・初心者/経験者・販売/集客/制作・リスクなど、実際に出力を変える状況差がある場合は別候補として細分化する。
+- 状況別候補は label / parent_label / guidance に「何の条件で変わるKnowledgeか」が分かる名前と説明を入れる。例: SNS運用 > Instagram、記事販売 > 完全初心者、物販 > 家電・ガジェット。
+- 単一条件だけでは判断が変わらず、2〜4条件の組み合わせで出力が大きく変わる場合は、複合条件Knowledgeとして分ける。例: note × 完全初心者 × 有料記事、Instagram × 新規アカウント × 信頼形成、フリマ × 中古家電 × 精密配送。
+- 複合条件は網羅的な直積を作らず、媒体・経験段階・目的・制作方法・販売導線・リスクの相互作用が明確な高価値パターンだけ候補化する。
+- ただし一時的なUI配置や短命な流行では分割せず、再利用できる判断ルールだけKnowledge化する。
 
 【最終監査】
 - source_urlsが空の候補は出さない。
@@ -1044,182 +792,3 @@ ${rollout}
 - 既存仕様を確認できない場合は候補にせずsummaryへ「要確認」と書く。`;
 }
 
-
-
-export function buildSourceDiversityResearchPrompt(
-  preparation: SourceDiversityResearchPreparation,
-): string {
-  const targetJson = JSON.stringify(
-    preparation.items.map((item) => ({
-      item_type: item.itemType,
-      key: item.key,
-      source_count: item.sourceCount,
-      domain_count: item.domainCount,
-      current_domains: item.domains,
-      current_source_urls: item.sourceUrls,
-      source_checked_at: item.sourceCheckedAt,
-      current: item.payload,
-    })),
-    null,
-    2,
-  );
-
-  return `あなたはAI Action Studio（AAS）のKnowledge Evidence Researcherです。
-目的は、下記の既存Knowledge / Prompt Optimizationについて、根拠の数を形式的に増やすのではなく、内容を独立して裏付ける追加の公式・一次情報が存在するかを調査し、見つかった場合だけFreshレビュー用JSONへ反映することです。
-
-【最重要ルール】
-- source_urlsの件数を増やすこと自体を目標にしないでください。
-- 同じ内容を転載しただけのページ、まとめ記事、検索結果スニペット、SNS上の噂を追加根拠にしないでください。
-- 既存の公式一次情報1件だけが最も適切な根拠なら、低品質な2件目を無理に追加しないでください。
-- 独立した根拠とは、可能なら別運営主体・別ドメインの公式一次情報、公的機関、規制当局、標準仕様などです。
-- サービス自身の仕様は、そのサービス運営者の公式情報が唯一の適切な根拠である場合があります。その場合は「追加根拠なし」とsummaryへ記載し、JSON項目へ含めなくて構いません。
-- 法令・広告表示・労務などは、サービス公式だけでなく公的機関の一次情報があれば優先して確認してください。
-- 既存keyは絶対に変更しないでください。
-- 既存内容と新しい公式根拠が食い違う場合は、単なるソース追加ではなく内容修正として最小限更新してください。
-- 料金、仕様、規約、制度など時点依存情報は現在情報を実際に開いて確認してください。
-- ユーザー体験・実績・レビューを創作しないでください。
-- 成果保証・未確認の数値・推測を追加しないでください。
-
-【対象】
-件数: ${preparation.itemCount}
-単一URL候補: ${preparation.singleSourceCount}
-単一ドメイン候補: ${preparation.singleDomainCount}
-
-${targetJson}
-
-【出力方針】
-- 追加の独立した公式/一次根拠が見つかった項目、または根拠確認により内容修正が必要な項目だけJSONへ含めてください。
-- 適切な追加根拠が見つからない項目は無理に変更せず、summaryへ「追加根拠なし: key」と記載してください。
-- source_urlsには、今回実際に開いて内容を確認したURLだけを入れてください。
-- 既存の有効なsource_urlsは削除せず、失効・誤りが確認された場合だけ差し替えてください。
-
-【出力】
-Markdownコードフェンスや説明を付けず、次のJSONオブジェクトだけを返してください。
-
-{
-  "summary": "keyごとに、追加根拠あり / 追加根拠なし / 内容修正 / 要確認を簡潔に記載",
-  "knowledge_rules": [
-    {
-      "key": "既存keyをそのまま",
-      "kind": "既存値",
-      "label": "既存または根拠に基づく最小修正版",
-      "parent_label": "",
-      "aliases": [],
-      "guidance": ["現在の公式根拠で支持されるルール"],
-      "deliverables": [],
-      "cautions": [],
-      "tasks": ["既存の該当タスク"],
-      "priority": 70,
-      "source_urls": ["既存の有効な公式URL", "今回確認した独立した公式/一次URL"],
-      "source_summary": "各URLが何を裏付けるかと、今回の変更内容"
-    }
-  ],
-  "prompt_optimizations": [
-    {
-      "key": "既存keyをそのまま",
-      "provider": "all|chatgpt|claude|gemini",
-      "plan": "all|free|paid",
-      "task": "既存の該当タスク",
-      "rules": ["現在の公式根拠で支持されるルール"],
-      "priority": 70,
-      "source_urls": ["既存の有効な公式URL", "今回確認した独立した公式/一次URL"],
-      "source_summary": "各URLが何を裏付けるかと、今回の変更内容"
-    }
-  ]
-}
-
-【最終監査】
-- 件数合わせのための低品質ソースを追加しない。
-- 追加URLを実際に開いて確認する。
-- 同じ運営主体の重複ページだけで「独立した根拠」と扱わない。
-- keyを変えない。
-- 無関係な項目を追加しない。
-- 確認できない内容を推測で補わない。
-- JSON以外を返さない。`;
-}
-
-
-export function buildSourceFreshnessResearchPrompt(
-  preparation: SourceFreshnessPreparation,
-): string {
-  const targetJson = JSON.stringify(
-    preparation.items.map((item) => ({
-      item_type: item.itemType,
-      state: item.state,
-      key: item.key,
-      source_checked_at: item.sourceCheckedAt,
-      source_urls: item.sourceUrls,
-      current: item.payload,
-    })),
-    null,
-    2,
-  );
-
-  return `あなたはAI Action Studio（AAS）のKnowledge Source Reviewerです。
-目的は、下記の既存Knowledge / Prompt Optimizationについて、現在の公式情報で根拠を再確認し、Freshレビュー用JSONだけを返すことです。
-
-【重要】
-- この依頼は新規Knowledgeを大量追加するためではなく、既存項目の根拠再確認です。
-- 各keyは変更しないでください。
-- まず現在登録されているsource_urlsを実際に確認してください。
-- URLが移転・廃止されている場合は、同じ運営主体の最新公式ページを探してください。
-- 検索結果スニペットだけで判断しないでください。
-- 料金、仕様、規約、アルゴリズム、制度など時点依存情報は、確認できた現在情報だけを使ってください。
-- 公式根拠で現在も内容が支持されている場合でも、現在の内容をそのままJSONへ含めてください。公開処理でsource_checked_atを更新するためです。
-- 公式情報と内容が食い違う場合は、根拠に合わせて最小限修正してください。
-- 十分な根拠が確認できない項目はJSONへ含めず、summaryへ「要確認」とkeyを書いてください。
-- ユーザー体験・実績・レビューを創作しないでください。
-- 成果保証や未確認の数値を追加しないでください。
-
-【再確認対象】
-件数: ${preparation.itemCount}
-根拠欠落: ${preparation.missingCount}
-期限切れ: ${preparation.staleCount}
-期限接近: ${preparation.dueCount}
-鮮度基準: ${preparation.staleDays}日
-警告開始: 失効${preparation.warningDays}日前
-
-${targetJson}
-
-【出力】
-Markdownコードフェンスや説明を付けず、次のJSONオブジェクトだけを返してください。
-
-{
-  "summary": "再確認結果。変更なし・変更あり・要確認をkey付きで簡潔に記載",
-  "knowledge_rules": [
-    {
-      "key": "既存keyをそのまま",
-      "kind": "既存または根拠に基づく値",
-      "label": "既存または最小修正版",
-      "parent_label": "",
-      "aliases": [],
-      "guidance": ["現在の公式根拠で支持されるルール"],
-      "deliverables": [],
-      "cautions": [],
-      "tasks": ["該当タスク"],
-      "priority": 70,
-      "source_urls": ["今回実際に確認した公式URL"],
-      "source_summary": "今回確認した根拠と、変更の有無"
-    }
-  ],
-  "prompt_optimizations": [
-    {
-      "key": "既存keyをそのまま",
-      "provider": "all|chatgpt|claude|gemini",
-      "plan": "all|free|paid",
-      "task": "該当タスク",
-      "rules": ["現在の公式根拠で支持される最適化ルール"],
-      "priority": 70,
-      "source_urls": ["今回実際に確認した公式URL"],
-      "source_summary": "今回確認した根拠と、変更の有無"
-    }
-  ]
-}
-
-【最終確認】
-- 各項目は公式根拠を実際に開いて確認する。
-- keyを変えない。
-- 無関係な項目を追加しない。
-- 確認できない項目を推測で通さない。
-- JSON以外を返さない。`;
-}

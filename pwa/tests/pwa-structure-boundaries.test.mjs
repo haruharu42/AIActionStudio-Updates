@@ -8,6 +8,12 @@ import { createServer } from "vite";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readArticleStepSource = async () => (await Promise.all([
+  "components/article-create/article-create-steps.tsx",
+  "components/article-create/article-create-generation-steps.tsx",
+  "components/article-create/article-create-finish-steps.tsx",
+  "components/article-create/article-create-step-shared.tsx",
+].map((relative) => read(relative)))).join("\n");
 
 const vite = await createServer({
   appType: "custom",
@@ -107,7 +113,7 @@ test("article draft URL parsing and step validation stay pure and bounded", () =
 
 test("article creator keeps UI, access and pure draft responsibilities separated", async () => {
   const page = await read("components/phase11-create-page.tsx");
-  const stepUi = await read("components/article-create/article-create-steps.tsx");
+  const stepUi = await readArticleStepSource();
   const draftHelpers = await read("lib/article-create-draft.ts");
   const progress = await read("lib/phase11-wizard-progress.ts");
 
@@ -126,4 +132,25 @@ test("article creator keeps UI, access and pure draft responsibilities separated
   assert.match(stepUi, /export function SaveStep/);
   assert.match(draftHelpers, /export function parseStoredArticleDraft/);
   assert.match(progress, /parseStoredArticleDraft/);
+});
+
+test("signed and local runtime images stay behind the direct image boundary", async () => {
+  const wrapper = await read("components/direct-runtime-image.tsx");
+  const consumers = await Promise.all([
+    read("app/profile/page.tsx"),
+    read("app/ranking/page.tsx"),
+    read("components/article-library/note-post-assistant.tsx"),
+    read("components/creator-hud.tsx"),
+    read("components/phase18-beginner-home.tsx"),
+  ]);
+
+  assert.match(wrapper, /Blob\/Object URLs and expiring signed URLs/);
+  assert.match(wrapper, /eslint-disable-next-line @next\/next\/no-img-element/);
+  assert.match(wrapper, /alt: string/);
+  assert.match(wrapper, /return <img alt=\{alt\} \{\.\.\.props\} \/>/);
+
+  for (const source of consumers) {
+    assert.match(source, /DirectRuntimeImage/);
+    assert.doesNotMatch(source, /<img\b/);
+  }
 });

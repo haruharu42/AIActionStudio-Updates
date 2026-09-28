@@ -11,7 +11,7 @@ export type InviteRedeemResult = {
 function row(value: unknown): Record<string, unknown> {
   const singleton = Array.isArray(value) ? value[0] : value;
   if (!singleton || typeof singleton !== "object" || Array.isArray(singleton)) {
-    throw new Error("招待コードの応答形式が不正です。");
+    throw new Error("利用コードの応答形式が不正です。");
   }
   return singleton as Record<string, unknown>;
 }
@@ -27,7 +27,7 @@ export async function redeemPwaInvite(
 ): Promise<InviteRedeemResult> {
   const normalized = inviteCode.trim();
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized)) {
-    throw new Error("招待コードの形式が正しくありません。");
+    throw new Error("利用コードの形式が正しくありません。");
   }
 
   const { data, error } = await client.rpc("redeem_pwa_invite", {
@@ -35,16 +35,19 @@ export async function redeemPwaInvite(
   });
   if (error) {
     const message = String(error.message ?? "").toLowerCase();
+    if (message.includes("access code redemption is disabled")) {
+      throw new Error("現在、利用コードの新規受付は停止しています。");
+    }
     if (message.includes("entitlement already active")) {
       throw new Error("このアカウントには有効なPWA利用権がすでにあります。");
     }
     if (message.includes("unavailable") || message.includes("not found")) {
-      throw new Error("この招待コードは使用できません。期限・利用回数を確認してください。");
+      throw new Error("この利用コードは使用できません。期限・利用回数を確認してください。");
     }
     if (message.includes("already redeemed")) {
-      throw new Error("この招待コードはこのアカウントですでに使用されています。");
+      throw new Error("この利用コードはこのアカウントですでに使用されています。");
     }
-    throw new Error("招待コードの確認に失敗しました。");
+    throw new Error("利用コードの確認に失敗しました。");
   }
 
   const parsed = row(data);

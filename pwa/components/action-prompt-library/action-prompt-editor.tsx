@@ -1,3 +1,4 @@
+import { SelectWithCustom } from "@/components/select-with-custom";
 import { AI_APP_LINKS, type AiAppKey } from "@/lib/ai-app-links";
 import { recommendedActionPromptAi, type ActionPromptTemplate } from "@/features/prompts";
 
@@ -51,22 +52,35 @@ export function ActionPromptEditor({
 
       <div className="action-prompt-fields">
         {selected.fields.map((field) => (
-          <label className={field.multiline ? "full" : ""} key={field.key}>
-            <span>{field.label}</span>
-            {field.multiline ? (
-              <textarea
-                value={values[field.key] ?? ""}
-                placeholder={field.placeholder}
-                onChange={(event) => onValueChange(field.key, event.target.value)}
-              />
-            ) : (
-              <input
-                value={values[field.key] ?? ""}
-                placeholder={field.placeholder}
-                onChange={(event) => onValueChange(field.key, event.target.value)}
-              />
-            )}
-          </label>
+          field.options?.length ? (
+            <SelectWithCustom
+              key={field.key}
+              className="action-prompt-field"
+              label={field.label}
+              value={values[field.key] ?? ""}
+              onChange={(value) => onValueChange(field.key, value)}
+              options={field.options}
+              placeholder="候補から選択"
+              customPlaceholder={field.placeholder || "その他を自由入力"}
+            />
+          ) : (
+            <label className={field.multiline ? "full" : ""} key={field.key}>
+              <span>{field.label}</span>
+              {field.multiline ? (
+                <textarea
+                  value={values[field.key] ?? ""}
+                  placeholder={field.placeholder}
+                  onChange={(event) => onValueChange(field.key, event.target.value)}
+                />
+              ) : (
+                <input
+                  value={values[field.key] ?? ""}
+                  placeholder={field.placeholder}
+                  onChange={(event) => onValueChange(field.key, event.target.value)}
+                />
+              )}
+            </label>
+          )
         ))}
       </div>
 

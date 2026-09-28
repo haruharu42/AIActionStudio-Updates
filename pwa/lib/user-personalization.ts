@@ -24,6 +24,9 @@ export type UserWritingProfile = {
   avoidHype: boolean;
   preferredPlatform: PreferredPlatform | null;
   preferredGenre: string;
+  personaContext: string;
+  customInstructions: string;
+  avoidPhrases: string;
   articleCount: number;
   platformCounts: Record<string, number>;
   genreCounts: Record<string, number>;
@@ -72,6 +75,9 @@ export function createDefaultWritingProfile(userId: string): UserWritingProfile 
     avoidHype: true,
     preferredPlatform: null,
     preferredGenre: "",
+    personaContext: "",
+    customInstructions: "",
+    avoidPhrases: "",
     articleCount: 0,
     platformCounts: {},
     genreCounts: {},
@@ -137,6 +143,9 @@ function parseProfile(userId: string, row: unknown): UserWritingProfile {
     avoidHype: data.avoid_hype !== false,
     preferredPlatform,
     preferredGenre: typeof data.preferred_genre === "string" ? data.preferred_genre.slice(0, 100) : "",
+    personaContext: typeof data.persona_context === "string" ? data.persona_context.slice(0, 1200) : "",
+    customInstructions: typeof data.custom_instructions === "string" ? data.custom_instructions.slice(0, 2400) : "",
+    avoidPhrases: typeof data.avoid_phrases === "string" ? data.avoid_phrases.slice(0, 1200) : "",
     articleCount: typeof data.article_count === "number" && Number.isSafeInteger(data.article_count) && data.article_count >= 0 ? data.article_count : 0,
     platformCounts: numericCounts(data.platform_counts),
     genreCounts: numericCounts(data.genre_counts),
@@ -158,7 +167,7 @@ export async function loadWritingProfile(
 ): Promise<UserWritingProfile> {
   const { data, error } = await client
     .from("user_writing_profiles")
-    .select("user_id,personalization_enabled,preferred_ai,preferred_plan,tone,heading_style,list_preference,cta_style,avoid_hype,preferred_platform,preferred_genre,article_count,platform_counts,genre_counts,subgenre_counts,article_type_counts,age_group_counts,target_length_counts,preset_counts,last_article_type,last_generation_mode,last_used_at,updated_at")
+    .select("user_id,personalization_enabled,preferred_ai,preferred_plan,tone,heading_style,list_preference,cta_style,avoid_hype,preferred_platform,preferred_genre,persona_context,custom_instructions,avoid_phrases,article_count,platform_counts,genre_counts,subgenre_counts,article_type_counts,age_group_counts,target_length_counts,preset_counts,last_article_type,last_generation_mode,last_used_at,updated_at")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -182,14 +191,19 @@ export async function saveWritingProfile(
     avoid_hype: profile.avoidHype,
     preferred_platform: profile.preferredPlatform,
     preferred_genre: profile.preferredGenre.trim().slice(0, 100) || null,
+    persona_context: profile.personaContext.trim().slice(0, 1200),
+    custom_instructions: profile.customInstructions.trim().slice(0, 2400),
+    avoid_phrases: profile.avoidPhrases.trim().slice(0, 1200),
   };
   const { data, error } = await client
     .from("user_writing_profiles")
     .upsert(payload, { onConflict: "user_id" })
-    .select("user_id,personalization_enabled,preferred_ai,preferred_plan,tone,heading_style,list_preference,cta_style,avoid_hype,preferred_platform,preferred_genre,article_count,platform_counts,genre_counts,subgenre_counts,article_type_counts,age_group_counts,target_length_counts,preset_counts,last_article_type,last_generation_mode,last_used_at,updated_at")
+    .select("user_id,personalization_enabled,preferred_ai,preferred_plan,tone,heading_style,list_preference,cta_style,avoid_hype,preferred_platform,preferred_genre,persona_context,custom_instructions,avoid_phrases,article_count,platform_counts,genre_counts,subgenre_counts,article_type_counts,age_group_counts,target_length_counts,preset_counts,last_article_type,last_generation_mode,last_used_at,updated_at")
     .single();
   if (error || !data) throw new Error("あなた向け最適化の設定を保存できませんでした。");
-  return parseProfile(profile.userId, data);
+  const saved = parseProfile(profile.userId, data);
+  runtimeProfile = saved;
+  return saved;
 }
 
 export async function resetWritingProfile(
@@ -199,7 +213,7 @@ export async function resetWritingProfile(
   const { error } = await client.from("user_writing_profiles").delete().eq("user_id", userId);
   if (error) throw new Error("あなた向け最適化の設定をリセットできませんでした。");
   const profile = createDefaultWritingProfile(userId);
-  if (runtimeProfile?.userId === userId) runtimeProfile = profile;
+  runtimeProfile = profile;
   return profile;
 }
 
@@ -234,6 +248,9 @@ export function summarizeWritingProfile(profile: UserWritingProfile): string[] {
   if (subgenre) lines.push(`よく使うサブジャンル: ${subgenre}`);
   if (ageGroup) lines.push(`よく使う読者層: ${ageGroup}`);
   if (targetLength) lines.push(`よく使う文字数: 約${targetLength.replace(/（.*$/, "")}文字`);
+  if (profile.personaContext || profile.customInstructions || profile.avoidPhrases) {
+    lines.push("自分で指定した追加パーソナライズ: 設定済み");
+  }
   return lines;
 }
 
@@ -288,6 +305,61 @@ const ctaRule: Record<CtaStyle, string> = {
   direct: "CTAは次に取る行動が明確に分かる直接的な表現にする",
 };
 
+function personalizationItems(value: string): string[] {
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.trim().replace(/^[-・]\s*/, ""))
+    .filter((item, index, items) => item.length > 0 && items.indexOf(item) === index);
+}
+
+function appendUserAuthoredPersonalization(lines: string[], profile: UserWritingProfile): void {
+  const personaContext = personalizationItems(profile.personaContext);
+  const customInstructions = personalizationItems(profile.customInstructions);
+  const avoidPhrases = personalizationItems(profile.avoidPhrases);
+  if (personaContext.length === 0 && customInstructions.length === 0 && avoidPhrases.length === 0) return;
+
+  lines.push(
+    "",
+    "【ユーザーが明示した追加パーソナライズ】",
+    "- 以下はユーザー本人がAASへ選択・入力した文章・回答の好み。今回の明示指示、事実確認、安全ルール、媒体ルールを上書きしない。",
+    "- 記載されていない個人情報・経験・実績・感情は推測して補わない。",
+  );
+  for (const item of personaContext) lines.push(`- 執筆上の前提: ${item}`);
+  for (const item of customInstructions) lines.push(`- 追加の文章・回答指示: ${item}`);
+  for (const item of avoidPhrases) lines.push(`- 避けたい言葉・表現: ${item}`);
+}
+
+export function buildPersonalizationHandoffPrompt(
+  profile: UserWritingProfile,
+  provider: AiProvider = profile.preferredAi,
+): string {
+  const lines = [
+    "【AAS パーソナライズ引き継ぎ】",
+    `対象AI: ${AI_PROVIDER_LABELS[provider]}`,
+    "以下はAI Action Studio（AAS）で私自身が設定した文章・回答の好みです。このチャット内の今後の回答に反映してください。",
+    "ただし、今回の個別指示、事実確認、安全上の制約、利用サービスのルールを優先し、記載されていない私の経歴・体験・実績・感情は推測しないでください。",
+    "",
+    "【基本の文章設定】",
+    `- ${toneRule[profile.tone]}`,
+    `- ${headingRule[profile.headingStyle]}`,
+    `- ${listRule[profile.listPreference]}`,
+    `- ${ctaRule[profile.ctaStyle]}`,
+  ];
+  if (profile.avoidHype) lines.push("- 煽り表現・成果保証・過度な期待を持たせる表現を避ける");
+  if (profile.preferredPlatform) lines.push(`- 普段よく使う掲載先: ${profile.preferredPlatform}`);
+  if (profile.preferredGenre) lines.push(`- 普段よく扱うジャンル: ${profile.preferredGenre}`);
+
+  appendUserAuthoredPersonalization(lines, profile);
+
+  const providerNote: Record<AiProvider, string> = {
+    chatgpt: "この文章はChatGPTのメモリやカスタム指示へ自動登録する依頼ではありません。通常チャット・一時チャットを問わず、この会話へ明示的に渡した設定として扱ってください。",
+    claude: "この文章はClaudeのメモリやプロフィールへ自動登録する依頼ではありません。通常チャット・シークレットチャットを問わず、この会話へ明示的に渡した設定として扱ってください。",
+    gemini: "この文章はGeminiのパーソナライズ設定へ自動登録する依頼ではありません。通常チャット・一時チャットを問わず、この会話へ明示的に渡した設定として扱ってください。",
+  };
+  lines.push("", "【引き継ぎの扱い】", providerNote[provider]);
+  return lines.join("\n");
+}
+
 export function buildUserPromptContext(
   profile: UserWritingProfile | null,
   task: KnowledgeTask = "article",
@@ -323,6 +395,7 @@ export function buildUserPromptContext(
     if (profile.avoidHype) lines.push("- 煽り表現・過剰な期待を持たせる表現を特に避ける");
     if (profile.preferredPlatform) lines.push(`- 通常よく使う掲載先: ${profile.preferredPlatform}。今回のARTICLE BRIEF指定が異なる場合は今回指定を優先する`);
     if (profile.preferredGenre) lines.push(`- 通常よく使うジャンル: ${profile.preferredGenre}。今回のARTICLE BRIEF指定が異なる場合は今回指定を優先する`);
+    appendUserAuthoredPersonalization(lines, profile);
     const learnedPlatform = topCount(profile.platformCounts);
     const learnedGenre = topCount(profile.genreCounts);
     const learnedSubgenre = topCount(profile.subgenreCounts);

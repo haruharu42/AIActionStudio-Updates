@@ -53,6 +53,17 @@ export function authMessage(error: unknown): string {
   if (lowered.includes("user already registered")) {
     return "このメールアドレスは登録済みです。";
   }
+  if (lowered.includes("pwned") || lowered.includes("leaked password") || lowered.includes("password has been leaked")) {
+    return "このパスワードは漏洩済みパスワードとして検出されました。別サービスで使っていない新しいパスワードを設定してください。";
+  }
+  if (
+    lowered.includes("weak password")
+    || lowered.includes("weak_password")
+    || lowered.includes("password should")
+    || lowered.includes("password must")
+  ) {
+    return "パスワードの強度条件を満たしていません。より長く、推測されにくい新しいパスワードを設定してください。";
+  }
   if (lowered.includes("password")) {
     return "パスワードを確認してください。";
   }

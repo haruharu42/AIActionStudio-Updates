@@ -7,13 +7,19 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = path.resolve(root, "..");
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readArticleStepSource = async () => (await Promise.all([
+  "components/article-create/article-create-steps.tsx",
+  "components/article-create/article-create-generation-steps.tsx",
+  "components/article-create/article-create-finish-steps.tsx",
+  "components/article-create/article-create-step-shared.tsx",
+].map((relative) => read(relative)))).join("\n");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
 test("article creation keeps AI selection as wizard step one and allows returning to it", async () => {
   const [route, page, steps, draft, progress, personalization] = await Promise.all([
     read("app/create/page.tsx"),
     read("components/phase11-create-page.tsx"),
-    read("components/article-create/article-create-steps.tsx"),
+    readArticleStepSource(),
     read("lib/article-create-draft.ts"),
     read("lib/phase11-wizard-progress.ts"),
     read("lib/user-personalization.ts"),
@@ -38,14 +44,167 @@ test("article creation keeps AI selection as wizard step one and allows returnin
 });
 
 test("personalization settings can be viewed edited saved and reset", async () => {
-  const settings = await read("components/pwa-settings-page.tsx");
-  for (const label of ["あなた向け最適化", "普段使うAI", "文章の雰囲気", "普段の掲載先", "AASが保持している小さな利用傾向", "最適化設定を保存", "学習内容をリセット"]) {
+  const [settings, accessProvider] = await Promise.all([
+    read("components/pwa-settings-page.tsx"),
+    read("components/access-state-provider.tsx"),
+  ]);
+  for (const label of ["AIの書き方を自分好みにする", "普段使うAI", "文章の雰囲気", "主な掲載先", "AASが保持している小さな利用傾向", "最適化設定を保存", "学習内容をリセット"]) {
     assert.match(settings, new RegExp(label));
   }
   assert.match(settings, /loadWritingProfile/);
   assert.match(settings, /saveWritingProfile/);
   assert.match(settings, /resetWritingProfile/);
   assert.match(settings, /記事本文・AI回答全文・プロンプト全文/);
+  assert.match(settings, /setRuntimeWritingProfile\(saved\)/);
+  assert.match(settings, /setRuntimeWritingProfile\(reset\)/);
+  assert.match(accessProvider, /loadWritingProfile/);
+  assert.match(accessProvider, /setRuntimeWritingProfile\(profile\)/);
+  assert.match(accessProvider, /createDefaultWritingProfile/);
+  assert.match(accessProvider, /runtimeProfileUserId/);
+  assert.match(accessProvider, /runtimeProfileReadyUserId/);
+  assert.match(accessProvider, /runtimeProfilePending/);
+  assert.match(accessProvider, /runtimeProfilePending \? null : children/);
+});
+
+
+
+test("personalization runtime survives route changes and core save reset operations", async () => {
+  const [accessProvider, personalization, article] = await Promise.all([
+    read("components/access-state-provider.tsx"),
+    read("lib/user-personalization.ts"),
+    read("components/phase11-create-page.tsx"),
+  ]);
+
+  assert.match(accessProvider, /setRuntimeProfileReadyUserId\(runtimeProfileUserId\)/);
+  assert.match(accessProvider, /state\.kind === "ready"[\s\S]*?runtimeProfileReadyUserId !== state\.profile\.id/);
+  assert.match(personalization, /const saved = parseProfile\(profile\.userId, data\);[\s\S]*?runtimeProfile = saved;[\s\S]*?return saved;/);
+  assert.match(personalization, /const profile = createDefaultWritingProfile\(userId\);[\s\S]*?runtimeProfile = profile;[\s\S]*?return profile;/);
+  assert.doesNotMatch(article, /setRuntimePlatformAccountDesigns\(null\);\s*setRuntimeWritingProfile\(null\);/);
+});
+
+test("user-authored personalization handoff is cloud-backed prompt-safe and provider-specific", async () => {
+  const [settings, panel, personalization, css, migration] = await Promise.all([
+    read("components/pwa-settings-page.tsx"),
+    read("components/personalization-handoff-panel.tsx"),
+    read("lib/user-personalization.ts"),
+    read("app/phase25-user-personalization.css"),
+    readRepo("supabase/migrations/20260927095219_user_personalization_handoff_v1.sql"),
+  ]);
+
+  assert.match(settings, /PersonalizationHandoffPanel/);
+  assert.match(settings, /自分で入力した追加パーソナライズ/);
+
+  for (const field of ["personaContext", "customInstructions", "avoidPhrases"]) {
+    assert.match(personalization, new RegExp(field));
+  }
+  for (const column of ["persona_context", "custom_instructions", "avoid_phrases"]) {
+    assert.match(personalization, new RegExp(column));
+    assert.match(migration, new RegExp(column));
+  }
+
+  assert.match(personalization, /buildPersonalizationHandoffPrompt/);
+  assert.match(personalization, /AAS パーソナライズ引き継ぎ/);
+  assert.match(personalization, /ユーザーが明示した追加パーソナライズ/);
+  assert.match(personalization, /記載されていない個人情報・経験・実績・感情は推測して補わない/);
+  assert.match(personalization, /メモリやカスタム指示へ自動登録する依頼ではありません/);
+  assert.match(personalization, /メモリやプロフィールへ自動登録する依頼ではありません/);
+  assert.match(personalization, /パーソナライズ設定へ自動登録する依頼ではありません/);
+
+  for (const label of [
+    "AIへ伝える追加条件",
+    "① 選ぶ",
+    "② 追加する",
+    "③ 足りない時だけ自由入力",
+    "AIに伝えたい執筆上の前提",
+    "追加の文章・回答指示",
+    "避けたい言葉・表現",
+  ]) {
+    assert.match(panel, new RegExp(label));
+  }
+
+  assert.match(panel, /AI_PROVIDER_LABELS\[provider\]\}用をコピー/);
+  assert.match(panel, /Object\.keys\(PROVIDER_GUIDANCE\)/);
+
+  for (const secret of ["パスワード", "APIキー", "アクセストークン", "認証コード", "クレジットカード"]) {
+    assert.match(panel, new RegExp(secret));
+  }
+  assert.match(panel, /一時チャットではパーソナライズされた回答は利用できません/);
+  assert.match(panel, /シークレットチャットでは既存メモリを使いません/);
+  assert.match(panel, /AASの設定がChatGPTのメモリやカスタム指示へ自動登録されるわけではありません/);
+  assert.match(panel, /個人最適化がONの場合はAASが生成する記事・SNSプロンプトへ自動反映/);
+  assert.match(panel, /ChatGPT・Claude・Gemini/);
+
+  assert.match(migration, /char_length\(persona_context\) <= 1200/);
+  assert.match(migration, /char_length\(custom_instructions\) <= 2400/);
+  assert.match(migration, /char_length\(avoid_phrases\) <= 1200/);
+  assert.doesNotMatch(migration, /service[_-]?role|security definer/i);
+
+  assert.match(css, /\.personalization-handoff/);
+  assert.match(css, /\.personalization-provider-handoff/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.personalization-provider-handoff/);
+});
+
+test("personalization UI is dropdown-first with addable presets and free input", async () => {
+  const [settings, panel, personalization, css] = await Promise.all([
+    read("components/pwa-settings-page.tsx"),
+    read("components/personalization-handoff-panel.tsx"),
+    read("lib/user-personalization.ts"),
+    read("app/phase25-user-personalization.css"),
+  ]);
+
+  for (const label of [
+    "AIの書き方を自分好みにする",
+    "STEP 1",
+    "普段使うAIと投稿先",
+    "STEP 2",
+    "文章の書き方",
+    "主なジャンル",
+    "その他・自由入力",
+    "誇張・煽り表現",
+  ]) {
+    assert.match(settings, new RegExp(label));
+  }
+  assert.match(settings, /COMMON_PERSONALIZATION_GENRES/);
+  assert.match(settings, /<select/);
+  assert.match(settings, /ジャンルを自由入力/);
+
+  for (const label of [
+    "AIへ伝える追加条件",
+    "選んで追加",
+    "自由入力を追加",
+    "初心者向けにする",
+    "結論から書く",
+    "具体例を入れる",
+    "人間味を残す",
+    "成果保証を避ける",
+    "AI定型句を避ける",
+    "絵文字の使いすぎを避ける",
+  ]) {
+    assert.match(panel, new RegExp(label));
+  }
+  assert.match(panel, /function PresetAdder/);
+  assert.match(panel, /items\.length >= 12/);
+  assert.match(panel, /onClick=\{\(\) => addItem\(selected\)\}/);
+  assert.match(panel, /onClick=\{\(\) => addItem\(custom\)\}/);
+  assert.match(panel, /onClick=\{\(\) => removeItem\(item\)\}/);
+  assert.match(panel, /<optgroup/);
+  assert.doesNotMatch(panel, /<textarea/);
+
+  assert.match(personalization, /function personalizationItems/);
+  assert.match(personalization, /for \(const item of personaContext\)/);
+  assert.match(personalization, /for \(const item of customInstructions\)/);
+  assert.match(personalization, /for \(const item of avoidPhrases\)/);
+  assert.equal(personalization.includes(String.raw`.split(/\\r?\\n/)`), false, "newline regex must not be double escaped");
+  assert.equal(personalization.includes(String.raw`.split(/\r?\n/)`), true, "newline regex must split saved multi-line preferences");
+  assert.equal(personalization.includes(String.raw`.replace(/^[-・]\\s*/`), false, "bullet-strip whitespace regex must not be double escaped");
+  assert.equal(personalization.includes(String.raw`.replace(/^[-・]\s*/`), true, "bullet-strip regex must remove optional whitespace");
+
+  assert.match(css, /\.personalization-choice-section/);
+  assert.match(css, /\.personalization-preset-add/);
+  assert.match(css, /\.personalization-preset-chips/);
+  assert.match(css, /\.personalization-custom-add/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.personalization-preset-add/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.personalization-preset-builder-head small[\s\S]*?font-size: 11px/);
 });
 
 test("prompt builder applies provider plan and optional user preferences", async () => {
@@ -64,7 +223,7 @@ test("prompt builder applies provider plan and optional user preferences", async
 test("article wizard supports direct back navigation and safe clearing of pasted AI content", async () => {
   const [page, steps, css] = await Promise.all([
     read("components/phase11-create-page.tsx"),
-    read("components/article-create/article-create-steps.tsx"),
+    readArticleStepSource(),
     read("app/phase9-11.css"),
   ]);
 

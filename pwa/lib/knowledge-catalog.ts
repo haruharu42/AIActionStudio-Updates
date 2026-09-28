@@ -40,7 +40,7 @@ function asKind(value: unknown): KnowledgeKind | null {
   return value === "age" || value === "genre" || value === "subgenre" || value === "publication" || value === "task" || value === "combination" ? value : null;
 }
 
-export function parseKnowledgeCatalogRow(row: Record<string, unknown>): KnowledgeRule | null {
+function parseCatalogRow(row: Record<string, unknown>): KnowledgeRule | null {
   const kind = asKind(row.kind);
   const key = typeof row.key === "string" ? row.key : "";
   const label = typeof row.label === "string" ? row.label.trim() : "";
@@ -73,7 +73,7 @@ export async function loadActiveKnowledgeCatalog(client: SupabaseClient): Promis
     : current;
   if (response.error) throw new Error("ナレッジを読み込めませんでした。");
   return (response.data ?? [])
-    .map((row: Record<string, unknown>) => parseKnowledgeCatalogRow(row))
+    .map((row: Record<string, unknown>) => parseCatalogRow(row))
     .filter((rule: KnowledgeRule | null): rule is KnowledgeRule => Boolean(rule));
 }
 

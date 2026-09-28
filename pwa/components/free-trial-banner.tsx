@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import {
   FREE_TRIAL_USAGE_CHANGED_EVENT,
   getMyFreeTrialStatus,
@@ -10,7 +11,6 @@ import {
   type TrialUsageResult,
 } from "@/lib/free-trial";
 import { fetchPublicSalesSettings, type SalesSettings } from "@/lib/sales-settings";
-import { getSupabaseClient } from "@/lib/supabase";
 
 type LimitKind = "daily" | "feature" | null;
 
@@ -28,13 +28,20 @@ function dismissedKey(usageDate: string): string {
 }
 
 export function FreeTrialBanner() {
+  const { state: accessState, client } = useSharedAccessState();
+  const accessUserId = accessState.kind === "ready" ? accessState.profile.id : "";
   const [status, setStatus] = useState<FreeTrialStatus | null>(null);
   const [sales, setSales] = useState<SalesSettings | null>(null);
   const [limitKind, setLimitKind] = useState<LimitKind>(null);
 
   const loadStatus = useCallback(async (forcedKind: Exclude<LimitKind, null> | null = null) => {
+    if (!accessUserId || !client) {
+      setStatus(null);
+      setLimitKind(null);
+      return;
+    }
     try {
-      const next = await getMyFreeTrialStatus(getSupabaseClient());
+      const next = await getMyFreeTrialStatus(client);
       setStatus(next);
       if (next.bypassLimits || next.trialStatus !== "active") {
         setLimitKind(null);
@@ -57,10 +64,19 @@ export function FreeTrialBanner() {
       setStatus(null);
       setLimitKind(null);
     }
-  }, []);
+  }, [accessUserId, client]);
 
   useEffect(() => {
     let active = true;
+    if (!accessUserId || !client) {
+      queueMicrotask(() => {
+        if (!active) return;
+        setStatus(null);
+        setSales(null);
+        setLimitKind(null);
+      });
+      return () => { active = false; };
+    }
     queueMicrotask(() => {
       if (!active) return;
       void Promise.allSettled([
@@ -91,7 +107,7 @@ export function FreeTrialBanner() {
       window.removeEventListener(FREE_TRIAL_USAGE_CHANGED_EVENT, onUsageChanged);
       window.removeEventListener("focus", onFocus);
     };
-  }, [loadStatus]);
+  }, [accessUserId, client, loadStatus]);
 
   if (!status || status.bypassLimits || status.trialStatus !== "active") return null;
 

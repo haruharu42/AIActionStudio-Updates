@@ -96,6 +96,21 @@ test("operations health endpoint and admin UI are wired without exposing secrets
   assert.doesNotMatch(`${page}\n${adminClient}`, /AAS_SUPABASE_SERVICE_ROLE_KEY|AAS_STRIPE_SECRET_KEY|AAS_STRIPE_WEBHOOK_SECRET/);
 });
 
+test("fully opaque browser script diagnostics are warnings while actionable client errors stay errors", async () => {
+  const migration = await readRepo("supabase/migrations/20260928072031_ops_opaque_script_warning_v1.sql");
+
+  assert.match(migration, /v_event_kind text := 'error'/);
+  assert.match(migration, /v_severity text := 'error'/);
+  assert.match(migration, /v_code = 'WINDOW_SCRIPT_ERROR_OPAQUE'/);
+  assert.match(migration, /v_event_kind := 'warning'/);
+  assert.match(migration, /v_severity := 'warning'/);
+  assert.match(migration, /private\.ops_upsert_event/);
+  assert.match(migration, /error_code='WINDOW_SCRIPT_ERROR_OPAQUE'/);
+  assert.match(migration, /status='resolved'/);
+  assert.match(migration, /grant execute on function public\.record_client_error\(text,text,text,text,text\) to authenticated/);
+  assert.doesNotMatch(migration, /grant .* to anon/i);
+});
+
 test("global error boundary reports safe messages instead of stack traces", async () => {
   const reporter = await read("components/app-error-reporter.tsx");
   const ops = await read("lib/ops.ts");

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSharedAccessState } from "@/components/access-state-provider";
 
 import { FreeTrialAdminPanel } from "@/components/free-trial-admin-panel";
-import { listAdminUsers, type AdminUser } from "@/lib/phase10-admin";
+import { listPwaAdminUsers, type PwaAdminUser } from "@/lib/pwa-admin-users";
 
 type Gate =
   | { kind: "loading" }
@@ -18,7 +18,7 @@ type Gate =
 export function FreeTrialAdminPage() {
   const { state: accessState, client } = useSharedAccessState();
   const [initError, setInitError] = useState("");
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [users, setUsers] = useState<PwaAdminUser[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
@@ -54,7 +54,7 @@ export function FreeTrialAdminPage() {
 
   const reloadUsers = async () => {
     if (!client) throw new Error("AASへ接続できませんでした。");
-    const next = await listAdminUsers(client);
+    const next = await listPwaAdminUsers(client);
     setUsers(next);
     if (selectedId && !next.some((user) => user.id === selectedId)) setSelectedId("");
   };
@@ -72,7 +72,7 @@ export function FreeTrialAdminPage() {
     });
     const boot = async () => {
       try {
-        const nextUsers = await listAdminUsers(client);
+        const nextUsers = await listPwaAdminUsers(client);
         if (!active) return;
         setUsers(nextUsers);
       } catch (error) {

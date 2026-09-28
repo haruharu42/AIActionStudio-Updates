@@ -155,4 +155,15 @@ test("support center is documented, responsive, and keeps the public legal suppo
   assert.match(faq, /管理者から未読返信/);
   assert.match(publicSupport, /お問い合わせ・開示請求/);
   assert.match(publicSupport, /販売者情報の開示請求/);
+  assert.match(publicSupport, /fetchCommerceConfig/);
+  assert.match(publicSupport, /const configuredExternalSalesUrl = settings\.externalSalesEnabled/);
+  assert.match(publicSupport, /setExternalSalesUrl\(commerce\.legalReady \? configuredExternalSalesUrl : ""\)/);
+  assert.match(publicSupport, /externalSalesConfigured/);
+  assert.match(publicSupport, /販売前情報が未完了/);
+  assert.match(publicSupport, /購入導線はまだ公開していません/);
+  assert.match(publicSupport, /href="\/inquiries"/);
+  assert.match(publicSupport, /AAS内の問い合わせセンターを開く/);
+  assert.match(publicSupport, /購入前・ログインできない場合/);
+  assert.match(publicSupport, /公開サポート窓口/);
+  assert.match(publicSupport, /supportUrl/);
 });

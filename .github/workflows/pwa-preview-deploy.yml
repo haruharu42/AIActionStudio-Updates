@@ -265,8 +265,6 @@ jobs:
           npx wrangler versions upload \
             --config "$CONFIG_PATH" \
             --keep-vars \
-            --var "AAS_SUPABASE_URL:$NEXT_PUBLIC_AAS_SUPABASE_URL" \
-            --var "AAS_SUPABASE_PUBLISHABLE_KEY:$NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY" \
             --preview-alias aas-preview \
             --message "AAS PWA preview $GITHUB_SHA" \
             2>&1 | tee "$output_file"

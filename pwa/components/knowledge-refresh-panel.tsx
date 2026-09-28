@@ -3,187 +3,68 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { launchAiApp } from "@/lib/ai-app-links";
+import { PresetNumberSelectWithCustom, SelectWithCustom } from "@/components/select-with-custom";
+import { KnowledgeDiffSummary } from "@/components/knowledge-refresh/knowledge-diff-summary";
+import { KnowledgeChannelGuide, KnowledgeRefreshHistory } from "@/components/knowledge-refresh/knowledge-refresh-static-sections";
+import { KnowledgeQualityAnalyzer } from "@/components/knowledge-refresh/knowledge-quality-analyzer";
+import { KnowledgeSourceHealthPanel } from "@/components/knowledge-refresh/knowledge-source-health-panel";
 import {
-  adminCancelKnowledgeRefresh,
+  formatKnowledgeDate,
+  knowledgeAutomationActionLabel,
+  knowledgeRefreshStatusLabel,
+} from "@/components/knowledge-refresh/knowledge-refresh-display";
+import {
+  adminGetKnowledgeAutomationAiConfig,
+  adminGetKnowledgeAutomationStatus,
+  adminGetKnowledgeProductionHealth,
   adminGetKnowledgeRefreshChannels,
-  adminGetSourceFreshnessQueue,
-  adminGetSourceRiskReport,
-  adminGetStableReleaseQueue,
+  adminGetKnowledgeSourceRiskReport,
+  adminListKnowledgeAutomationCandidates,
+  adminListKnowledgeAutomationSources,
   adminListKnowledgeRefreshRequests,
-  adminListSourceRecheckReceipts,
   adminPreviewKnowledgeRefreshBundleDiff,
   adminPrepareSourceDiversityResearch,
-  adminPrepareSourceFreshnessRecheck,
-  adminPrepareStableRelease,
-  adminRecordSourceRecheckReceipt,
   adminPublishKnowledgeRefreshBundle,
+  adminRequestKnowledgeAutomationRun,
   adminRequestKnowledgeRefresh,
-  adminRetryKnowledgeRefresh,
-  adminRunKnowledgeScheduler,
+  adminRetryKnowledgeAutomationCandidateAi,
+  adminReviewKnowledgeAutomationCandidate,
+  adminSetKnowledgeAutomationAiConfig,
   adminStartKnowledgeRefresh,
-  adminValidateKnowledgeRefreshBundle,
-  adminValidateStablePromotionBundle,
+  buildKnowledgeAutomationCandidateBundle,
   buildKnowledgeRefreshResearchPrompt,
-  buildSourceDiversityResearchPrompt,
-  buildSourceFreshnessResearchPrompt,
   parseKnowledgeRefreshBundle,
-  type KnowledgeQualityReport,
-  type KnowledgeRefreshChangeItem,
+  type KnowledgeAutomationAiConfig,
+  type KnowledgeAutomationCandidate,
+  type KnowledgeAutomationSource,
+  type KnowledgeAutomationStatus,
+  type KnowledgeProductionHealth,
   type KnowledgeRefreshChannelState,
   type KnowledgeRefreshDiff,
   type KnowledgeRefreshRequest,
-  type SourceFreshnessQueue,
-  type SourceFreshnessQueueItem,
-  type SourceRecheckOutcome,
-  type SourceRecheckReceipt,
-  type SourceRiskReport,
-  type StablePromotionReport,
-  type StableReleaseQueue,
+  type KnowledgeSourceRiskReport,
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
-
-function formatDate(value: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ja-JP");
-}
-
-function formatCycle(hours: number | null | undefined): string {
-  if (!hours) return "-";
-  if (hours % 24 === 0) return `${hours / 24}日ごと`;
-  return `${hours}時間ごと`;
-}
-
-function statusLabel(status: KnowledgeRefreshRequest["status"]): string {
-  switch (status) {
-    case "pending": return "待機中";
-    case "processing": return "調査・確認中";
-    case "completed": return "公開済み";
-    case "failed": return "失敗";
-    case "cancelled": return "キャンセル";
-  }
-}
-
-function sourceOutcomeLabel(outcome: SourceRecheckOutcome): string {
-  if (outcome === "unchanged") return "変更なし";
-  if (outcome === "changed") return "変更あり";
-  if (outcome === "removed") return "URL失効";
-  return "取得不可";
-}
-
-function refreshErrorLabel(value: string): string {
-  if (value.startsWith("AAS auto-recovery: processing exceeded 24 hours")) {
-    return "24時間以上処理中だったため自動解除しました。次回の更新サイクルで再試行できます。";
-  }
-  return value;
-}
-
-const FIELD_LABELS: Record<string, string> = {
-  new: "新規追加",
-  kind: "分類",
-  label: "表示名",
-  parent_label: "親分類",
-  aliases: "別名",
-  guidance: "制作ルール",
-  deliverables: "成果物",
-  cautions: "注意・禁止",
-  tasks: "適用機能",
-  priority: "優先度",
-  sources: "根拠URL",
-  source_summary: "根拠要約",
-  provider: "AIプロバイダー",
-  plan: "利用プラン",
-  task: "用途",
-  rules: "Promptルール",
-};
-
-function actionLabel(action: KnowledgeRefreshChangeItem["action"]): string {
-  if (action === "added") return "追加";
-  if (action === "updated") return "変更";
-  return "変更なし";
-}
-
-function DiffGroup({
-  title,
-  diff,
-}: {
-  title: string;
-  diff: KnowledgeRefreshDiff["knowledge"];
-}) {
-  return (
-    <section className="knowledge-diff-group">
-      <header>
-        <strong>{title}</strong>
-        <div>
-          <span className="added">＋{diff.added} 追加</span>
-          <span className="updated">↻ {diff.updated} 変更</span>
-          <span className="unchanged">＝{diff.unchanged} 変更なし</span>
-        </div>
-      </header>
-      {diff.items.length > 0 && (
-        <div className="knowledge-diff-items">
-          {diff.items.map((item) => (
-            <article key={item.itemType + ":" + item.key}>
-              <div className="knowledge-diff-item-head">
-                <span className={"diff-action " + item.action}>{actionLabel(item.action)}</span>
-                <strong>{item.label || item.key}</strong>
-              </div>
-              <small>{item.key}</small>
-              {item.changedFields.length > 0 && (
-                <p>
-                  変更箇所: {item.changedFields.map((field) => FIELD_LABELS[field] ?? field).join(" / ")}
-                </p>
-              )}
-              {item.sourceSummary && <p className="source-summary">根拠: {item.sourceSummary}</p>}
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function DiffSummary({ diff }: { diff: KnowledgeRefreshDiff }) {
-  return (
-    <div className="knowledge-diff-summary">
-      <DiffGroup title="Knowledge" diff={diff.knowledge} />
-      <DiffGroup title="Prompt" diff={diff.prompt} />
-    </div>
-  );
-}
 
 export function KnowledgeRefreshPanel() {
   const [requests, setRequests] = useState<KnowledgeRefreshRequest[]>([]);
   const [channels, setChannels] = useState<KnowledgeRefreshChannelState[]>([]);
+  const [automationStatus, setAutomationStatus] = useState<KnowledgeAutomationStatus | null>(null);
+  const [productionHealth, setProductionHealth] = useState<KnowledgeProductionHealth | null>(null);
+  const [sourceRiskReport, setSourceRiskReport] = useState<KnowledgeSourceRiskReport | null>(null);
+  const [automationSources, setAutomationSources] = useState<KnowledgeAutomationSource[]>([]);
+  const [automationCandidates, setAutomationCandidates] = useState<KnowledgeAutomationCandidate[]>([]);
+  const [automationAiConfig, setAutomationAiConfig] = useState<KnowledgeAutomationAiConfig | null>(null);
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiModel, setAiModel] = useState("gpt-5.6");
+  const [aiMaxCandidates, setAiMaxCandidates] = useState(6);
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [preparedAutomationCandidateId, setPreparedAutomationCandidateId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [bundleText, setBundleText] = useState("");
   const [diffPreview, setDiffPreview] = useState<KnowledgeRefreshDiff | null>(null);
-  const [qualityReport, setQualityReport] = useState<KnowledgeQualityReport | null>(null);
-  const [stablePromotionReport, setStablePromotionReport] = useState<StablePromotionReport | null>(null);
-  const [stableQueue, setStableQueue] = useState<StableReleaseQueue | null>(null);
-  const [sourceQueue, setSourceQueue] = useState<SourceFreshnessQueue | null>(null);
-  const [sourceReceipts, setSourceReceipts] = useState<SourceRecheckReceipt[]>([]);
-  const [sourceRisk, setSourceRisk] = useState<SourceRiskReport | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-
-  const reviewedSources = useMemo(() => {
-    if (!diffPreview || !bundleText.trim()) return [] as string[];
-    try {
-      const bundle = parseKnowledgeRefreshBundle(bundleText);
-      const values = [...bundle.knowledge_rules, ...bundle.prompt_optimizations];
-      const urls = values.flatMap((item) => {
-        if (!item || typeof item !== "object" || Array.isArray(item)) return [];
-        const sourceUrls = (item as Record<string, unknown>).source_urls;
-        return Array.isArray(sourceUrls)
-          ? sourceUrls.filter((value): value is string => typeof value === "string" && /^https:\/\//i.test(value))
-          : [];
-      });
-      return [...new Set(urls)].slice(0, 40);
-    } catch {
-      return [];
-    }
-  }, [bundleText, diffPreview]);
 
   const selected = useMemo(
     () => requests.find((request) => request.id === selectedId) ?? null,
@@ -191,23 +72,29 @@ export function KnowledgeRefreshPanel() {
   );
   const freshState = channels.find((channel) => channel.channel === "fresh") ?? null;
   const stableState = channels.find((channel) => channel.channel === "stable") ?? null;
-
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue, nextSourceReceipts, nextSourceRisk] = await Promise.all([
+    const [nextRequests, nextChannels, nextAutomationStatus, nextProductionHealth, nextSourceRiskReport, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
-      adminGetStableReleaseQueue(client),
-      adminGetSourceFreshnessQueue(client),
-      adminListSourceRecheckReceipts(client, 30),
-      adminGetSourceRiskReport(client),
+      adminGetKnowledgeAutomationStatus(client),
+      adminGetKnowledgeProductionHealth(client),
+      adminGetKnowledgeSourceRiskReport(client),
+      adminListKnowledgeAutomationSources(client, 200),
+      adminListKnowledgeAutomationCandidates(client, "pending", 50),
+      adminGetKnowledgeAutomationAiConfig(client),
     ]);
     setRequests(nextRequests);
     setChannels(nextChannels);
-    setStableQueue(nextStableQueue);
-    setSourceQueue(nextSourceQueue);
-    setSourceReceipts(nextSourceReceipts);
-    setSourceRisk(nextSourceRisk);
+    setAutomationStatus(nextAutomationStatus);
+    setProductionHealth(nextProductionHealth);
+    setSourceRiskReport(nextSourceRiskReport);
+    setAutomationSources(nextAutomationSources);
+    setAutomationCandidates(nextAutomationCandidates);
+    setAutomationAiConfig(nextAiConfig);
+    setAiEnabled(nextAiConfig.enabled);
+    setAiModel(nextAiConfig.model);
+    setAiMaxCandidates(nextAiConfig.maxCandidatesPerRun);
     if (selectedId === null) {
       const active = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
       if (active) setSelectedId(active.id);
@@ -219,21 +106,28 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue, nextSourceReceipts, nextSourceRisk] = await Promise.all([
+        const [nextRequests, nextChannels, nextAutomationStatus, nextProductionHealth, nextSourceRiskReport, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
-          adminGetStableReleaseQueue(client),
-          adminGetSourceFreshnessQueue(client),
-          adminListSourceRecheckReceipts(client, 30),
-          adminGetSourceRiskReport(client),
+          adminGetKnowledgeAutomationStatus(client),
+          adminGetKnowledgeProductionHealth(client),
+          adminGetKnowledgeSourceRiskReport(client),
+          adminListKnowledgeAutomationSources(client, 200),
+          adminListKnowledgeAutomationCandidates(client, "pending", 50),
+          adminGetKnowledgeAutomationAiConfig(client),
         ]);
         if (!active) return;
         setRequests(nextRequests);
         setChannels(nextChannels);
-        setStableQueue(nextStableQueue);
-        setSourceQueue(nextSourceQueue);
-        setSourceReceipts(nextSourceReceipts);
-        setSourceRisk(nextSourceRisk);
+        setAutomationStatus(nextAutomationStatus);
+        setProductionHealth(nextProductionHealth);
+        setSourceRiskReport(nextSourceRiskReport);
+        setAutomationSources(nextAutomationSources);
+        setAutomationCandidates(nextAutomationCandidates);
+        setAutomationAiConfig(nextAiConfig);
+        setAiEnabled(nextAiConfig.enabled);
+        setAiModel(nextAiConfig.model);
+        setAiMaxCandidates(nextAiConfig.maxCandidatesPerRun);
         const firstActive = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
         if (firstActive) setSelectedId(firstActive.id);
       } catch (error) {
@@ -244,15 +138,147 @@ export function KnowledgeRefreshPanel() {
     return () => { active = false; };
   }, []);
 
+  const saveAutomationAiConfig = async () => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminSetKnowledgeAutomationAiConfig(getSupabaseClient(), {
+        enabled: aiEnabled,
+        provider: "openai",
+        model: aiModel,
+        maxCandidatesPerRun: aiMaxCandidates,
+        apiKey: aiApiKey,
+      });
+      setAiApiKey("");
+      await reload();
+      setMessage(aiEnabled
+        ? "AI候補JSON自動生成を有効化しました。APIキーはVaultへ保存され、画面には再表示しません。"
+        : "AI候補JSON自動生成を無効化しました。公式ソース監視は継続します。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "AI自動解析設定を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const retryAutomationAi = async (candidate: KnowledgeAutomationCandidate) => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminRetryKnowledgeAutomationCandidateAi(getSupabaseClient(), candidate.id);
+      await reload();
+      setMessage("AI解析を再試行待ちへ戻しました。次回の自動調査で再解析されます。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "AI解析を再試行状態へ戻せませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const prepareAutomationCandidate = async (candidate: KnowledgeAutomationCandidate) => {
+    const bundle = buildKnowledgeAutomationCandidateBundle(candidate);
+    if (!bundle) {
+      setMessage("この候補にはFresh差分へ取り込めるAI提案JSONがありません。");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      const client = getSupabaseClient();
+      const requestId = await adminRequestKnowledgeRefresh(client, "fresh");
+      setSelectedId(requestId);
+      setPreparedAutomationCandidateId(candidate.id);
+      setBundleText(JSON.stringify(bundle, null, 2));
+      setDiffPreview(null);
+      await reload();
+      setSelectedId(requestId);
+      setPreparedAutomationCandidateId(candidate.id);
+      setMessage("AI提案をFresh差分レビューへ取り込みました。候補状態もまだ確定していません。「変更点を確認」後、公開に成功した場合だけ処理済みにします。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "AI提案をFresh差分レビューへ取り込めませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runAutomation = async () => {
+    setBusy(true);
+    setMessage("");
+    try {
+      const runId = await adminRequestKnowledgeAutomationRun(getSupabaseClient());
+      await reload();
+      setMessage(`公式ソース自動調査 #${runId} を開始しました。候補は自動公開されません。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "公式ソース自動調査を開始できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const prepareSourceDiversity = async () => {
+    if (!sourceRiskReport || sourceRiskReport.reviewItems.length === 0) {
+      setMessage("追加根拠リサーチが必要なKnowledge / Promptはありません。");
+      return;
+    }
+    if (!window.confirm("根拠が1ソースまたは1ドメインに偏る項目をFreshリサーチ対象として準備しますか？ 自動公開はされません。")) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await adminPrepareSourceDiversityResearch(getSupabaseClient(), 12);
+      setSelectedId(result.requestId);
+      await reload();
+      setSelectedId(result.requestId);
+      setMessage(`追加根拠リサーチ ${result.itemCount}件をFresh更新 #${result.requestId} へ準備しました。差分確認・公開操作を行うまで正式Knowledgeは変わりません。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "追加根拠リサーチを準備できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyAutomationPrompt = async (candidate: KnowledgeAutomationCandidate) => {
+    try {
+      await navigator.clipboard.writeText(candidate.researchPrompt);
+      setMessage("候補専用の検証プロンプトをコピーしました。Web検索できるAIで公式ソースを再確認してください。");
+    } catch {
+      setMessage("クリップボードへコピーできませんでした。");
+    }
+  };
+
+  const reviewAutomationCandidate = async (
+    candidate: KnowledgeAutomationCandidate,
+    decision: "approved" | "rejected",
+  ) => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminReviewKnowledgeAutomationCandidate(
+        getSupabaseClient(),
+        candidate.id,
+        decision,
+        decision === "approved"
+          ? "管理者が調査継続候補として承認。正式公開は別途Quality Gateと差分確認が必要。"
+          : "管理者が自動調査候補を却下。",
+      );
+      await reload();
+      setMessage(decision === "approved"
+        ? "候補を承認しました。まだ正式Knowledgeには公開されていません。"
+        : "候補を却下しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "候補のレビュー結果を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const enqueue = async (channel: "fresh" | "stable") => {
     setBusy(true);
     setMessage("");
     setDiffPreview(null);
-    setQualityReport(null);
-    setStablePromotionReport(null);
     try {
       const id = await adminRequestKnowledgeRefresh(getSupabaseClient(), channel);
       setSelectedId(id);
+      setPreparedAutomationCandidateId(null);
       await reload();
       setMessage(channel === "fresh"
         ? "Fresh（先行確認版）の更新をキューへ追加しました。"
@@ -268,8 +294,6 @@ export function KnowledgeRefreshPanel() {
     setBusy(true);
     setMessage("");
     setDiffPreview(null);
-    setQualityReport(null);
-    setStablePromotionReport(null);
     try {
       await adminStartKnowledgeRefresh(getSupabaseClient(), request.id);
       setSelectedId(request.id);
@@ -277,178 +301,6 @@ export function KnowledgeRefreshPanel() {
       setMessage("更新を調査・確認中へ変更しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "更新を開始できませんでした。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const cancel = async (request: KnowledgeRefreshRequest) => {
-    if (!window.confirm(`更新 #${request.id} を中止しますか？公開済みKnowledge / Promptには影響しません。`)) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      await adminCancelKnowledgeRefresh(getSupabaseClient(), request.id);
-      setBundleText("");
-      setDiffPreview(null);
-      setQualityReport(null);
-    setStablePromotionReport(null);
-      if (selectedId === request.id) setSelectedId(null);
-      await reload();
-      setMessage(`更新 #${request.id} を中止しました。必要なら履歴から再試行できます。`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "更新を中止できませんでした。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const retry = async (request: KnowledgeRefreshRequest) => {
-    setBusy(true);
-    setMessage("");
-    setDiffPreview(null);
-    setQualityReport(null);
-    setStablePromotionReport(null);
-    try {
-      const nextId = await adminRetryKnowledgeRefresh(getSupabaseClient(), request.id);
-      setSelectedId(nextId);
-      setBundleText("");
-      await reload();
-      setMessage(`更新 #${request.id} を再キュー化しました。現在の更新IDは #${nextId} です。`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "更新を再試行できませんでした。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const syncScheduler = async () => {
-    setBusy(true);
-    setMessage("");
-    try {
-      await adminRunKnowledgeScheduler(getSupabaseClient());
-      await reload();
-      setMessage("更新期限を再確認し、必要なFresh / Stable要求を同期しました。");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "更新スケジューラを同期できませんでした。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const prepareStableRelease = async () => {
-    if (!stableQueue || stableQueue.readyCount < 1) return;
-    setBusy(true);
-    setMessage("");
-    setDiffPreview(null);
-    setQualityReport(null);
-    setStablePromotionReport(null);
-    try {
-      const prepared = await adminPrepareStableRelease(getSupabaseClient());
-      setSelectedId(prepared.requestId);
-      setBundleText(JSON.stringify(prepared.bundle, null, 2));
-      await reload();
-      setSelectedId(prepared.requestId);
-      setMessage(
-        `Stableレビュー候補を自動準備しました。Knowledge ${prepared.knowledgeCount}件 / Prompt ${prepared.promptCount}件です。「変更点を確認」からレビューしてください。`,
-      );
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Stableレビュー候補を準備できませんでした。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const prepareSourceRecheck = async () => {
-    if (!sourceQueue || sourceQueue.missingCount + sourceQueue.staleCount + sourceQueue.dueCount < 1) return;
-    setBusy(true);
-    setMessage("");
-    setDiffPreview(null);
-    setQualityReport(null);
-    setStablePromotionReport(null);
-    setBundleText("");
-    try {
-      const prepared = await adminPrepareSourceFreshnessRecheck(getSupabaseClient(), 20);
-      const prompt = buildSourceFreshnessResearchPrompt(prepared);
-      await navigator.clipboard.writeText(prompt);
-      await reload();
-      setSelectedId(prepared.requestId);
-      setMessage(
-        `根拠再確認対象 ${prepared.itemCount}件をFresh更新 #${prepared.requestId} に準備し、専用調査プロンプトをコピーしました。Web検索できるAIで再確認し、JSONを貼り付けてください。`,
-      );
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "根拠再確認を準備できませんでした。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const recordSourceReceipt = async (
-    item: SourceFreshnessQueueItem,
-    sourceUrl: string,
-    outcome: SourceRecheckOutcome,
-  ) => {
-    const outcomeLabel = outcome === "unchanged"
-      ? "変更なし"
-      : outcome === "changed"
-        ? "変更あり"
-        : outcome === "removed"
-          ? "URL失効"
-          : "取得不可";
-    if (!window.confirm(`公式ページを実際に確認し、「${outcomeLabel}」として記録しますか？`)) return;
-
-    const notes = outcome === "unchanged"
-      ? ""
-      : window.prompt("確認メモ（任意）", "") ?? "";
-
-    setBusy(true);
-    setMessage("");
-    try {
-      const result = await adminRecordSourceRecheckReceipt(getSupabaseClient(), {
-        itemType: item.itemType,
-        itemKey: item.key,
-        sourceUrl,
-        outcome,
-        notes,
-        requestId: selected?.channel === "fresh" && (selected.status === "pending" || selected.status === "processing")
-          ? selected.id
-          : null,
-      });
-      await reload();
-      if (result.completedCycle) {
-        setMessage(`${item.label} の全根拠URLを「変更なし」で確認しました。確認日を更新しました。`);
-      } else if (result.followupRequestId) {
-        setSelectedId(result.followupRequestId);
-        setMessage(`${item.label} の根拠に「${outcomeLabel}」を記録しました。Fresh更新 #${result.followupRequestId} で内容更新を確認してください。`);
-      } else {
-        setMessage(`${item.label}: ${result.checkedSourceCount}/${result.totalSourceCount} URLを確認済みです。残り ${result.remainingSourceCount} 件です。`);
-      }
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "根拠再確認の記録を保存できませんでした。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-
-  const prepareSourceDiversityResearch = async () => {
-    if (!sourceRisk || sourceRisk.reviewItems.length < 1) return;
-    setBusy(true);
-    setMessage("");
-    setDiffPreview(null);
-    setQualityReport(null);
-    setStablePromotionReport(null);
-    setBundleText("");
-    try {
-      const prepared = await adminPrepareSourceDiversityResearch(getSupabaseClient(), 12);
-      const prompt = buildSourceDiversityResearchPrompt(prepared);
-      await navigator.clipboard.writeText(prompt);
-      await reload();
-      setSelectedId(prepared.requestId);
-      setMessage(
-        `追加根拠リサーチ対象 ${prepared.itemCount}件をFresh更新 #${prepared.requestId} に準備し、専用調査プロンプトをコピーしました。独立した公式/一次情報が見つかった項目だけ更新してください。`,
-      );
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "追加根拠リサーチを準備できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -470,30 +322,11 @@ export function KnowledgeRefreshPanel() {
     setMessage("");
     try {
       const bundle = parseKnowledgeRefreshBundle(bundleText);
-      const client = getSupabaseClient();
-      const [diff, quality, stableGate] = await Promise.all([
-        adminPreviewKnowledgeRefreshBundleDiff(client, bundle),
-        adminValidateKnowledgeRefreshBundle(client, bundle),
-        selected?.channel === "stable"
-          ? adminValidateStablePromotionBundle(client, bundle)
-          : Promise.resolve(null),
-      ]);
+      const diff = await adminPreviewKnowledgeRefreshBundleDiff(getSupabaseClient(), bundle);
       setDiffPreview(diff);
-      setQualityReport(quality);
-      setStablePromotionReport(stableGate);
-      if (!quality.valid) {
-        setMessage(`品質ゲートで ${quality.blocking.length}件の修正必須項目が見つかりました。公開前に修正してください。`);
-      } else if (stableGate && !stableGate.valid) {
-        setMessage(`Stable昇格ゲートで ${stableGate.blocking.length}件の回帰を検出しました。Stable公開前に修正してください。`);
-      } else {
-        setMessage(selected?.channel === "stable"
-          ? "差分・品質ゲート・Stable昇格ゲートを確認しました。ブロック項目はありません。"
-          : "差分と品質ゲートを確認しました。ブロック項目はありません。");
-      }
+      setMessage("現在の正式データとの差分を確認しました。内容を確認してから公開してください。");
     } catch (error) {
       setDiffPreview(null);
-      setQualityReport(null);
-    setStablePromotionReport(null);
       setMessage(error instanceof Error ? error.message : "変更点を比較できませんでした。");
     } finally {
       setBusy(false);
@@ -501,13 +334,7 @@ export function KnowledgeRefreshPanel() {
   };
 
   const publish = async () => {
-    if (
-      !selected
-      || !diffPreview
-      || !qualityReport?.valid
-      || (selected.channel === "stable" && !stablePromotionReport?.valid)
-      || (selected.status !== "pending" && selected.status !== "processing")
-    ) return;
+    if (!selected || !diffPreview || (selected.status !== "pending" && selected.status !== "processing")) return;
 
     const changedCount =
       diffPreview.knowledge.added + diffPreview.knowledge.updated +
@@ -515,18 +342,26 @@ export function KnowledgeRefreshPanel() {
     const channelLabel = selected.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）";
 
     if (!window.confirm(
-      `${channelLabel}へ公開しますか？\n追加・変更される項目は合計 ${changedCount}件です。\n品質ゲート: ブロック0件 / 警告 ${qualityReport.warnings.length}件${selected.channel === "stable" ? "\nStable昇格ゲート: 12副業のTop 5回帰なし" : ""}\n差分と根拠を確認済みの場合のみ続行してください。`,
+      `${channelLabel}へ公開しますか？\n追加・変更される項目は合計 ${changedCount}件です。\n差分内容を確認済みの場合のみ続行してください。`,
     )) return;
 
     setBusy(true);
     setMessage("");
     try {
       const bundle = parseKnowledgeRefreshBundle(bundleText);
-      const result = await adminPublishKnowledgeRefreshBundle(getSupabaseClient(), selected.id, bundle);
+      const client = getSupabaseClient();
+      const result = await adminPublishKnowledgeRefreshBundle(client, selected.id, bundle);
+      if (preparedAutomationCandidateId !== null) {
+        await adminReviewKnowledgeAutomationCandidate(
+          client,
+          preparedAutomationCandidateId,
+          "converted",
+          "Fresh差分確認と管理者公開が完了したため、AI自動提案候補を処理済みに変更。",
+        );
+      }
+      setPreparedAutomationCandidateId(null);
       setBundleText("");
       setDiffPreview(null);
-      setQualityReport(null);
-    setStablePromotionReport(null);
       await reload();
       setMessage(
         `${result.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）"} v${result.publishedVersion} を公開しました。Knowledge ${result.knowledgeCount}件 / Prompt ${result.promptCount}件です。`,
@@ -549,256 +384,220 @@ export function KnowledgeRefreshPanel() {
           <h2>Knowledge / Prompt 更新</h2>
           <p>記事・SNS・画像に加え、各副業専用Knowledge / Promptも更新対象です。更新期限は自動でキュー化し、管理者が差分と根拠を確認してからFresh / Stableへ版管理して公開します。</p>
         </div>
-        <div className="knowledge-panel-actions">
-          <button type="button" disabled={busy} onClick={() => void syncScheduler()}>更新期限を同期</button>
-          <button type="button" disabled={busy} onClick={() => void reload()}>再読込</button>
-        </div>
+        <button type="button" disabled={busy} onClick={() => void reload()}>再読込</button>
       </div>
 
-      <div className="knowledge-channel-guide" aria-label="FreshとStableの違い">
-        <article className="fresh">
-          <div className="knowledge-channel-title">
-            <span>FRESH</span>
-            <strong>先行確認版</strong>
-          </div>
-          <h3>新しい重要変更を早めに確認</h3>
-          <p>管理者 / Creator Membership向けの先行チャネル。公式根拠を確認した変更を早期に試し、一般側へ広げる前に問題がないか確認します。</p>
-          <dl>
-            <div><dt>更新周期</dt><dd>{formatCycle(freshState?.refreshHours)}</dd></div>
-            <div><dt>現在</dt><dd>v{freshState?.currentVersion ?? "-"}</dd></div>
-            <div><dt>次回予定</dt><dd>{formatDate(freshState?.nextRefreshDueAt ?? null)}</dd></div>
-          </dl>
-          <button type="button" disabled={busy} onClick={() => void enqueue("fresh")}>Fresh（先行確認）を更新</button>
-        </article>
+      <KnowledgeChannelGuide
+        freshState={freshState}
+        stableState={stableState}
+        busy={busy}
+        onEnqueue={enqueue}
+      />
 
-        <article className="stable">
-          <div className="knowledge-channel-title">
-            <span>STABLE</span>
-            <strong>標準版</strong>
-          </div>
-          <h3>確認済みの内容を通常利用へ</h3>
-          <p>一般ユーザー向けの標準チャネル。十分に確認できた仕様やPrompt改善を優先し、変化の速さより安定性を重視します。</p>
-          <dl>
-            <div><dt>更新周期</dt><dd>{formatCycle(stableState?.refreshHours)}</dd></div>
-            <div><dt>現在</dt><dd>v{stableState?.currentVersion ?? "-"}</dd></div>
-            <div><dt>次回予定</dt><dd>{formatDate(stableState?.nextRefreshDueAt ?? null)}</dd></div>
-          </dl>
-          <button type="button" disabled={busy} onClick={() => void enqueue("stable")}>Stable（標準版）を更新</button>
-        </article>
-      </div>
-
-      <div className="knowledge-channel-flow">
-        <strong>使い分け</strong>
-        <span>Fresh = 早めに確認する場所</span>
-        <b aria-hidden="true">→</b>
-        <span>Stable = 一般利用の基準</span>
-      </div>
-
-      <div className="knowledge-refresh-safety">
-        <strong>自動収集＝自動公開ではありません</strong>
-        <span>外部Webの内容はそのまま採用しません。公式情報・根拠URL・現在データとの差分を管理者が確認し、「変更点を確認」後にだけ公開できます。</span>
-      </div>
-
-      <section className="knowledge-source-freshness-queue">
-        <header>
+      <section className="knowledge-automation-panel" aria-label="公式ソース自動監視">
+        <div className="knowledge-automation-head">
           <div>
-            <p className="eyebrow">SOURCE FRESHNESS QUEUE</p>
-            <strong>公式根拠の再確認</strong>
-            <p>Knowledge / Promptの根拠確認日を監視し、{sourceQueue?.staleDays ?? 90}日失効の{sourceQueue?.warningDays ?? 30}日前から再確認対象へ入れます。確認済み扱いへの自動更新はしません。</p>
+            <p className="eyebrow">OFFICIAL SOURCE MONITOR</p>
+            <h3>公式ソース自動監視</h3>
+            <p>登録済みの公式・一次情報を自動巡回し、本文ハッシュ・HTTP状態・Changelog更新から「新規 / 更新 / 再確認 / 廃止」の候補だけを作ります。</p>
           </div>
-          <div className="knowledge-source-freshness-counts">
-            <span className={(sourceQueue?.missingCount ?? 0) > 0 ? "missing" : ""}>MISSING {sourceQueue?.missingCount ?? 0}</span>
-            <span className={(sourceQueue?.staleCount ?? 0) > 0 ? "stale" : ""}>STALE {sourceQueue?.staleCount ?? 0}</span>
-            <span className={(sourceQueue?.dueCount ?? 0) > 0 ? "due" : ""}>DUE {sourceQueue?.dueCount ?? 0}</span>
-            <span className="fresh">FRESH {sourceQueue?.freshCount ?? 0}</span>
-          </div>
-        </header>
-        <div className="knowledge-source-freshness-meta">
-          <span>次の再確認開始: {formatDate(sourceQueue?.nextDueAt ?? null)}</span>
-          <span>期限基準: {sourceQueue?.staleDays ?? 90}日</span>
+          <button type="button" disabled={busy || automationStatus?.enabled === false} onClick={() => void runAutomation()}>
+            今すぐ公式ソースを調査
+          </button>
         </div>
-        {(sourceQueue?.items.filter((item) => item.state !== "fresh").length ?? 0) > 0 ? (
-          <div className="knowledge-source-freshness-items">
-            {sourceQueue?.items.filter((item) => item.state !== "fresh").slice(0, 12).map((item) => (
-              <article key={item.itemType + ":" + item.key} className={item.state}>
-                <div className="knowledge-source-freshness-card-head">
-                  <div>
-                    <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{item.catalogVersion}</span>
-                    <strong>{item.label}</strong>
-                    <small>{item.key}</small>
+
+        <div className="knowledge-automation-guard">
+          <strong>自動調査 ≠ 自動公開</strong>
+          <span>候補承認は「詳しく確認する価値がある」という状態変更だけです。正式反映には従来のQuality Gate・差分確認・Fresh / Stable公開操作が必要です。</span>
+        </div>
+
+        <div className="knowledge-ai-config">
+          <div className="knowledge-ai-config-head">
+            <div>
+              <strong>AI候補JSON自動生成</strong>
+              <p>公式ソースの取得・差分検知後にAIが候補JSONを作成します。AIが候補を作っても自動公開はされません。</p>
+            </div>
+            <span className={automationAiConfig?.apiKeyConfigured ? "configured" : "missing"}>
+              APIキー {automationAiConfig?.apiKeyConfigured ? "Vault設定済み" : "未設定"}
+            </span>
+          </div>
+          <div className="knowledge-ai-config-grid">
+            <label className="knowledge-ai-toggle">
+              <input
+                type="checkbox"
+                checked={aiEnabled}
+                onChange={(event) => setAiEnabled(event.target.checked)}
+              />
+              <span>AI自動解析を有効にする</span>
+            </label>
+            <SelectWithCustom
+              label="モデル"
+              value={aiModel}
+              onChange={setAiModel}
+              options={[
+                { value: "gpt-6-luna", label: "GPT-6 Luna（低コスト・大量処理向け）" },
+                { value: "gpt-5.6-luna", label: "GPT-5.6 Luna（低コスト）" },
+                { value: "gpt-5.6-terra", label: "GPT-5.6 Terra（バランス）" },
+                { value: "gpt-5.6", label: "GPT-5.6 Sol（高精度）" },
+              ]}
+              description="候補作成用AIです。新しいモデルIDを使う場合は「その他・自由入力」を選べます。"
+              customPlaceholder="OpenAI APIのモデルIDを入力"
+            />
+            <PresetNumberSelectWithCustom
+              label="1回の最大解析候補数"
+              value={aiMaxCandidates}
+              onChange={setAiMaxCandidates}
+              presets={[1, 3, 6, 10, 15, 20]}
+              min={1}
+              max={20}
+              suffix="件"
+              description="API費用を抑えたい場合は1〜3件から始める設定がおすすめです。"
+            />
+            <label>
+              <span>OpenAI APIキー（変更時のみ入力）</span>
+              <input
+                type="password"
+                value={aiApiKey}
+                onChange={(event) => setAiApiKey(event.target.value)}
+                placeholder={automationAiConfig?.apiKeyConfigured ? "設定済み・変更する場合だけ入力" : "APIキーを入力"}
+                autoComplete="new-password"
+              />
+            </label>
+          </div>
+          <div className="knowledge-ai-config-actions">
+            <small>APIキーはSupabase Vaultへ保存し、この画面では再表示しません。AI解析が無効でも公式ソース監視は動き続けます。</small>
+            <button type="button" disabled={busy || !aiModel.trim()} onClick={() => void saveAutomationAiConfig()}>
+              AI自動解析設定を保存
+            </button>
+          </div>
+        </div>
+
+        <dl className="knowledge-automation-metrics">
+          <div><dt>監視中</dt><dd>{automationStatus?.trackedSources ?? "-"} URL</dd></div>
+          <div><dt>次回対象</dt><dd>{automationStatus?.dueSources ?? "-"} URL</dd></div>
+          <div><dt>未確認候補</dt><dd>{automationStatus?.pendingCandidates ?? "-"} 件</dd></div>
+          <div><dt>承認済み候補</dt><dd>{automationStatus?.approvedCandidates ?? "-"} 件</dd></div>
+          <div><dt>最終成功</dt><dd>{formatKnowledgeDate(automationStatus?.lastSuccessAt ?? null)}</dd></div>
+          <div>
+            <dt>直近実行</dt>
+            <dd>
+              {automationStatus?.latestRunId
+                ? `#${automationStatus.latestRunId} / ${automationStatus.latestRunSourcesChecked} URL / 候補 ${automationStatus.latestRunCandidatesCreated}`
+                : "-"}
+            </dd>
+          </div>
+        </dl>
+
+        <KnowledgeSourceHealthPanel
+          sources={automationSources}
+          dueSources={automationStatus?.dueSources}
+        />
+
+        <KnowledgeQualityAnalyzer
+          productionHealth={productionHealth}
+          sourceRiskReport={sourceRiskReport}
+          busy={busy}
+          onPrepareSourceDiversity={() => void prepareSourceDiversity()}
+        />
+
+        {automationStatus?.lastError && (
+          <p className="knowledge-automation-error">直近エラー: {automationStatus.lastError}</p>
+        )}
+
+        {automationCandidates.length === 0 ? (
+          <p className="knowledge-empty">現在、管理者確認が必要な自動調査候補はありません。</p>
+        ) : (
+          <div className="knowledge-automation-candidates">
+            {automationCandidates.map((candidate) => (
+              <article key={candidate.id}>
+                <header>
+                  <span className={"automation-action " + candidate.candidateAction}>
+                    {knowledgeAutomationActionLabel(candidate.candidateAction)}
+                  </span>
+                  <strong>{candidate.sourceTitle || candidate.existingItemKey || candidate.sourceUrl}</strong>
+                  <small>信頼度 {candidate.confidence}% / 検出 {formatKnowledgeDate(candidate.detectedAt)}</small>
+                </header>
+
+                <p>{candidate.reason}</p>
+                {candidate.matchedTasks.length > 0 && (
+                  <div className="knowledge-automation-tasks">
+                    {candidate.matchedTasks.map((task) => <span key={task}>{task}</span>)}
                   </div>
-                  <div>
-                    <b>{item.state === "missing" ? "根拠不足" : item.state === "stale" ? "期限切れ" : "再確認時期"}</b>
-                    <small>確認 {formatDate(item.sourceCheckedAt)}{item.ageDays !== null ? ` · ${item.ageDays}日経過` : ""}</small>
-                  </div>
-                </div>
-                {item.sourceUrls.length > 0 ? (
-                  <div className="knowledge-source-receipt-actions">
-                    {item.sourceUrls.map((url) => (
-                      <div key={url} className="knowledge-source-receipt-row">
-                        <a href={url} target="_blank" rel="noreferrer">公式根拠を開く</a>
-                        <small title={url}>{url}</small>
-                        <div>
-                          <button type="button" disabled={busy} onClick={() => void recordSourceReceipt(item, url, "unchanged")}>変更なし</button>
-                          <button type="button" disabled={busy} onClick={() => void recordSourceReceipt(item, url, "changed")}>変更あり</button>
-                          <button type="button" disabled={busy} onClick={() => void recordSourceReceipt(item, url, "unreachable")}>取得不可</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="knowledge-source-missing-note">根拠URLがありません。Fresh更新で公式URLを追加してください。</p>
                 )}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="knowledge-empty">現在、再確認が必要な根拠はありません。</p>
-        )}
-        <button
-          type="button"
-          className="knowledge-source-recheck"
-          disabled={busy || !sourceQueue || sourceQueue.missingCount + sourceQueue.staleCount + sourceQueue.dueCount < 1}
-          onClick={() => void prepareSourceRecheck()}
-        >
-          再確認プロンプトを準備・コピー
-        </button>
-        <p className="knowledge-review-note">最大20件をFresh更新へ準備します。公式ページを実際に確認したJSONを貼り付け、既存の差分・品質ゲートを通してから公開してください。</p>
+                {candidate.existingItemKey && (
+                  <small className="knowledge-automation-existing">
+                    現行: {candidate.existingItemType ?? "item"} / {candidate.existingItemKey}
+                  </small>
+                )}
+                {candidate.sourceExcerpt && (
+                  <details>
+                    <summary>自動取得した抜粋を見る</summary>
+                    <p>{candidate.sourceExcerpt}</p>
+                  </details>
+                )}
 
-        {sourceReceipts.length > 0 && (
-          <details className="knowledge-source-receipt-history">
-            <summary>最近の根拠再確認履歴 {sourceReceipts.length}件</summary>
-            <div>
-              {sourceReceipts.slice(0, 20).map((receipt) => (
-                <article key={receipt.id} className={receipt.outcome}>
+                <div className={"knowledge-ai-analysis " + candidate.analysisStatus}>
                   <div>
-                    <span>{receipt.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{receipt.catalogVersion}</span>
-                    <strong>{receipt.itemKey}</strong>
-                    <small>{formatDate(receipt.checkedAt)}</small>
+                    <strong>AI解析: {candidate.analysisStatus === "completed" ? "完了" : candidate.analysisStatus === "failed" ? "失敗" : "待機中"}</strong>
+                    {candidate.analysisDecision && <span>判定: {candidate.analysisDecision}</span>}
+                    {candidate.analysisModel && <span>{candidate.analysisProvider} / {candidate.analysisModel}</span>}
                   </div>
-                  <div>
-                    <b>{sourceOutcomeLabel(receipt.outcome)}</b>
-                    {receipt.completedCycle && <em>全URL確認完了</em>}
-                    {receipt.requestId && <small>更新 #{receipt.requestId}</small>}
-                  </div>
-                  <a href={receipt.sourceUrl} target="_blank" rel="noreferrer">{receipt.sourceUrl}</a>
-                  {receipt.notes && <p>{receipt.notes}</p>}
-                </article>
-              ))}
-            </div>
-          </details>
-        )}
-      </section>
-
-      <section className="knowledge-source-risk-report">
-        <header>
-          <div>
-            <p className="eyebrow">SOURCE DIVERSITY</p>
-            <strong>根拠ドメインの分散状況</strong>
-            <p>鮮度とは別に、Knowledge / Promptが1つのURLや1ドメインへ依存しすぎていないかを確認します。単一ソースは自動で不合格にはしません。</p>
-          </div>
-          <div className="knowledge-source-risk-summary">
-            <span>DOMAIN {sourceRisk?.uniqueDomainCount ?? 0}</span>
-            <span>MULTI {sourceRisk?.multiDomainCount ?? 0}</span>
-            <span className={(sourceRisk?.singleSourceCount ?? 0) > 0 ? "attention" : ""}>1 URL {sourceRisk?.singleSourceCount ?? 0}</span>
-          </div>
-        </header>
-        <div className="knowledge-source-risk-metrics">
-          <article><span>対象</span><strong>{sourceRisk?.itemCount ?? 0}</strong><small>Knowledge + Prompt</small></article>
-          <article><span>複数ドメイン</span><strong>{sourceRisk?.multiDomainCount ?? 0}</strong><small>2ドメイン以上</small></article>
-          <article><span>単一ドメイン</span><strong>{sourceRisk?.singleDomainCount ?? 0}</strong><small>追加確認候補</small></article>
-          <article><span>最大ドメイン比率</span><strong>{sourceRisk?.topDomainSharePercent ?? 0}%</strong><small>{sourceRisk?.topDomainItemCount ?? 0}項目で利用</small></article>
-        </div>
-        {(sourceRisk?.domains.length ?? 0) > 0 && (
-          <div className="knowledge-source-domain-list">
-            <strong>使用ドメイン上位</strong>
-            <div>
-              {sourceRisk?.domains.slice(0, 8).map((domain) => (
-                <span key={domain.domain}><b>{domain.domain}</b><small>{domain.itemCount}項目 / {domain.urlCount}URL</small></span>
-              ))}
-            </div>
-          </div>
-        )}
-        {(sourceRisk?.reviewItems.length ?? 0) > 0 ? (
-          <div className="knowledge-source-risk-items">
-            <strong>単一ソース / 単一ドメインの確認候補</strong>
-            {sourceRisk?.reviewItems.slice(0, 10).map((item) => (
-              <article key={item.itemType + ":" + item.key}>
-                <div>
-                  <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{item.catalogVersion}</span>
-                  <strong>{item.label}</strong>
-                  <small>{item.key}</small>
+                  {candidate.analysisReason && <p>{candidate.analysisReason}</p>}
+                  {candidate.analysisError && <p className="knowledge-automation-error">{candidate.analysisError}</p>}
+                  {candidate.verifiedSourceUrls.length > 0 && (
+                    <div className="knowledge-ai-sources">
+                      {candidate.verifiedSourceUrls.map((url) => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer">確認済み根拠</a>
+                      ))}
+                    </div>
+                  )}
+                  {candidate.proposedPayload && (
+                    <details>
+                      <summary>AI提案JSONを見る</summary>
+                      <pre>{JSON.stringify(candidate.proposedPayload, null, 2)}</pre>
+                    </details>
+                  )}
                 </div>
-                <div>
-                  <b>{item.sourceCount} URL / {item.domainCount} domain</b>
-                  <small>根拠確認 {formatDate(item.sourceCheckedAt)}</small>
+
+                <div className="knowledge-automation-actions">
+                  <a href={candidate.sourceUrl} target="_blank" rel="noreferrer">公式ソースを開く</a>
+                  <button type="button" disabled={busy} onClick={() => void copyAutomationPrompt(candidate)}>
+                    検証プロンプトをコピー
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => launchAiApp("chatgpt")}>
+                    ChatGPTを開く
+                  </button>
+                  {candidate.analysisStatus === "failed" && (
+                    <button type="button" disabled={busy} onClick={() => void retryAutomationAi(candidate)}>
+                      AI解析を再試行
+                    </button>
+                  )}
+                  {buildKnowledgeAutomationCandidateBundle(candidate) && (
+                    <button type="button" className="prepare" disabled={busy} onClick={() => void prepareAutomationCandidate(candidate)}>
+                      Fresh差分へ取り込む
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="approve"
+                    disabled={busy}
+                    onClick={() => void reviewAutomationCandidate(candidate, "approved")}
+                  >
+                    候補承認（公開しない）
+                  </button>
+                  <button
+                    type="button"
+                    className="reject"
+                    disabled={busy}
+                    onClick={() => void reviewAutomationCandidate(candidate, "rejected")}
+                  >
+                    却下
+                  </button>
                 </div>
               </article>
             ))}
           </div>
-        ) : (
-          <p className="knowledge-empty">単一ソース依存の確認候補はありません。</p>
         )}
-        <button
-          type="button"
-          className="knowledge-source-diversity-research"
-          disabled={busy || !sourceRisk || sourceRisk.reviewItems.length < 1}
-          onClick={() => void prepareSourceDiversityResearch()}
-        >
-          追加根拠リサーチを準備・コピー
-        </button>
-        <p className="knowledge-review-note">1つの公式一次情報だけで十分な場合もあります。件数合わせの低品質ソースは追加せず、独立した公式/一次情報が本当にある場合だけFreshレビューへ追加します。</p>
-      </section>
-
-      <section className="knowledge-stable-release-queue">
-        <header>
-          <div>
-            <p className="eyebrow">STABLE RELEASE QUEUE</p>
-            <strong>Fresh → Stable 昇格候補</strong>
-            <p>Freshで検証済みかつ待機期間を完了し、現在のStableスナップショットと差分がある項目だけを候補化します。ここでは公開されません。</p>
-          </div>
-          <div className="knowledge-stable-release-counts">
-            <span className="ready">READY {stableQueue?.readyCount ?? 0}</span>
-            <span>WAIT {stableQueue?.waitingCount ?? 0}</span>
-            <span className={(stableQueue?.blockedCount ?? 0) > 0 ? "blocked" : ""}>BLOCK {stableQueue?.blockedCount ?? 0}</span>
-          </div>
-        </header>
-        <div className="knowledge-stable-release-meta">
-          <span>Knowledge READY: {stableQueue?.knowledgeReadyCount ?? 0}</span>
-          <span>Prompt READY: {stableQueue?.promptReadyCount ?? 0}</span>
-          <span>次の昇格可能: {formatDate(stableQueue?.nextReadyAt ?? null)}</span>
-        </div>
-        {(stableQueue?.items.length ?? 0) > 0 ? (
-          <div className="knowledge-stable-release-items">
-            {stableQueue?.items.slice(0, 12).map((item) => (
-              <article key={item.itemType + ":" + item.key} className={item.state}>
-                <div>
-                  <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · {item.changeType === "new" ? "新規" : "更新"}</span>
-                  <strong>{item.label}</strong>
-                  <small>{item.key}</small>
-                </div>
-                <div>
-                  <b>{item.state === "ready" ? "昇格可能" : item.state === "waiting" ? "待機中" : "要修正"}</b>
-                  <small>{item.stateReason || `根拠確認 ${formatDate(item.sourceCheckedAt)}`}</small>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="knowledge-empty">現在、Stableとの差分はありません。</p>
-        )}
-        {(stableQueue?.items.length ?? 0) > 12 && (
-          <small className="knowledge-stable-release-more">ほか {(stableQueue?.items.length ?? 0) - 12}件</small>
-        )}
-        <button
-          type="button"
-          className="knowledge-stable-prepare"
-          disabled={busy || (stableQueue?.readyCount ?? 0) < 1}
-          onClick={() => void prepareStableRelease()}
-        >
-          Stableレビューを自動準備
-        </button>
-        <p className="knowledge-review-note">このボタンはレビュー用JSONを作るだけです。公開には「変更点を確認」→品質ゲート→Stable昇格ゲート→管理者確認が必要です。</p>
       </section>
 
       {message && <div className="route-notice knowledge-message">{message}</div>}
@@ -811,24 +610,20 @@ export function KnowledgeRefreshPanel() {
             <article key={request.id} className={selectedId === request.id ? "active" : ""}>
               <button type="button" className="knowledge-refresh-select" onClick={() => {
                 setSelectedId(request.id);
+                setPreparedAutomationCandidateId(null);
                 setDiffPreview(null);
-      setQualityReport(null);
-    setStablePromotionReport(null);
                 setBundleText("");
               }}>
                 <span className={"channel-label " + request.channel}>
-                  {request.channel === "fresh" ? "Fresh・先行確認" : "Stable・標準版"} / {statusLabel(request.status)}
+                  {request.channel === "fresh" ? "Fresh・先行確認" : "Stable・標準版"} / {knowledgeRefreshStatusLabel(request.status)}
                 </span>
                 <strong>更新 #{request.id}</strong>
-                <small>要求 {formatDate(request.requestedAt)} / 開始 {formatDate(request.startedAt)}</small>
+                <small>要求 {formatKnowledgeDate(request.requestedAt)} / 開始 {formatKnowledgeDate(request.startedAt)}</small>
               </button>
               <div className="knowledge-refresh-row-actions">
                 {request.status === "pending" && <button type="button" disabled={busy} onClick={() => void start(request)}>調査開始</button>}
                 <button type="button" disabled={busy} onClick={() => void copyResearchPrompt(request)}>調査プロンプトをコピー</button>
-                <button type="button" disabled={busy} onClick={() => launchAiApp("chatgpt")}>ChatGPT</button>
-                <button type="button" disabled={busy} onClick={() => launchAiApp("claude")}>Claude</button>
-                <button type="button" disabled={busy} onClick={() => launchAiApp("gemini")}>Gemini</button>
-                <button type="button" className="danger" disabled={busy} onClick={() => void cancel(request)}>中止</button>
+                <button type="button" disabled={busy} onClick={() => launchAiApp("chatgpt")}>ChatGPTを開く</button>
               </div>
             </article>
           ))}
@@ -847,8 +642,6 @@ export function KnowledgeRefreshPanel() {
             onChange={(event) => {
               setBundleText(event.target.value);
               setDiffPreview(null);
-              setQualityReport(null);
-    setStablePromotionReport(null);
             }}
             placeholder='{"summary":"...","knowledge_rules":[],"prompt_optimizations":[]}'
             spellCheck={false}
@@ -857,13 +650,8 @@ export function KnowledgeRefreshPanel() {
             <button type="button" disabled={busy || !bundleText.trim()} onClick={() => void previewDiff()}>
               変更点を確認
             </button>
-            <button
-              type="button"
-              className="approve"
-              disabled={busy || !diffPreview || !qualityReport?.valid || (selected.channel === "stable" && !stablePromotionReport?.valid)}
-              onClick={() => void publish()}
-            >
-              {selected.channel === "stable" ? "Stableゲート通過後に公開" : "差分確認後に公開"}
+            <button type="button" className="approve" disabled={busy || !diffPreview} onClick={() => void publish()}>
+              差分確認後に公開
             </button>
           </div>
 
@@ -874,142 +662,13 @@ export function KnowledgeRefreshPanel() {
                 <strong>今回どこが変わるか</strong>
                 <p>「追加」「変更」「変更なし」を正式データと比較した結果です。変更箇所と根拠要約を確認してください。</p>
               </div>
-              <DiffSummary diff={diffPreview} />
-              {qualityReport && (
-                <section className={`knowledge-quality-gate ${qualityReport.valid ? "pass" : "blocked"}`}>
-                  <header>
-                    <div>
-                      <strong>{qualityReport.valid ? "✓ 品質ゲート通過" : "公開前の修正が必要"}</strong>
-                      <p>Knowledge {qualityReport.stats.knowledgeCount}件 / Prompt {qualityReport.stats.promptCount}件 / 根拠URL {qualityReport.stats.sourceUrlCount}件</p>
-                    </div>
-                    <span>{qualityReport.blocking.length} BLOCK / {qualityReport.warnings.length} WARN</span>
-                  </header>
-                  {qualityReport.blocking.length > 0 && (
-                    <div className="knowledge-quality-issues blocking">
-                      {qualityReport.blocking.map((issue, index) => (
-                        <article key={`blocking:${issue.code}:${issue.key}:${index}`}>
-                          <strong>修正必須</strong>
-                          <p>{issue.message}</p>
-                          {issue.key && <small>{issue.key}</small>}
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                  {qualityReport.warnings.length > 0 && (
-                    <details className="knowledge-quality-warnings">
-                      <summary>警告 {qualityReport.warnings.length}件を確認</summary>
-                      <div>
-                        {qualityReport.warnings.map((issue, index) => (
-                          <article key={`warning:${issue.code}:${issue.key}:${index}`}>
-                            <strong>確認推奨</strong>
-                            <p>{issue.message}</p>
-                            {issue.key && <small>{issue.key}</small>}
-                          </article>
-                        ))}
-                      </div>
-                    </details>
-                  )}
-                </section>
-              )}
-              {selected.channel === "stable" && stablePromotionReport && (
-                <section className={`knowledge-stable-gate ${stablePromotionReport.valid ? "pass" : "blocked"}`}>
-                  <header>
-                    <div>
-                      <strong>{stablePromotionReport.valid ? "✓ Stable昇格ゲート通過" : "Stable公開を停止中"}</strong>
-                      <p>公開後のStableカタログで12副業のTop 5を再計算しています。根拠鮮度は{stablePromotionReport.staleDays}日以内が基準です。</p>
-                    </div>
-                    <span>{stablePromotionReport.tasks.filter((task) => (
-                      task.selectedCount >= 5
-                      && task.corePass
-                      && task.supportPass
-                      && task.topTaskSpecific
-                      && task.missingSourceCount === 0
-                      && task.staleSourceCount === 0
-                    )).length}/{stablePromotionReport.tasks.length} PASS</span>
-                  </header>
-                  <div className="knowledge-stable-gate-grid">
-                    {stablePromotionReport.tasks.map((task) => {
-                      const passed = task.selectedCount >= 5
-                        && task.corePass
-                        && task.supportPass
-                        && task.topTaskSpecific
-                        && task.missingSourceCount === 0
-                        && task.staleSourceCount === 0;
-                      return (
-                        <article key={task.task} className={passed ? "pass" : "fail"}>
-                          <strong>{task.task.replace("sidejob_", "")}</strong>
-                          <small>Top5 {task.selectedCount}/5 · Core {task.corePass ? "✓" : "!"} · Support {task.supportPass ? "✓" : "!"}</small>
-                          <small>根拠欠落 {task.missingSourceCount} · 古い根拠 {task.staleSourceCount}</small>
-                        </article>
-                      );
-                    })}
-                  </div>
-                  {stablePromotionReport.blocking.length > 0 && (
-                    <div className="knowledge-quality-issues blocking">
-                      {stablePromotionReport.blocking.map((issue, index) => (
-                        <article key={`stable:${issue.code}:${issue.key}:${index}`}>
-                          <strong>Stable公開ブロック</strong>
-                          <p>{issue.message}</p>
-                          {issue.key && <small>{issue.key}</small>}
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )}
-              {reviewedSources.length > 0 && (
-                <div className="knowledge-source-review">
-                  <strong>今回の根拠URL</strong>
-                  <p>公開前に一次情報の内容・更新日・対象地域/プランを確認してください。</p>
-                  <div>{reviewedSources.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">{url}</a>)}</div>
-                </div>
-              )}
+              <KnowledgeDiffSummary diff={diffPreview} />
             </div>
           )}
         </div>
       )}
 
-      {recentRequests.length > 0 && (
-        <div className="knowledge-refresh-history">
-          <strong>最近の更新履歴・変更点</strong>
-          {recentRequests.map((request) => {
-            const diff = request.changeDetails;
-            const hasDetails = diff.knowledge.items.length > 0 || diff.prompt.items.length > 0;
-            return (
-              <article key={request.id}>
-                <div className="knowledge-history-head">
-                  <span className={"channel-label " + request.channel}>
-                    {request.channel === "fresh" ? "Fresh・先行確認" : "Stable・標準版"} / {statusLabel(request.status)}
-                  </span>
-                  <small>
-                    v{request.publishedVersion ?? "-"} / {formatDate(request.completedAt)}
-                  </small>
-                </div>
-                <div className="knowledge-history-counts">
-                  <span>Knowledge: ＋{diff.knowledge.added} / 変更 {diff.knowledge.updated}</span>
-                  <span>Prompt: ＋{diff.prompt.added} / 変更 {diff.prompt.updated}</span>
-                </div>
-                {request.researchSummary && <p>{request.researchSummary}</p>}
-                {hasDetails && (
-                  <details>
-                    <summary>変更した場所を詳しく見る</summary>
-                    <DiffSummary diff={diff} />
-                  </details>
-                )}
-                {!hasDetails && request.status === "completed" && (
-                  <small>この更新は旧形式の履歴のため詳細差分は記録されていません。</small>
-                )}
-                {request.errorMessage && <p className="error">{refreshErrorLabel(request.errorMessage)}</p>}
-                {(request.status === "failed" || request.status === "cancelled") && (
-                  <div className="knowledge-refresh-row-actions">
-                    <button type="button" disabled={busy} onClick={() => void retry(request)}>この更新を再試行</button>
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      )}
+      <KnowledgeRefreshHistory recentRequests={recentRequests} />
     </section>
   );
 }

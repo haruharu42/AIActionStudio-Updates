@@ -96,17 +96,31 @@ test("individual seller on-request mode keeps private identity out of public con
   const client = await read("lib/commerce.ts");
   const disclosure = await read("components/commercial-transactions-page.tsx");
   const vars = await read(".dev.vars.example");
+  const migration = await readRepo("supabase/migrations/20260928032442_commerce_seller_admin_settings_v1.sql");
 
   assert.match(worker, /AAS_SELLER_TYPE/);
   assert.match(worker, /AAS_SELLER_DISCLOSURE_MODE/);
-  assert.match(worker, /function privateSellerConfig/);
+  assert.match(worker, /function sellerConfigFromEnv/);
+  assert.match(worker, /async function loadSellerConfig/);
+  assert.match(worker, /commerce_sales_settings\?id=eq\.1&select=seller_type,seller_disclosure_mode,seller_name,seller_address,seller_phone,seller_email,seller_support_url/);
+  assert.match(worker, /hasDatabaseSellerData/);
+  assert.match(worker, /return hasDatabaseSellerData \? databaseConfig : fallback/);
   assert.match(worker, /function publicSellerConfig/);
   assert.match(worker, /name: discloseDirectly \? seller\.name : ""/);
   assert.match(worker, /address: discloseDirectly \? seller\.address : ""/);
   assert.match(worker, /phone: discloseDirectly \? seller\.phone : ""/);
-  assert.match(worker, /seller: publicSellerConfig\(env\)/);
+  assert.match(worker, /email: discloseDirectly \? seller\.email : ""/);
+  assert.match(worker, /seller: publicSellerConfig\(seller\)/);
+  assert.match(worker, /safeHttpsUrl\(seller\.supportUrl\)/);
+  assert.match(migration, /admin_get_commerce_seller_settings/);
+  assert.match(migration, /admin_update_commerce_seller_settings/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /seller_disclosure_mode/);
+  assert.match(migration, /seller_support_url/);
   assert.match(client, /disclosureMode: SellerDisclosureMode/);
   assert.match(disclosure, /請求があった場合には遅滞なく開示します/);
+  assert.match(disclosure, /seller\?\.disclosureMode === "on_request"/);
+  assert.match(disclosure, /販売者情報の開示について/);
   assert.match(disclosure, /問い合わせ・開示請求窓口/);
   assert.match(disclosure, /function safeHttpsUrl/);
   assert.match(disclosure, /parsed\.protocol === "https:"/);
@@ -137,6 +151,7 @@ test("service-role and Stripe secrets stay outside browser-visible configuration
 
 test("purchase UI states renewal and cancellation terms before Checkout", async () => {
   const plans = await read("components/commerce-plans-page.tsx");
+  const accessCode = await read("components/commerce/commerce-access-code-panel.tsx");
   const disclosure = await read("components/commercial-transactions-page.tsx");
   const billing = await read("components/billing-account-page.tsx");
   const client = await read("lib/commerce.ts");
@@ -147,7 +162,8 @@ test("purchase UI states renewal and cancellation terms before Checkout", async 
   assert.match(plans, /accepted/);
   assert.match(plans, /checkoutInFlight/);
   assert.match(plans, /if \(checkoutInFlight\.current\) return/);
-  assert.match(plans, /inviteInFlight/);
+  assert.match(accessCode, /const inFlight = useRef\(false\)/);
+  assert.match(accessCode, /if \(inFlight\.current\) return/);
   assert.match(billing, /portalInFlight/);
   assert.match(billing, /if \(portalInFlight\.current\) return/);
   assert.match(disclosure, /販売価格/);
@@ -167,16 +183,22 @@ test("free trial feature access fails closed when status verification is unavail
   assert.doesNotMatch(gate, /\(\) => \{\s*if \(active\) setReady\(true\);\s*\}/s);
 });
 
-test("unentitled logged-in users are routed to plans and can redeem an existing invite", async () => {
+test("unentitled logged-in users are routed to plans and can redeem an existing access code", async () => {
   const access = await read("lib/phase6-access.ts");
   const plans = await read("components/commerce-plans-page.tsx");
+  const accessCode = await read("components/commerce/commerce-access-code-panel.tsx");
   const invite = await read("lib/phase9-invite.ts");
 
   assert.match(access, /window\.location\.pathname !== "\/"/);
   assert.match(access, /window\.location\.replace\("\/plans\?from=login"\)/);
-  assert.match(plans, /redeemPwaInvite/);
-  assert.match(plans, /招待コードをお持ちの方/);
-  assert.match(plans, /招待コードを登録/);
+  assert.match(plans, /CommerceAccessCodePanel/);
+  assert.doesNotMatch(plans, /redeemPwaInvite|inviteInFlight|inviteCode/);
+  assert.match(accessCode, /redeemPwaInvite/);
+  assert.match(accessCode, /利用コードをお持ちの方/);
+  assert.match(accessCode, /利用コードを登録/);
+  assert.match(accessCode, /AI Action Studio/);
+  assert.match(accessCode, /if \(inFlight\.current\) return/);
+  assert.doesNotMatch(accessCode, /AI記事スタジオ|旧表記：招待コード/);
   assert.match(invite, /redeem_pwa_invite/);
 });
 
@@ -186,11 +208,13 @@ test("Worker routes billing before the application handler, filters public billi
   assert.match(entry, /if \(billingResponse\) \{/);
   assert.match(entry, /BILLING_REQUEST_FAILED/);
   assert.match(entry, /WEBHOOK_REJECTED/);
-  assert.match(entry, /filterPublicBillingConfig\(request, url, billingResponse\)/);
-  assert.match(entry, /return withSecurityHeaders\(await filterPublicBillingConfig\(request, url, billingResponse\)\)/);
+  assert.match(entry, /filterPublicBillingConfig\(request, url, billingResponse, env\)/);
+  assert.match(entry, /loadEffectiveSalesSettings/);
+  assert.match(entry, /effectivePlanEnabled/);
+  assert.match(entry, /return withSecurityHeaders\(await filterPublicBillingConfig\(request, url, billingResponse, env\)\)/);
   assert.match(entry, /withSecurityHeaders\(await handler\.fetch\(request, env, ctx\)\)/);
   assert.ok(entry.indexOf("handleBillingRequest(request") < entry.indexOf("handler.fetch(request"));
-  assert.ok(entry.indexOf("filterPublicBillingConfig(request, url, billingResponse)") < entry.indexOf("handler.fetch(request"));
+  assert.ok(entry.indexOf("filterPublicBillingConfig(request, url, billingResponse, env)") < entry.indexOf("handler.fetch(request"));
   for (const header of [
     "x-content-type-options",
     "x-frame-options",
@@ -202,3 +226,30 @@ test("Worker routes billing before the application handler, filters public billi
     assert.match(entry, new RegExp(header));
   }
 });
+
+
+test("external sales CTA is rendered only from a guarded HTTPS URL", async () => {
+  const [plans, sales] = await Promise.all([
+    read("components/commerce-plans-page.tsx"),
+    read("lib/sales-settings.ts"),
+  ]);
+
+  assert.match(plans, /外部販売ページで購入する/);
+  assert.match(plans, /externalPurchaseUrl \? "外部販売を受付中です" : "外部販売ページを準備中です"/);
+  assert.match(plans, /rel="noopener noreferrer"/);
+  assert.match(sales, /safeExternalSalesUrl/);
+});
+
+test("public commerce shortcuts stay below signed-out auth and access status surfaces", async () => {
+  const [home, css] = await Promise.all([
+    read("app/page.tsx"),
+    read("app/phase27-commerce.css"),
+  ]);
+
+  assert.match(home, /commerce-public-shortcuts/);
+  assert.match(
+    css,
+    /\.auth-page \+ \.commerce-public-shortcuts,\s*\.status-page \+ \.commerce-public-shortcuts\s*\{[\s\S]*?margin-top:\s*16px;/,
+  );
+});
+

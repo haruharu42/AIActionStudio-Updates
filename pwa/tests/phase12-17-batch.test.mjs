@@ -38,7 +38,14 @@ test("Phase 13 builds cover and inline prompt plans and stores them in the artic
   assert.match(imagePrompts, /inlineEnabled/);
   assert.match(imagePrompts, /imageStyle/);
   assert.match(imagePrompts, /imageStylePrompt/);
+  assert.match(imagePrompts, /contextParagraphs/);
+  assert.match(imagePrompts, /before\.slice\(-3\)/);
+  assert.match(imagePrompts, /after\.slice\(0, 3\)/);
+  assert.match(imagePrompts, /【全画像共通条件】/);
+  assert.match(imagePrompts, /【画像ごとの指示】/);
+  assert.match(imagePrompts, /input\?: ImagePromptPlanInput/);
   assert.match(creator, /buildImagePromptPlan/);
+  assert.match(await read("components/phase11-create-page.tsx"), /buildCombinedImagePrompt\(imagePrompts, imagePromptInput\)/);
   assert.match(creator, /prompt_plan: imagePrompts/);
   assert.match(creator, /image_prompt_version: 13/);
   assert.match(page, /buildImagePromptPlan/);
@@ -171,8 +178,8 @@ test("tools hub exposes grouped supporting routes while article creation keeps i
 test("service worker fetches current UI assets before cache fallback and purges older cache generations", async () => {
   const sw = await read("public/sw.js");
 
-  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v6-hq-illustration/);
-  assert.match(sw, /\/aas-axia-rumo-hero-hq\.webp/);
+  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v11-axia-generated/);
+  assert.match(sw, /FRESH_BRANDING_ASSETS\.has\(url\.pathname\)[\s\S]*networkFirst\(request\)/);
   assert.match(sw, /new Request\(request, \{ cache: "no-store" \}\)/);
   assert.match(sw, /keys\.filter\(\(key\) => key !== CACHE_NAME\)/);
   assert.match(sw, /if \(request\.mode === "navigate"\)[\s\S]*fetch\(freshRequest\(request\)\)/);

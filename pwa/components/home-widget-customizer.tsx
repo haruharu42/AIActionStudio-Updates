@@ -1,137 +1,100 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { getSupabaseClient } from "@/lib/supabase";
 import {
-  DEFAULT_HOME_WIDGET_LAYOUT,
-  HOME_WIDGET_DEFINITIONS,
-  defaultHomeWidgetPreferences,
+  HOME_WIDGET_LABELS,
+  createDefaultHomeWidgetPreferences,
   loadHomeWidgetPreferences,
-  normalizeHomeWidgetLayout,
-  readLocalHomeWidgetLayout,
   saveHomeWidgetPreferences,
-  writeLocalHomeWidgetLayout,
-  type HomeWidgetDevice,
+  type HomeWidgetItem,
   type HomeWidgetKey,
-  type HomeWidgetLayoutItem,
   type HomeWidgetPreferences,
 } from "@/lib/home-widget-preferences";
 
-function moveItem(
-  layout: readonly HomeWidgetLayoutItem[],
-  key: HomeWidgetKey,
-  direction: -1 | 1,
-): HomeWidgetLayoutItem[] {
-  const next = [...layout];
-  const index = next.findIndex((item) => item.key === key);
+type Target = "desktop" | "mobile";
+
+function clonePreferences(value: HomeWidgetPreferences): HomeWidgetPreferences {
+  return {
+    desktopLayout: value.desktopLayout.map((item) => ({ ...item })),
+    mobileLayout: value.mobileLayout.map((item) => ({ ...item })),
+  };
+}
+
+function moveItem(layout: HomeWidgetItem[], key: HomeWidgetKey, direction: -1 | 1): HomeWidgetItem[] {
+  const index = layout.findIndex((item) => item.key === key);
   const target = index + direction;
-  if (index < 0 || target < 0 || target >= next.length) return next;
+  if (index < 0 || target < 0 || target >= layout.length) return layout;
+
+  const next = layout.map((item) => ({ ...item }));
   [next[index], next[target]] = [next[target], next[index]];
   return next;
 }
 
-function moveBefore(
-  layout: readonly HomeWidgetLayoutItem[],
-  movingKey: HomeWidgetKey,
-  targetKey: HomeWidgetKey,
-): HomeWidgetLayoutItem[] {
-  if (movingKey === targetKey) return [...layout];
-  const moving = layout.find((item) => item.key === movingKey);
-  if (!moving) return [...layout];
-  const without = layout.filter((item) => item.key !== movingKey);
-  const targetIndex = without.findIndex((item) => item.key === targetKey);
-  if (targetIndex < 0) return [...layout];
-  without.splice(targetIndex, 0, moving);
-  return without;
-}
-
-export function HomeWidgetCustomizer({
-  client,
-  userId,
-}: {
-  client: SupabaseClient;
-  userId: string;
-}) {
-  const [device, setDevice] = useState<HomeWidgetDevice>("desktop");
-  const [preferences, setPreferences] = useState<HomeWidgetPreferences>(() => defaultHomeWidgetPreferences());
+export function HomeWidgetCustomizer({ userId }: { userId: string }) {
+  const [target, setTarget] = useState<Target>("desktop");
+  const [preferences, setPreferences] = useState<HomeWidgetPreferences>(() => createDefaultHomeWidgetPreferences());
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [draggingKey, setDraggingKey] = useState<HomeWidgetKey | null>(null);
 
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
-      setPreferences({
-        desktop: readLocalHomeWidgetLayout(userId, "desktop"),
-        mobile: readLocalHomeWidgetLayout(userId, "mobile"),
-      });
       setLoading(true);
       setMessage("");
     });
-
-    void loadHomeWidgetPreferences(client, userId).then(
-      (cloud) => {
+    void loadHomeWidgetPreferences(getSupabaseClient(), userId).then(
+      (value) => {
         if (!active) return;
-        setPreferences(cloud);
-        writeLocalHomeWidgetLayout(userId, "desktop", cloud.desktop);
-        writeLocalHomeWidgetLayout(userId, "mobile", cloud.mobile);
+        setPreferences(value);
       },
       () => {
-        if (active) setMessage("クラウド設定を取得できなかったため、この端末に保存されている配置を表示しています。");
+        if (!active) return;
+        setPreferences(createDefaultHomeWidgetPreferences());
+        setMessage("保存済み配置を読み込めなかったため、標準配置を表示しています。");
       },
     ).finally(() => {
       if (active) setLoading(false);
     });
-
     return () => { active = false; };
-  }, [client, userId]);
+  }, [userId]);
 
-  const layout = device === "desktop" ? preferences.desktop : preferences.mobile;
-  const definitionMap = useMemo(
-    () => new Map(HOME_WIDGET_DEFINITIONS.map((item) => [item.key, item])),
-    [],
+  const currentLayout = useMemo(
+    () => target === "desktop" ? preferences.desktopLayout : preferences.mobileLayout,
+    [preferences, target],
   );
 
-  const updateLayout = (next: readonly HomeWidgetLayoutItem[]) => {
-    const normalized = normalizeHomeWidgetLayout(next, device);
-    setPreferences((current) => ({
-      ...current,
-      [device]: normalized,
-    }));
+  const patchCurrent = (next: HomeWidgetItem[]) => {
+    setPreferences((current) => target === "desktop"
+      ? { ...current, desktopLayout: next }
+      : { ...current, mobileLayout: next });
   };
 
-  const toggleVisible = (key: HomeWidgetKey) => {
-    updateLayout(layout.map((item) => item.key === key ? { ...item, visible: !item.visible } : item));
+  const patchItem = (key: HomeWidgetKey, patch: Partial<HomeWidgetItem>) => {
+    patchCurrent(currentLayout.map((item) => item.key === key ? { ...item, ...patch, key } : item));
   };
 
-  const setSize = (key: HomeWidgetKey, size: "wide" | "half") => {
-    updateLayout(layout.map((item) => item.key === key ? { ...item, size } : item));
-  };
-
-  const resetDevice = () => {
-    updateLayout(DEFAULT_HOME_WIDGET_LAYOUT);
-    setMessage(`${device === "desktop" ? "PC" : "スマホ"}配置を初期状態へ戻しました。保存すると反映されます。`);
+  const resetTarget = () => {
+    const defaults = createDefaultHomeWidgetPreferences();
+    patchCurrent(target === "desktop" ? defaults.desktopLayout : defaults.mobileLayout);
+    setMessage("標準配置へ戻しました。保存すると反映されます。");
   };
 
   const save = async () => {
-    setSaving(true);
+    setBusy(true);
     setMessage("");
-    const localDesktop = writeLocalHomeWidgetLayout(userId, "desktop", preferences.desktop);
-    const localMobile = writeLocalHomeWidgetLayout(userId, "mobile", preferences.mobile);
     try {
-      const saved = await saveHomeWidgetPreferences(client, userId, {
-        desktop: localDesktop,
-        mobile: localMobile,
-      });
+      const saved = await saveHomeWidgetPreferences(getSupabaseClient(), userId, clonePreferences(preferences));
       setPreferences(saved);
-      setMessage("ホームのウィジェット配置を保存しました。ホームへ戻ると反映されます。");
+      setMessage("ホーム画面のウィジェット配置を保存しました。");
+      window.dispatchEvent(new CustomEvent("aas:home-widgets-updated", { detail: saved }));
     } catch {
-      setMessage("この端末には保存しましたが、クラウド同期に失敗しました。通信状態を確認してもう一度保存してください。");
+      setMessage("ウィジェット配置を保存できませんでした。通信状態を確認して再度お試しください。");
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   };
 
@@ -140,93 +103,67 @@ export function HomeWidgetCustomizer({
       <div className="home-widget-customizer-head">
         <div>
           <p className="eyebrow">HOME WIDGETS</p>
-          <h2 id="home-widget-customizer-title">ホーム・ウィジェット</h2>
-          <p>ホームのカードを好きな順番へ並べ替え、不要なものは非表示にできます。PCとスマホは別々に保存できます。</p>
+          <h2 id="home-widget-customizer-title">ホーム画面の配置</h2>
+          <p>PCとスマホを別々に、順番・表示/非表示・横幅を変更できます。</p>
         </div>
-        <div className="home-widget-device-tabs" role="tablist" aria-label="編集する画面">
-          <button type="button" role="tab" aria-selected={device === "desktop"} className={device === "desktop" ? "active" : ""} onClick={() => setDevice("desktop")}>PC</button>
-          <button type="button" role="tab" aria-selected={device === "mobile"} className={device === "mobile" ? "active" : ""} onClick={() => setDevice("mobile")}>スマホ</button>
+        <div className="home-widget-target-tabs" role="tablist" aria-label="ホーム画面の対象">
+          <button type="button" className={target === "desktop" ? "active" : ""} onClick={() => setTarget("desktop")}>PC</button>
+          <button type="button" className={target === "mobile" ? "active" : ""} onClick={() => setTarget("mobile")}>スマホ</button>
         </div>
       </div>
 
-      {loading ? <p className="persistent-settings-status">ウィジェット設定を読み込んでいます…</p> : null}
+      {loading ? (
+        <p className="persistent-settings-status">ホーム配置を読み込んでいます…</p>
+      ) : (
+        <>
+          <div className="home-widget-list">
+            {currentLayout.map((item, index) => (
+              <article className={"home-widget-row " + (item.visible ? "" : "hidden-widget")} key={item.key}>
+                <span className="home-widget-drag-mark" aria-hidden="true">⋮⋮</span>
+                <div className="home-widget-row-main">
+                  <strong>{HOME_WIDGET_LABELS[item.key]}</strong>
+                  <small>{item.visible ? "ホームに表示" : "非表示"}</small>
+                </div>
+                <div className="home-widget-row-actions">
+                  <button type="button" aria-label={HOME_WIDGET_LABELS[item.key] + "を上へ"} disabled={index === 0} onClick={() => patchCurrent(moveItem(currentLayout, item.key, -1))}>↑</button>
+                  <button type="button" aria-label={HOME_WIDGET_LABELS[item.key] + "を下へ"} disabled={index === currentLayout.length - 1} onClick={() => patchCurrent(moveItem(currentLayout, item.key, 1))}>↓</button>
+                  <button
+                    type="button"
+                    className={"home-widget-visibility " + (item.visible ? "on" : "")}
+                    role="switch"
+                    aria-checked={item.visible}
+                    onClick={() => patchItem(item.key, { visible: !item.visible })}
+                  >
+                    {item.visible ? "表示" : "非表示"}
+                  </button>
+                  <label>
+                    <span>幅</span>
+                    <select value={item.size} onChange={(event) => patchItem(item.key, { size: event.target.value === "half" ? "half" : "wide" })}>
+                      <option value="wide">横幅いっぱい</option>
+                      <option value="half">1/2幅</option>
+                    </select>
+                  </label>
+                </div>
+              </article>
+            ))}
+          </div>
 
-      <div className="home-widget-preview" aria-label="現在の配置プレビュー">
-        {layout.filter((item) => item.visible).map((item) => {
-          const definition = definitionMap.get(item.key);
-          if (!definition) return null;
-          return (
-            <span key={item.key} className={device === "desktop" && item.size === "half" ? "half" : "wide"}>
-              <b aria-hidden="true">{definition.icon}</b>{definition.label}
-            </span>
-          );
-        })}
-      </div>
+          <p className="home-widget-mobile-note">
+            スマホでは画面幅を優先して1列表示になります。「1/2幅」はPCや横幅に余裕がある画面で反映されます。
+          </p>
 
-      <div className="home-widget-editor-list">
-        {layout.map((item, index) => {
-          const definition = definitionMap.get(item.key);
-          if (!definition) return null;
-          return (
-            <div
-              className={`home-widget-editor-row ${item.visible ? "" : "is-hidden"} ${draggingKey === item.key ? "is-dragging" : ""}`}
-              key={item.key}
-              draggable
-              onDragStart={() => setDraggingKey(item.key)}
-              onDragEnd={() => setDraggingKey(null)}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                if (draggingKey) updateLayout(moveBefore(layout, draggingKey, item.key));
-                setDraggingKey(null);
-              }}
-            >
-              <span className="home-widget-drag" aria-hidden="true">⋮⋮</span>
-              <span className="home-widget-editor-icon" aria-hidden="true">{definition.icon}</span>
-              <span className="home-widget-editor-copy">
-                <strong>{definition.label}</strong>
-                <small>{definition.description}</small>
-              </span>
+          {message ? <p className="home-widget-message" role="status">{message}</p> : null}
 
-              {device === "desktop" && definition.allowHalf ? (
-                <label className="home-widget-size">
-                  <span>幅</span>
-                  <select value={item.size} onChange={(event) => setSize(item.key, event.target.value as "wide" | "half")}>
-                    <option value="wide">ワイド</option>
-                    <option value="half">1/2</option>
-                  </select>
-                </label>
-              ) : (
-                <span className="home-widget-size-fixed">{device === "desktop" ? "ワイド固定" : "1列表示"}</span>
-              )}
+          <div className="home-widget-customizer-actions">
+            <button type="button" className="secondary-action" disabled={busy} onClick={resetTarget}>この画面を標準配置に戻す</button>
+            <button type="button" className="primary-action" disabled={busy} onClick={() => void save()}>{busy ? "保存中…" : "配置を保存"}</button>
+          </div>
 
-              <div className="home-widget-order-buttons" aria-label={`${definition.label}の並べ替え`}>
-                <button type="button" disabled={index === 0} onClick={() => updateLayout(moveItem(layout, item.key, -1))} aria-label="上へ移動">↑</button>
-                <button type="button" disabled={index === layout.length - 1} onClick={() => updateLayout(moveItem(layout, item.key, 1))} aria-label="下へ移動">↓</button>
-              </div>
-
-              <button
-                type="button"
-                role="switch"
-                aria-checked={item.visible}
-                className={`home-widget-visibility ${item.visible ? "on" : ""}`}
-                onClick={() => toggleVisible(item.key)}
-              >
-                <span aria-hidden="true" />
-                <b>{item.visible ? "表示" : "非表示"}</b>
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {message ? <p className="home-widget-message" role="status">{message}</p> : null}
-
-      <div className="home-widget-actions">
-        <button type="button" className="secondary" onClick={resetDevice}>この画面を初期配置へ戻す</button>
-        <button type="button" disabled={saving} onClick={() => void save()}>{saving ? "保存中…" : "配置を保存"}</button>
-      </div>
-      <small className="home-widget-help">PCでは「⋮⋮」をドラッグして並べ替えできます。スマホでは↑↓ボタンを使うと確実に操作できます。</small>
+          <small className="home-widget-cloud-note">
+            配置はAASアカウントごとにクラウド保存されます。記事本文やAI回答はこの設定には保存しません。
+          </small>
+        </>
+      )}
     </section>
   );
 }

@@ -205,6 +205,65 @@
   font-size: 9px;
 }
 
+.note-monthly-target-card {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0;
+  border: 1px solid #cfe0f3;
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: 14px;
+}
+
+.note-monthly-target-card > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.note-monthly-target-card > div:first-child strong {
+  color: #174d83;
+  font-size: 12px;
+}
+
+.note-monthly-target-card > div:first-child span,
+.note-monthly-target-card > small {
+  color: #536d89;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.note-monthly-target-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.note-monthly-target-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.note-monthly-target-grid label > span {
+  color: #355675;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.note-monthly-target-grid input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #c7d8ea;
+  border-radius: 10px;
+  background: #fff;
+  color: #183552;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+
+.note-monthly-target-card > button {
+  justify-self: start;
+}
+
 .note-ai-easy-import {
   border-color: #b7d4f5;
   background: linear-gradient(180deg, #fbfdff, #f4f9ff);
@@ -324,5 +383,22 @@
 
   .note-plan-stats .note-plan-times strong {
     font-size: 12px;
+  }
+}
+
+
+@media (max-width: 760px) {
+  .note-monthly-target-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .note-monthly-target-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .note-monthly-target-card > button {
+    width: 100%;
   }
 }

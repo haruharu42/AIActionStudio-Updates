@@ -10,7 +10,11 @@ function storageKey(userId: string, slug: string): string {
 
 export function hasStoredSideHustleDraft(userId: string, definition: SideHustleDefinition): boolean {
   if (typeof window === "undefined" || !userId) return false;
-  return window.localStorage.getItem(storageKey(userId, definition.slug)) !== null;
+  try {
+    return window.localStorage.getItem(storageKey(userId, definition.slug)) !== null;
+  } catch {
+    return false;
+  }
 }
 
 export function readSideHustleDraft(
@@ -41,8 +45,8 @@ export function readSideHustleDraft(
     }));
     return {
       values,
-      selectedAi: row.selectedAi === "claude" || row.selectedAi === "gemini" ? row.selectedAi : "chatgpt",
-      selectedPlan: row.selectedPlan === "free" ? "free" : "paid",
+      selectedAi: row.selectedAi === "claude" || row.selectedAi === "gemini" || row.selectedAi === "chatgpt" ? row.selectedAi : fallback.selectedAi,
+      selectedPlan: row.selectedPlan === "paid" ? "paid" : "free",
       resultText: typeof row.resultText === "string" ? row.resultText.slice(0, 120000) : "",
       step: typeof row.step === "number" && Number.isInteger(row.step)
         ? Math.max(0, Math.min(4, row.step))
@@ -57,12 +61,22 @@ export function writeSideHustleDraft(
   userId: string,
   definition: SideHustleDefinition,
   draft: SideHustleDraft,
-): void {
-  if (typeof window === "undefined" || !userId) return;
-  window.localStorage.setItem(storageKey(userId, definition.slug), JSON.stringify(draft));
+): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  try {
+    window.localStorage.setItem(storageKey(userId, definition.slug), JSON.stringify(draft));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-export function clearSideHustleDraft(userId: string, definition: SideHustleDefinition): void {
-  if (typeof window === "undefined" || !userId) return;
-  window.localStorage.removeItem(storageKey(userId, definition.slug));
+export function clearSideHustleDraft(userId: string, definition: SideHustleDefinition): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  try {
+    window.localStorage.removeItem(storageKey(userId, definition.slug));
+    return true;
+  } catch {
+    return false;
+  }
 }

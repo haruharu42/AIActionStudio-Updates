@@ -4,28 +4,28 @@ import type { Metadata } from "next";
 import { LegalDocument } from "@/components/legal-document";
 
 export const metadata: Metadata = {
-  title: "プライバシーポリシー | AI記事スタジオ",
+  title: "プライバシーポリシー | AI Action Studio",
   robots: { index: false, follow: false },
 };
 
 export default function PrivacyPage() {
   return (
     <LegalDocument
-      title="AI記事スタジオ PWA プライバシーポリシー"
-      description="AI記事スタジオ PWAにおける個人情報・利用データの取扱いを定めます。"
+      title="AI Action Studio PWA プライバシーポリシー"
+      description="AI Action Studio PWAにおける個人情報・利用データの取扱いを定めます。"
     >
-      <p>最終更新日: 2026年9月16日</p>
+      <p>最終更新日: 2026年9月25日</p>
 
       <h2>1. 基本方針</h2>
       <p>
-        AI記事スタジオ PWA（以下「本サービス」）は、利用者の情報を、本サービスの提供、認証、利用権・契約管理、記事・画像の同期、セキュリティ確保、問い合わせ対応その他あらかじめ示した目的の範囲で取り扱います。
+        AI Action Studio PWA（以下「本サービス」）は、利用者の情報を、本サービスの提供、認証、利用権・契約管理、記事・画像の同期、セキュリティ確保、問い合わせ対応その他あらかじめ示した目的の範囲で取り扱います。
       </p>
 
       <h2>2. 取得する情報</h2>
       <p>本サービスでは、機能に応じて次の情報を取り扱う場合があります。</p>
       <ul>
         <li>メールアドレス、表示名、認証に必要なアカウント情報</li>
-        <li>AASユーザーID、role、status、利用権、招待コードの利用履歴</li>
+        <li>AASユーザーID、role、status、利用権、利用コードの利用履歴</li>
         <li>契約プラン、利用期間、契約状態、更新・解約状態、Stripe Customer ID、Subscription ID、Checkout Session ID、処理済みイベントID等の決済連携情報</li>
         <li>記事タイトル、本文、掲載先、無料・有料区分、タグ、公開状態、公開予定日時、公開URL等の記事情報</li>
         <li>アップロードしたカバー画像・挿絵、そのメタデータ</li>
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
       <ul>
         <li>本人確認、ログイン、アカウント状態および利用権の確認</li>
         <li>購入、契約更新、解約、決済状態に応じて利用権を付与・更新・失効するため</li>
-        <li>Windows版とPWA版の間で記事・画像等を同期するため</li>
+        <li>機能に応じてクラウド保存した記事・画像等を、同一のAASアカウントで対応端末から利用できるようにするため</li>
         <li>記事作成、画像管理、SNS設計、公開管理等の機能を提供するため</li>
         <li>不正利用の防止、障害対応、セキュリティ維持、監査のため</li>
         <li>問い合わせ対応および重要なサービス通知のため</li>

@@ -6,6 +6,12 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readArticleStepSource = async () => (await Promise.all([
+  "components/article-create/article-create-steps.tsx",
+  "components/article-create/article-create-generation-steps.tsx",
+  "components/article-create/article-create-finish-steps.tsx",
+  "components/article-create/article-create-step-shared.tsx",
+].map((relative) => read(relative)))).join("\n");
 
 test("article output uses only the owned publish body and creates a safe Markdown filename", async () => {
   const api = await read("lib/article-export.ts");
@@ -27,7 +33,7 @@ test("article output uses only the owned publish body and creates a safe Markdow
 test("paid article pricing stays compatible with positive-price validation", async () => {
   const api = await read("lib/phase11-create.ts");
   const page = await read("components/phase11-create-page.tsx");
-  const stepUi = await read("components/article-create/article-create-steps.tsx");
+  const stepUi = await readArticleStepSource();
   const migration = await read("../supabase/migrations/20260910142500_articles_paid_price_consistency.sql");
 
   assert.match(api, /draft\.price <= 0/);
@@ -47,7 +53,7 @@ test("magazine creation is dropdown-first, validated and persisted without a new
   const planner = await read("lib/magazine-planner.ts");
   const plannerUi = await read("components/article-create/magazine-planner.tsx");
   const page = await read("components/phase11-create-page.tsx");
-  const steps = await read("components/article-create/article-create-steps.tsx");
+  const steps = await readArticleStepSource();
   const draftHelpers = await read("lib/article-create-draft.ts");
   const api = await read("lib/phase11-create.ts");
   const progress = await read("lib/phase11-wizard-progress.ts");
@@ -165,4 +171,19 @@ test("article creator UI v2 keeps the eight-step rail readable and preserves two
   assert.match(css, /grid-template-columns: repeat\(8, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: 1fr/);
+});
+
+
+test("article image generation exposes batch and individual prompts and forbids temporary chat", async () => {
+  const prompts = await read("lib/phase13-image-prompts.ts");
+  const steps = await readArticleStepSource();
+
+  assert.match(prompts, /画像生成では一時チャットは使用不可です。通常チャットを使用してください。/);
+  assert.match(prompts, /buildCombinedImagePrompt/);
+  assert.match(prompts, /IMAGE_CHAT_USAGE_RULE/);
+  assert.match(steps, /画像生成プロンプト（一括・個別）/);
+  assert.match(steps, /個別に画像を作成/);
+  assert.match(steps, /個別作成プロンプト/);
+  assert.match(steps, /画像生成では一時チャットは使用不可/);
+  assert.match(steps, /imagePrompts\.map/);
 });

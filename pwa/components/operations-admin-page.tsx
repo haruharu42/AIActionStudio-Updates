@@ -188,7 +188,14 @@ export function OperationsAdminPage() {
   const counts = snapshot?.counts ?? { open: 0, critical: 0, error: 0, warning: 0 };
   const latestRun = snapshot?.runs[0] ?? null;
   const capacity = snapshot?.capacity ?? null;
-  const overall = counts.critical > 0 || counts.error > 0 || latestRun?.status === "failed" || worker?.ok === false ? "error" : counts.warning > 0 || latestRun?.status === "warning" ? "warning" : "healthy";
+  const monitoringReady = snapshot !== null && worker !== null;
+  const overall = !monitoringReady
+    ? "unknown"
+    : counts.critical > 0 || counts.error > 0 || latestRun?.status === "failed" || worker.ok === false
+      ? "error"
+      : counts.warning > 0 || latestRun?.status === "warning"
+        ? "warning"
+        : "healthy";
   const capacityForm: CapacityDraft = capacityDraft ?? {
     planLabel: capacity?.planLabel ?? "未設定",
     databaseLimitGb: limitToGb(capacity?.database.limitBytes ?? null),

@@ -90,6 +90,19 @@ export function markdownToNoteHtml(markdown: string): string {
       continue;
     }
 
+    const imageInsertion = /^\*\*【挿絵(\d+)をここに挿入】\*\*$/.exec(trimmed);
+    if (imageInsertion) {
+      flushAll();
+      html.push(`<p><br></p><p><strong>【挿絵${Number(imageInsertion[1])}をここに挿入】</strong></p><p><br></p>`);
+      continue;
+    }
+
+    if (trimmed === "**【ここから有料エリア】**") {
+      flushAll();
+      html.push("<p><br></p><p><strong>【ここから有料エリア】</strong></p><p><br></p>");
+      continue;
+    }
+
     const heading = /^(#{1,6})\s+(.+)$/.exec(line);
     if (heading) {
       flushAll();

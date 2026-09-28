@@ -7,7 +7,41 @@ import { fileURLToPath } from "node:url";
 const pwaRoot = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = path.resolve(pwaRoot, "..");
 const readPwa = (relative) => readFile(path.join(pwaRoot, relative), "utf8");
+const readNoteOperationsLibSource = async () => (await Promise.all([
+  "lib/note-operations.ts",
+  "lib/note-operation-prompts.ts",
+].map((relative) => readPwa(relative)))).join("\n");
+const readNoteOperationsSource = async () => (await Promise.all([
+  "components/note-operations-page.tsx",
+  "components/note-operations/note-operations-static-tabs.tsx",
+].map((relative) => readPwa(relative)))).join("\n");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
+
+test("note operations keeps static start and calendar tabs outside the controller page", async () => {
+  const [page, staticTabs] = await Promise.all([
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-operations/note-operations-static-tabs.tsx"),
+  ]);
+
+  assert.match(page, /NoteStartGuideTab/);
+  assert.match(page, /NoteCalendarTab/);
+  assert.match(staticTabs, /export function NoteStartGuideTab/);
+  assert.match(staticTabs, /export function NoteCalendarTab/);
+  assert.doesNotMatch(staticTabs, /getSupabaseClient|\.rpc\(|saveNoteOperationProfile|replaceNoteSchedule/);
+});
+
+test("note operations keeps prompt generation pure and separate from persistence", async () => {
+  const [lib, prompts] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-operation-prompts.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-operation-prompts"/);
+  assert.match(prompts, /export function buildNoteProfileDraft/);
+  assert.match(prompts, /export function buildNoteAccountResearchPrompt/);
+  assert.match(prompts, /export function buildNoteScheduleResearchPrompt/);
+  assert.doesNotMatch(prompts, /SupabaseClient|\.from\(|\.rpc\(|replaceNoteScheduleAtomically/);
+});
 
 test("note operations data is owner-scoped and never stores note credentials", async () => {
   const migration = await readRepo("supabase/migrations/20260919123613_note_operations_planner_v1.sql");
@@ -28,7 +62,11 @@ test("note operations data is owner-scoped and never stores note credentials", a
 });
 
 test("note operations engine generates mixed schedules and supports download upload formats", async () => {
-  const lib = await readPwa("lib/note-operations.ts");
+  const [lib, transfer, performance] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-operations-transfer.ts"),
+    readPwa("lib/note-schedule-performance.ts"),
+  ]);
 
   assert.match(lib, /generateNoteSchedule/);
   assert.match(lib, /paidPostsPerMonth/);
@@ -38,7 +76,10 @@ test("note operations engine generates mixed schedules and supports download upl
   assert.match(lib, /profile_setup/);
   assert.match(lib, /exportNoteScheduleCsv/);
   assert.match(lib, /exportNoteOperationsJson/);
-  assert.match(lib, /aas-note-operations-v1/);
+  assert.match(transfer, /aas-note-operations-v1/);
+  assert.match(performance, /summarizeNoteSchedulePerformance/);
+  assert.match(performance, /formatSchedulePerformanceForPrompt/);
+  assert.match(performance, /NOTE_PERFORMANCE_WEEKDAYS/);
   assert.match(lib, /parseNoteOperationsImport/);
   assert.match(lib, /replaceNoteSchedule/);
   assert.match(lib, /todayJstDateKey/);
@@ -47,7 +88,7 @@ test("note operations engine generates mixed schedules and supports download upl
 
 test("note operations UI covers setup profile planning calendar and home todo", async () => {
   const [page, today, home, tools, toolCatalog, desktop, mobile, layout, css] = await Promise.all([
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("components/note-today-panel.tsx"),
     readPwa("components/phase18-beginner-home.tsx"),
     readPwa("components/phase-tools-page.tsx"),
@@ -98,10 +139,11 @@ test("note operations UI covers setup profile planning calendar and home todo", 
 
 
 test("note beginner profile builder uses dropdown presets and current-web research prompts", async () => {
-  const [migration, lib, page, css] = await Promise.all([
+  const [migration, lib, profileLib, page, css] = await Promise.all([
     readRepo("supabase/migrations/20260919125425_note_operations_profile_builder_presets.sql"),
-    readPwa("lib/note-operations.ts"),
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-operation-profile.ts"),
+    readNoteOperationsSource(),
     readPwa("app/phase38-note-operations.css"),
   ]);
 
@@ -122,6 +164,7 @@ test("note beginner profile builder uses dropdown presets and current-web resear
     "NOTE_TONE_PRESETS",
     "NOTE_MONETIZATION_STYLES",
   ]) {
+    assert.match(profileLib, new RegExp(optionSet));
     assert.match(lib, new RegExp(optionSet));
   }
 
@@ -135,12 +178,14 @@ test("note beginner profile builder uses dropdown presets and current-web resear
   assert.match(lib, /経歴、年齢、職業、収入、実績、資格/);
   assert.match(lib, /アカウント構成を3案/);
 
-  assert.match(page, /どのジャンルで運営したい/);
+  assert.match(page, /noteアカウントの大きなジャンル/);
+  assert.match(page, /記事作成で使う詳細ジャンル/);
+  assert.match(page, /記事作成で使うサブジャンル/);
   assert.match(page, /どんなアカウントにしたい/);
   assert.match(page, /主に誰に届けたい/);
-  assert.match(page, /文章の雰囲気は/);
+  assert.match(page, /文体・文章の雰囲気/);
   assert.match(page, /収益化はどうしたい/);
-  assert.match(lib, /その他（自由入力）/);
+  assert.match(profileLib, /その他（自由入力）/);
   assert.match(page, /chatgpt","gemini","claude/);
   assert.match(page, /現在のよく使うAI/);
   assert.match(page, /最新情報から構成候補を作る/);
@@ -153,13 +198,84 @@ test("note beginner profile builder uses dropdown presets and current-web resear
 });
 
 
+test("note profile stores detailed article defaults and soft monthly targets", async () => {
+  const [columnsMigration, constraintsMigration, lib, profileLib, page, helpers, staticTabs, createDraft, css] = await Promise.all([
+    readRepo("supabase/migrations/20260928093057_note_operation_monthly_targets_and_article_defaults_v1.sql"),
+    readRepo("supabase/migrations/20260928093155_note_operation_profile_flexibility_constraints_v1.sql"),
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-operation-profile.ts"),
+    readNoteOperationsSource(),
+    readPwa("components/note-operations/note-operations-page-helpers.ts"),
+    readPwa("components/note-operations/note-operations-static-tabs.tsx"),
+    readPwa("lib/article-create-draft.ts"),
+    readPwa("app/phase39-readability.css"),
+  ]);
+
+  for (const column of [
+    "article_genre",
+    "article_subgenre",
+    "free_posts_per_month",
+    "free_target_length",
+    "paid_target_length",
+  ]) assert.match(columnsMigration, new RegExp(column));
+
+  assert.match(constraintsMigration, /paid_posts_per_month <= 60/);
+  assert.match(constraintsMigration, /free_posts_per_month <= 60/);
+  assert.match(constraintsMigration, /free_target_length >= 500/);
+  assert.match(constraintsMigration, /paid_target_length <= 50000/);
+  assert.match(constraintsMigration, /storytelling/);
+  assert.match(constraintsMigration, /humorous/);
+
+  assert.match(profileLib, /freePostsPerMonth: number/);
+  assert.match(profileLib, /articleGenre: string/);
+  assert.match(profileLib, /articleSubgenre: string/);
+  assert.match(profileLib, /freeTargetLength: number/);
+  assert.match(profileLib, /paidTargetLength: number/);
+  for (const tone of ["logical", "empathetic", "storytelling", "concise", "essay", "warm", "formal", "humorous"]) {
+    assert.match(profileLib, new RegExp(`value: "${tone}"`));
+  }
+
+  assert.match(lib, /free_posts_per_month: Math\.max\(0, Math\.min\(60/);
+  assert.match(lib, /paid_posts_per_month: Math\.max\(0, Math\.min\(60/);
+  assert.match(lib, /article_genre: profile\.articleGenre/);
+  assert.match(lib, /free_target_length:/);
+  assert.match(lib, /paid_target_length:/);
+
+  assert.match(page, /月の記事作成数の目安/);
+  assert.match(page, /この目安をAASに保存/);
+  assert.match(page, /無料note \/ 月の目安/);
+  assert.match(page, /有料note \/ 月の目安/);
+  assert.match(page, /無料noteの文字数目安/);
+  assert.match(page, /有料noteの文字数目安/);
+  assert.match(page, /ノルマではありません/);
+  assert.match(page, /前月までの実績/);
+  assert.match(page, /previousPerformance/);
+  assert.match(page, /previousArticleOutput/);
+  assert.match(css, /\.note-monthly-target-card/);
+  assert.match(css, /\.note-monthly-target-grid/);
+
+  assert.match(helpers, /title: item\.title/);
+  assert.match(helpers, /genre: profile\.articleGenre/);
+  assert.match(helpers, /subgenre: profile\.articleSubgenre/);
+  assert.match(helpers, /targetLength: String\(paid \? profile\.paidTargetLength : profile\.freeTargetLength\)/);
+  assert.match(staticTabs, /createHref\(item, profile\)/);
+  assert.match(createDraft, /const title = params\.get\("title"\)/);
+  assert.match(createDraft, /const targetLength = Number\(params\.get\("targetLength"\)\)/);
+  assert.match(createDraft, /source === "note-operations"/);
+});
+
 test("AI monthly note schedule uses month-based research, validation, and owner-scoped plan storage", async () => {
-  const [migration, lib, page, helpers, css] = await Promise.all([
+  const [migration, lib, parser, normalizer, planner, page, helpers, css, performance, persistenceMigration] = await Promise.all([
     readRepo("supabase/migrations/20260919131121_note_ai_monthly_schedule_plans.sql"),
-    readPwa("lib/note-operations.ts"),
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-ai-schedule-json.ts"),
+    readPwa("lib/note-ai-schedule-normalize.ts"),
+    readPwa("lib/note-ai-schedule-plan.ts"),
+    readNoteOperationsSource(),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
+    readPwa("lib/note-schedule-performance.ts"),
+    readRepo("supabase/migrations/20260925130712_audit_atomic_note_schedule_replace.sql"),
   ]);
 
   assert.match(migration, /create table if not exists public\.note_operation_schedule_plans/);
@@ -195,56 +311,60 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
     assert.match(lib, new RegExp(symbol));
   }
 
-  assert.match(lib, /parseSimpleAiArticleSchedule/);
-  assert.match(lib, /fallbackDailyPostingTimes/);
-  assert.match(lib, /ensureDistinctDailyPostingTimes/);
-  assert.match(lib, /2: \["12:00", "20:00"\]/);
-  assert.match(lib, /3: \["09:00", "14:00", "20:00"\]/);
+  assert.match(normalizer, /parseSimpleAiArticleSchedule/);
+  assert.match(normalizer, /fallbackDailyPostingTimes/);
+  assert.match(normalizer, /ensureDistinctDailyPostingTimes/);
+  assert.match(normalizer, /2: \["12:00", "20:00"\]/);
+  assert.match(normalizer, /3: \["09:00", "14:00", "20:00"\]/);
   assert.match(lib, /1日2回以上なら投稿回数と同じ行数/);
   assert.match(lib, /前文、挨拶、説明、要約、理由、注意書き、出典一覧、コードフェンス、表の後の文章は一切出力しない/);
   assert.match(lib, /Markdown表/);
   assert.match(lib, /\| 日付 \| 時刻 \| 種別 \| 記事タイトル \| テーマ \|/);
   assert.match(lib, /最終回答は、AASへそのままコピー＆ペーストする次のMarkdown表だけを返す/);
-  assert.match(lib, /AI回答内の無料note・有料note作成予定をAASが直接読み取りました/);
-  assert.match(lib, /normalizeAiArticleScheduleType/);
-  assert.match(lib, /無料note作成/);
-  assert.match(lib, /有料note作成/);
+  assert.match(planner, /AI回答内の無料note・有料note作成予定をAASが直接読み取りました/);
+  assert.match(normalizer, /normalizeAiArticleScheduleType/);
+  assert.match(normalizer, /無料note作成/);
+  assert.match(normalizer, /有料note作成/);
   assert.match(lib, /scheduleに入れてよいtypeは free_note と paid_note の2種類だけ/);
-  assert.match(lib, /\.in\("item_type", \["free_note", "paid_note"\]\)/);
+  assert.match(persistenceMigration, /item_type in \('free_note','paid_note'\)/);
   assert.match(page, /articleSchedule/);
   assert.match(page, /無料note \/ 有料noteの作成日・時間/);
   assert.match(page, /AIにはAASへ貼る予定表だけを返すよう指示します/);
-  assert.match(lib, /balancedJsonObjects/);
-  assert.match(lib, /scheduleRootFromValue/);
-  assert.match(lib, /ChatGPTの回答全文を削らず/);
-  assert.match(lib, /AAS用の運用スケジュールが回答内に見つかりませんでした/);
-  assert.match(lib, /対象月の外にある予定/);
-  assert.match(lib, /同じ日時に記事投稿が重複/);
-  assert.match(lib, /1日に最大/);
-  assert.match(lib, /調査元URLがありません/);
-  assert.match(lib, /note公式（note\.com\/info）/);
-  assert.match(lib, /直近180日以内の出典/);
-  assert.match(lib, /replacementStart/);
+  assert.match(parser, /balancedJsonObjects/);
+  assert.match(parser, /scheduleRootFromValue/);
+  assert.match(parser, /ChatGPTの回答全文を削らず/);
+  assert.match(parser, /AAS用の運用スケジュールが回答内に見つかりませんでした/);
+  assert.match(planner, /対象月の外にある予定/);
+  assert.match(planner, /同じ日時に記事投稿が重複/);
+  assert.match(planner, /1日に最大/);
+  assert.match(planner, /調査元URLがありません/);
+  assert.match(planner, /note公式（note\.com\/info）/);
+  assert.match(planner, /直近180日以内の出典/);
+  assert.match(persistenceMigration, /then v_today else p_target_month/);
   assert.match(lib, /status === "done"/);
   assert.match(lib, /AAS運用スケジュール実績/);
   assert.match(lib, /AASで実際に作成したnote記事数/);
-  assert.match(lib, /投稿予定に対する完了率/);
+  assert.match(lib, /前月のAAS運用スケジュール実績/);
+  assert.match(lib, /前月にAASで実際に作成したnote記事数/);
+  assert.match(lib, /月間目安（ノルマではない）/);
+  assert.match(lib, /概ね20%程度の増減/);
+  assert.match(performance, /投稿予定に対する完了率/);
   assert.match(lib, /無料30本・有料20本/);
   assert.match(lib, /未完了分やスキップ分を「借金」/);
   assert.match(lib, /今日から月末までに新しく行う分/);
-  assert.match(lib, /曜日別/);
-  assert.match(lib, /時刻別/);
+  assert.match(performance, /曜日別/);
+  assert.match(performance, /時刻別/);
   assert.match(lib, /AASから渡していない本文、PV、売上、購入率/);
   assert.match(lib, /item\.itemType === "free_note" \|\| item\.itemType === "paid_note"/);
-  assert.match(lib, /eq\("status", "planned"\)/);
-  assert.match(lib, /gte\("scheduled_date", replacementStart\)/);
-  assert.match(lib, /lte\("scheduled_date", end\)/);
+  assert.match(persistenceMigration, /status = 'planned'/);
+  assert.match(persistenceMigration, /scheduled_date between v_start and v_end/);
+  assert.match(persistenceMigration, /security invoker/);
 
   assert.match(page, /type="month"/);
   assert.match(page, /min=\{currentJstMonth\(\)\}/);
-  assert.match(page, /週に何回投稿するか/);
+  assert.match(page, /月間目安から実際の無料\/有料本数を調整/);
   assert.match(page, /1日に何回まで投稿するか/);
-  assert.match(page, /有料noteを週何回にするか/);
+  assert.match(page, /前月・今月の実績に合わせた増減/);
   assert.match(page, /ChatGPT \/ Gemini \/ Claude/);
   assert.match(page, /コピーしたAI回答を読み込んで反映/);
   assert.match(page, /貼り付けた回答をそのまま反映/);
@@ -265,6 +385,8 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /今月の実績から残り期間を組み直せます/);
   assert.match(page, /referencePerformance\.adherenceRate/);
   assert.match(page, /articleOutput\.freeCreated/);
+  assert.match(page, /previousArticleOutput/);
+  assert.match(page, /previousPerformance/);
   assert.match(page, /本文・PV・売上・購入率はAIへ渡しません/);
   assert.match(page, /AAS用JSONをコピー/);
   assert.match(page, /JSONファイルで保存/);
@@ -291,17 +413,19 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
 
 
 test("note schedule import accepts full AI response prose and keeps file import as fallback", async () => {
-  const [lib, page, css, layout] = await Promise.all([
-    readPwa("lib/note-operations.ts"),
-    readPwa("components/note-operations-page.tsx"),
+  const [lib, parser, page, css, layout] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-ai-schedule-json.ts"),
+    readNoteOperationsSource(),
     readPwa("app/phase39-readability.css"),
     readPwa("app/layout.tsx"),
   ]);
 
-  assert.match(lib, /export function extractNoteAiScheduleJson/);
-  assert.match(lib, /matchAll\(fencePattern\)/);
-  assert.match(lib, /balancedJsonObjects\(rawText\)/);
-  assert.match(lib, /object\.schema === "aas-note-schedule-v2"/);
+  assert.match(lib, /export \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
+  assert.match(parser, /export function extractNoteAiScheduleJson/);
+  assert.match(parser, /matchAll\(fencePattern\)/);
+  assert.match(parser, /balancedJsonObjects\(rawText\)/);
+  assert.match(parser, /object\.schema === "aas-note-schedule-v2"/);
   assert.match(page, /AIの回答をそのままAASへ反映/);
   assert.match(page, /JSONは不要です/);
   assert.match(page, /コピーしたAI回答を読み込んで反映/);
@@ -312,24 +436,27 @@ test("note schedule import accepts full AI response prose and keeps file import 
 
 
 test("AI note calendar is article-only and tolerates common free paid aliases", async () => {
-  const [lib, page, today] = await Promise.all([
-    readPwa("lib/note-operations.ts"),
-    readPwa("components/note-operations-page.tsx"),
+  const [lib, parser, normalizer, planner, page, today] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-ai-schedule-json.ts"),
+    readPwa("lib/note-ai-schedule-normalize.ts"),
+    readPwa("lib/note-ai-schedule-plan.ts"),
+    readNoteOperationsSource(),
     readPwa("components/note-today-panel.tsx"),
   ]);
 
-  assert.match(lib, /\["free_note", "free", "free_article", "無料note", "無料ノート", "無料記事", "無料note作成"\]/);
-  assert.match(lib, /\["paid_note", "paid", "paid_article", "有料note", "有料ノート", "有料記事", "有料note作成"\]/);
-  assert.match(lib, /raw\.type \?\? raw\.item_type \?\? raw\.article_type/);
-  assert.match(lib, /raw\.scheduled_date/);
-  assert.match(lib, /raw\.scheduled_time/);
-  assert.match(lib, /object\.targetMonth/);
-  assert.match(lib, /Array\.isArray\(object\.calendar\)/);
-  assert.match(lib, /Array\.isArray\(object\.items\)/);
-  assert.match(lib, /root\.targetMonth/);
-  assert.match(lib, /raw\.day/);
-  assert.match(lib, /raw\.name/);
-  assert.match(lib, /rawTitle \|\| fallbackTitle/);
+  assert.match(normalizer, /\["free_note", "free", "free_article", "無料note", "無料ノート", "無料記事", "無料note作成"\]/);
+  assert.match(normalizer, /\["paid_note", "paid", "paid_article", "有料note", "有料ノート", "有料記事", "有料note作成"\]/);
+  assert.match(normalizer, /raw\.type \?\? raw\.item_type \?\? raw\.article_type/);
+  assert.match(normalizer, /raw\.scheduled_date/);
+  assert.match(normalizer, /raw\.scheduled_time/);
+  assert.match(parser, /object\.targetMonth/);
+  assert.match(parser, /Array\.isArray\(object\.calendar\)/);
+  assert.match(parser, /Array\.isArray\(object\.items\)/);
+  assert.match(planner, /root\.targetMonth/);
+  assert.match(normalizer, /raw\.day/);
+  assert.match(normalizer, /raw\.name/);
+  assert.match(normalizer, /rawTitle \|\| fallbackTitle/);
   assert.match(lib, /isNoteArticleScheduleItem\(item\)/);
   assert.match(page, /schedule\.filter\(\(item\) => isNoteArticleScheduleItem\(item\)\)/);
   assert.match(page, /articleSchedule\.slice\(0, 120\)/);
@@ -338,18 +465,19 @@ test("AI note calendar is article-only and tolerates common free paid aliases", 
 
 
 test("note schedule can be recovered from a plain markdown table without JSON", async () => {
-  const [lib, page, manual] = await Promise.all([
-    readPwa("lib/note-operations.ts"),
-    readPwa("components/note-operations-page.tsx"),
+  const [normalizer, page, manual] = await Promise.all([
+    readPwa("lib/note-ai-schedule-normalize.ts"),
+    readNoteOperationsSource(),
     readPwa("app/manual/page.tsx"),
   ]);
 
-  assert.match(lib, /function parseSimpleAiArticleSchedule/);
-  assert.match(lib, /有料\(\?:note\|ノート\|記事\)/);
-  assert.match(lib, /無料\(\?:note\|ノート\|記事\)/);
-  assert.match(lib, /text\.split\(\/\\r\?\\n\//);
-  assert.match(lib, /line\.split\("\|"\)/);
-  assert.match(lib, /JSONではなくAI回答内の予定表・文章から読み取りました/);
+  assert.match(normalizer, /function parseSimpleAiArticleSchedule/);
+  assert.match(normalizer, /有料\(\?:note\|ノート\|記事\)/);
+  assert.match(normalizer, /無料\(\?:note\|ノート\|記事\)/);
+  assert.match(normalizer, /text\.split\(\/\\r\?\\n\//);
+  assert.match(normalizer, /line\.split\("\|"\)/);
+  const planner = await readPwa("lib/note-ai-schedule-plan.ts");
+  assert.match(planner, /JSONではなくAI回答内の予定表・文章から読み取りました/);
   assert.match(page, /AIにはAASへ貼る予定表だけを返すよう指示します/);
   assert.match(page, /貼り付けた内容はこの端末でアカウント別に保存/);
   assert.match(manual, /JSONを作ったり編集したりする必要はありません/);
@@ -357,9 +485,10 @@ test("note schedule can be recovered from a plain markdown table without JSON", 
 
 
 test("AI schedule output is copy-only, multi-post times are explicit, and pasted text persists until clear", async () => {
-  const [lib, page, helpers, css, manual] = await Promise.all([
-    readPwa("lib/note-operations.ts"),
-    readPwa("components/note-operations-page.tsx"),
+  const [lib, normalizer, page, helpers, css, manual] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-ai-schedule-normalize.ts"),
+    readNoteOperationsSource(),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase39-readability.css"),
     readPwa("app/manual/page.tsx"),
@@ -369,8 +498,8 @@ test("AI schedule output is copy-only, multi-post times are explicit, and pasted
   assert.match(lib, /表以外の文字は出力しない/);
   assert.match(lib, /1日2回なら2行・2時刻、1日3回なら3行・3時刻/);
   assert.match(lib, /同日の時刻同士は原則3時間以上空ける/);
-  assert.match(lib, /ensureDistinctDailyPostingTimes\(items\)/);
-  assert.match(lib, /ensureDistinctDailyPostingTimes\(/);
+  assert.match(normalizer, /ensureDistinctDailyPostingTimes\(items\)/);
+  assert.match(normalizer, /export function ensureDistinctDailyPostingTimes\(/);
 
   assert.match(helpers, /aas\.note\.schedule\.response\.v1/);
   assert.match(page, /scheduleResponseLoaded/);
@@ -386,24 +515,28 @@ test("AI schedule output is copy-only, multi-post times are explicit, and pasted
 
 
 test("AAS note operation preset is available only inside the active-admin UI path", async () => {
-  const [lib, page, helpers, css] = await Promise.all([
-    readPwa("lib/note-operations.ts"),
-    readPwa("components/note-operations-page.tsx"),
+  const [lib, profileLib, page, helpers, css] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-operation-profile.ts"),
+    readNoteOperationsSource(),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
   ]);
 
   assert.match(lib, /AAS_ADMIN_NOTE_PROFILE_PRESET/);
-  assert.match(lib, /AI Article Studio（AAS）・AI記事制作・コンテンツ運営/);
-  assert.match(lib, /applyAasAdminNoteProfilePreset/);
-  assert.match(lib, /accountGenre: "other"/);
-  assert.match(lib, /accountStyle: "other"/);
-  assert.match(lib, /audiencePreset: "other"/);
-  assert.match(lib, /monetizationStyle: "other"/);
-  assert.match(lib, /operationGoal: "growth"/);
-  assert.match(lib, /experienceNote/);
+  assert.match(profileLib, /AI Action Studio（AAS）・AI副業・コンテンツ制作・運営支援/);
+  assert.match(profileLib, /副業専用プロンプト/);
+  assert.match(profileLib, /Knowledge活用/);
+  assert.doesNotMatch(profileLib, /AI Article Studio（AAS）/);
+  assert.match(profileLib, /applyAasAdminNoteProfilePreset/);
+  assert.match(profileLib, /accountGenre: "other"/);
+  assert.match(profileLib, /accountStyle: "other"/);
+  assert.match(profileLib, /audiencePreset: "other"/);
+  assert.match(profileLib, /monetizationStyle: "other"/);
+  assert.match(profileLib, /operationGoal: "growth"/);
+  assert.match(profileLib, /experienceNote/);
   assert.doesNotMatch(
-    lib.match(/export function applyAasAdminNoteProfilePreset[\s\S]*?\n}/)?.[0] ?? "",
+    profileLib.match(/export function applyAasAdminNoteProfilePreset[\s\S]*?\n}/)?.[0] ?? "",
     /experienceNote:\s*"/,
   );
 
@@ -421,4 +554,266 @@ test("AAS note operation preset is available only inside the active-admin UI pat
   assert.match(css, /\.note-aas-admin-preset/);
   assert.match(css, /\.note-aas-admin-preset-grid/);
   assert.doesNotMatch(`${lib}\n${page}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+});
+
+
+test("note operation profile definitions are isolated behind a compatibility re-export", async () => {
+  const [lib, profileLib] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-operation-profile.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-operation-profile"/);
+  assert.match(lib, /export \{[\s\S]*AAS_ADMIN_NOTE_PROFILE_PRESET[\s\S]*\} from "@\/lib\/note-operation-profile"/);
+  assert.doesNotMatch(lib, /^export const NOTE_OPERATION_GOALS/m);
+  assert.doesNotMatch(lib, /^export function defaultNoteOperationProfile/m);
+  assert.doesNotMatch(lib, /^export const AAS_ADMIN_NOTE_PROFILE_PRESET/m);
+  assert.match(profileLib, /^export type NoteOperationProfile =/m);
+  assert.doesNotMatch(lib, /^export type NoteOperationProfile =/m);
+  assert.match(profileLib, /^export const NOTE_OPERATION_GOALS/m);
+  assert.match(profileLib, /^export function defaultNoteOperationProfile/m);
+  assert.match(profileLib, /^export const AAS_ADMIN_NOTE_PROFILE_PRESET/m);
+  assert.match(profileLib, /^export function applyAasAdminNoteProfilePreset/m);
+});
+
+
+test("note schedule contracts live in a dedicated type module while note-operations keeps compatibility exports", async () => {
+  const [lib, types] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-schedule-types.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-schedule-types"/);
+  assert.match(lib, /export type \{[\s\S]*?NoteAiSchedulePlan[\s\S]*?NoteScheduleItem[\s\S]*?\} from "@\/lib\/note-schedule-types"/);
+  assert.doesNotMatch(lib, /^export type NoteScheduleItemType =/m);
+  assert.match(types, /export type NoteScheduleItemType = "free_note" \| "paid_note"/);
+  assert.match(types, /export type NoteAiSchedulePlan/);
+  assert.match(types, /schema: "aas-note-schedule-v2"/);
+  assert.match(types, /export type NoteSchedulePerformanceSnapshot/);
+  assert.match(types, /export type NoteArticleOutputSnapshot/);
+});
+
+
+test("note AI schedule JSON extraction is isolated as a pure parser module", async () => {
+  const [lib, parser, planner] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-ai-schedule-json.ts"),
+    readPwa("lib/note-ai-schedule-plan.ts"),
+  ]);
+
+  assert.doesNotMatch(lib, /import \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
+  assert.match(lib, /export \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
+  assert.match(planner, /import \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
+  assert.doesNotMatch(lib, /^function stripJsonFence/m);
+  assert.doesNotMatch(lib, /^function balancedJsonObjects/m);
+  assert.match(parser, /function stripJsonFence/);
+  assert.match(parser, /function scheduleRootFromValue/);
+  assert.match(parser, /function balancedJsonObjects/);
+  assert.match(parser, /export function extractNoteAiScheduleJson/);
+  assert.doesNotMatch(parser, /SupabaseClient|getSupabaseClient|service[_-]?role|sb_secret_/i);
+});
+
+
+test("note schedule date and time helpers live in a dedicated core module", async () => {
+  const [lib, core] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-schedule-core.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-schedule-core"/);
+  assert.match(lib, /export \{[\s\S]*?currentJstMonth[\s\S]*?noteMonthBounds[\s\S]*?previousJstMonth[\s\S]*?todayJstDateKey[\s\S]*?\} from "@\/lib\/note-schedule-core"/);
+  assert.doesNotMatch(lib, /^export function todayJstDateKey/m);
+  assert.doesNotMatch(lib, /^export function noteMonthBounds/m);
+  assert.match(core, /export function todayJstDateKey/);
+  assert.match(core, /timeZone: "Asia\/Tokyo"/);
+  assert.match(core, /export function currentJstMonth/);
+  assert.match(core, /export function noteMonthBounds/);
+  assert.match(core, /export function previousJstMonth/);
+  assert.match(core, /export function nextJstMonth/);
+  assert.match(core, /export function normalizeNoteScheduleTime/);
+  assert.match(core, /export function addNoteScheduleDays/);
+});
+
+
+test("AI note schedule normalization is isolated from persistence and UI concerns", async () => {
+  const [lib, planner, normalizer] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-ai-schedule-plan.ts"),
+    readPwa("lib/note-ai-schedule-normalize.ts"),
+  ]);
+
+  assert.match(planner, /from "@\/lib\/note-ai-schedule-normalize"/);
+  assert.doesNotMatch(lib, /from "@\/lib\/note-ai-schedule-normalize"/);
+  assert.doesNotMatch(lib, /^function normalizeAiArticleScheduleType/m);
+  assert.doesNotMatch(lib, /^function fallbackDailyPostingTimes/m);
+  assert.doesNotMatch(lib, /^function parseSimpleAiArticleSchedule/m);
+  assert.match(normalizer, /function normalizeAiArticleScheduleType/);
+  assert.match(normalizer, /function fallbackDailyPostingTimes/);
+  assert.match(normalizer, /export function ensureDistinctDailyPostingTimes/);
+  assert.match(normalizer, /export function parseSimpleAiArticleSchedule/);
+  assert.match(normalizer, /export function parseAiScheduleItem/);
+  assert.match(normalizer, /from "@\/lib\/note-schedule-core"/);
+  assert.match(normalizer, /from "@\/lib\/note-schedule-types"/);
+  assert.doesNotMatch(normalizer, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
+});
+
+
+test("AI note schedule plan parsing is isolated behind a compatibility export", async () => {
+  const [lib, planner] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-ai-schedule-plan.ts"),
+  ]);
+
+  assert.match(lib, /export \{ parseNoteAiSchedulePlan \} from "@\/lib\/note-ai-schedule-plan"/);
+  assert.doesNotMatch(lib, /^export function parseNoteAiSchedulePlan/m);
+  assert.match(planner, /export function parseNoteAiSchedulePlan/);
+  assert.match(planner, /extractNoteAiScheduleJson/);
+  assert.match(planner, /parseSimpleAiArticleSchedule/);
+  assert.match(planner, /ensureDistinctDailyPostingTimes/);
+  assert.match(planner, /NoteAiSchedulePlan/);
+  assert.doesNotMatch(planner, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
+});
+
+
+test("note operation file transfer helpers are isolated from scheduling and persistence", async () => {
+  const [lib, transfer] = await Promise.all([
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-operations-transfer.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-operations-transfer"/);
+  assert.doesNotMatch(lib, /^export function exportNoteScheduleCsv/m);
+  assert.doesNotMatch(lib, /^export function exportNoteOperationsJson/m);
+  assert.doesNotMatch(lib, /^export function parseNoteOperationsImport/m);
+  assert.match(transfer, /export function exportNoteAiSchedulePlanJson/);
+  assert.match(transfer, /export function exportNoteScheduleCsv/);
+  assert.match(transfer, /export function exportNoteOperationsJson/);
+  assert.match(transfer, /export function parseNoteOperationsImport/);
+  assert.match(transfer, /parseCsvRecords/);
+  assert.match(transfer, /aas-note-operations-v1/);
+  assert.doesNotMatch(transfer, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
+});
+
+
+test("note membership cockpit covers grounded improvement metrics and article source metadata", async () => {
+  const [page, cockpit, advisor, metricsPanel, createPage, cockpitLib, metricsLib, knowledge, draftLib, createLib, css] = await Promise.all([
+    readNoteOperationsSource(),
+    readPwa("components/note-operations/note-membership-cockpit.tsx"),
+    readPwa("components/note-operations/note-membership-advisor.tsx"),
+    readPwa("components/note-operations/note-membership-metrics-panel.tsx"),
+    readPwa("components/phase11-create-page.tsx"),
+    readPwa("lib/note-membership-cockpit.ts"),
+    readPwa("lib/note-membership-metrics.ts"),
+    readPwa("lib/note-membership-advisor.ts"),
+    readPwa("lib/article-create-draft.ts"),
+    readPwa("lib/phase11-create.ts"),
+    readPwa("app/phase38-note-operations.css"),
+  ]);
+
+  assert.match(page, /type Tab = "start" \| "profile" \| "plan" \| "calendar" \| "membership"/);
+  assert.match(page, /5\. メンバーシップ相談/);
+  assert.match(page, /NoteMembershipCockpit/);
+  assert.match(page, /onOpenCalendar=\{\(\) => setTab\("calendar"\)\}/);
+
+  assert.match(cockpit, /noteメンバーシップ運営コックピット/);
+  for (const label of ["相談・設計","料金・特典診断","開始準備","紹介ページ","告知・集客","月間運営","改善相談"]) {
+    assert.match(cockpit, new RegExp(label));
+  }
+  assert.match(cockpit, /NoteMembershipAdvisor/);
+  assert.match(cockpit, /const copyTask = copy\(\);[\s\S]*?launchAiApp\(selectedAi\);[\s\S]*?await copyTask/);
+  assert.doesNotMatch(cockpit, /await copy\(\);\s*launchAiApp\(selectedAi\)/);
+  assert.match(advisor, /const copyTask = copyPrompt\(\);[\s\S]*?launchAiApp\(selectedAi\);[\s\S]*?await copyTask/);
+  assert.doesNotMatch(advisor, /await copyPrompt\(\);\s*launchAiApp\(selectedAi\)/);
+  assert.match(cockpit, /membershipLaunchStorageKey/);
+  assert.match(cockpit, /window\.localStorage\.setItem/);
+  assert.match(cockpit, /buildMembershipPricingPrompt/);
+  assert.match(cockpit, /buildMembershipPagePrompt/);
+  assert.match(cockpit, /buildMembershipPromotionPrompt/);
+  assert.match(cockpit, /buildMembershipCalendarPrompt/);
+  assert.match(cockpit, /buildMembershipImprovePrompt/);
+  assert.match(cockpit, /NoteMembershipMetricsPanel/);
+  assert.match(cockpit, /metricsEntries/);
+  assert.match(cockpit, /buildMembershipImprovePrompt\(profile, improve, metricsEntries\)/);
+  assert.match(cockpit, /メンバー限定用記事を作る/);
+  assert.match(cockpit, /AASの「有料記事の有料エリア」とは別扱い/);
+
+  assert.match(advisor, /noteメンバーシップ相談・設計/);
+  assert.match(advisor, /何を相談しますか？/);
+  assert.match(advisor, /希望する料金帯/);
+  assert.match(advisor, /主な特典/);
+  assert.match(advisor, /1ヶ月無料/);
+
+  assert.match(knowledge, /NOTE_MEMBERSHIP_KNOWLEDGE/);
+  assert.match(knowledge, /やりたいこと・得意なこと・読者ニーズ/);
+  assert.match(knowledge, /2026年8月3日以降の新規加入/);
+  assert.match(knowledge, /最大5プラン/);
+  assert.match(knowledge, /会員数、継続率、売上、加入率を保証しない/);
+
+  assert.match(cockpitLib, /NOTE_MEMBERSHIP_LAUNCH_CHECKLIST/);
+  assert.match(cockpitLib, /紹介ページを作成/);
+  assert.match(cockpitLib, /buildMembershipPricingPrompt/);
+  assert.match(cockpitLib, /buildMembershipPromotionPrompt/);
+  assert.match(cockpitLib, /buildMembershipCalendarPrompt/);
+  assert.match(cockpitLib, /buildMembershipImprovePrompt/);
+  assert.match(cockpitLib, /formatMembershipMetricsForPrompt\(metrics, 6\)/);
+  assert.match(cockpitLib, /【ユーザー入力実績】/);
+  assert.match(cockpitLib, /空欄・未入力の数値は推測、補完、逆算しない/);
+  assert.match(cockpitLib, /実績データがないため、数値に基づく原因断定はしない/);
+  assert.match(cockpitLib, /membershipArticleHref/);
+  assert.match(cockpitLib, /from: "note-membership"/);
+  assert.match(cockpitLib, /membershipArticleKind: mode/);
+  assert.match(cockpitLib, /articleType: "free"/);
+
+  assert.match(draftLib, /source === "note-membership"/);
+  assert.match(draftLib, /articleCreationContextFromParams/);
+  assert.match(draftLib, /membershipArticleKind/);
+  assert.match(draftLib, /rawKind === "member" \|\| rawKind === "announcement" \|\| rawKind === "qa"/);
+  assert.match(draftLib, /メンバー限定公開の設定はnote側で行います/);
+
+  assert.match(createPage, /initialArticleCreationContextFromLocation/);
+  assert.match(createPage, /const \[creationContext\] = useState/);
+  assert.match(createPage, /activePresetId,[\s\S]*?creationContext/);
+
+  assert.match(createLib, /export type ArticleCreationContext/);
+  assert.match(createLib, /creation_source: creationContext\?\.source \?\? null/);
+  assert.match(createLib, /note_membership_article_kind/);
+  assert.match(createLib, /creationContext\?\.source === "note-membership"/);
+
+  assert.match(metricsLib, /aas\.note\.membership\.metrics\.v1/);
+  assert.match(metricsLib, /NOTE_MEMBERSHIP_METRICS_MAX_ENTRIES = 36/);
+  assert.match(metricsLib, /parseMembershipMetricsEntry/);
+  assert.match(metricsLib, /parseMembershipMetricsEntries/);
+  assert.match(metricsLib, /upsertMembershipMetricsEntry/);
+  assert.match(metricsLib, /formatMembershipMetricsForPrompt/);
+  assert.match(metricsLib, /timeZone:\s*"Asia\/Tokyo"/);
+  assert.match(metricsLib, /value > currentMembershipMetricsMonth\(\)/);
+  assert.match(metricsPanel, /max=\{currentMembershipMetricsMonth\(\)\}/);
+  for (const field of ["month", "memberCount", "newMembers", "cancellations", "revenueYen", "postCount", "operationHours", "memo"]) {
+    assert.match(metricsLib, new RegExp(field));
+  }
+  assert.doesNotMatch(metricsLib, /email|password|cookie|access[_-]?token|refresh[_-]?token/i);
+
+  assert.match(metricsPanel, /実績入力・改善履歴/);
+  assert.match(metricsPanel, /membershipMetricsStorageKey\(userId\)/);
+  assert.match(metricsPanel, /window\.localStorage\.getItem/);
+  assert.match(metricsPanel, /window\.localStorage\.setItem/);
+  assert.match(metricsPanel, /queueMicrotask/);
+  assert.match(metricsPanel, /noteのログイン情報・Cookie・認証情報・会員個人情報は保存しません/);
+  assert.match(metricsPanel, /入力した数値だけを改善相談へ渡します/);
+  assert.match(metricsPanel, /parseMembershipMetricsEntry\(draft\)/);
+
+  assert.match(css, /\.note-membership-cockpit/);
+  assert.match(css, /\.note-membership-cockpit-tabs/);
+  assert.match(css, /repeat\(7, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.note-membership-checklist/);
+  assert.match(css, /\.note-membership-metrics-grid/);
+  assert.match(css, /\.note-membership-metrics-history/);
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.note-membership-metrics-grid/);
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.note-membership-launch-links/);
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.note-membership-metrics-grid/);
+
+  assert.doesNotMatch(
+    `${page}\n${cockpit}\n${advisor}\n${metricsPanel}\n${createPage}\n${cockpitLib}\n${metricsLib}\n${knowledge}\n${draftLib}\n${createLib}`,
+    /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i,
+  );
 });

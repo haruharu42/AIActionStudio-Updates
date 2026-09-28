@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { MembershipAuditSection, MembershipRecommendationsSection, MembershipStatusSection } from "@/components/admin-membership/admin-membership-static-sections";
+import { SelectWithCustom } from "@/components/select-with-custom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -408,43 +410,14 @@ export function AdminMembershipPage() {
       )}
 
       {operationsReady && (
-        <section className="admin-panel membership-admin-section">
-          <div className="admin-panel-heading">
-            <div>
-              <p className="eyebrow">MEMBER STATUS</p>
-              <h2>現在のメンバー状況</h2>
-            </div>
-            <span className="availability-badge active">{assignments.length}人</span>
-          </div>
-          <div className="membership-status-grid">
-            <article><span>有効メンバー</span><strong>{assignments.length}</strong><small>現在有効なCreator Club系特典</small></article>
-            <article><span>7日以内に期限</span><strong>{expiringSoon.length}</strong><small>更新確認が必要なメンバー</small></article>
-            {plans.map((plan) => (
-              <article key={plan.planCode}>
-                <span>{plan.displayName}</span>
-                <strong>{assignmentPlanCounts.get(plan.planCode) ?? 0}</strong>
-                <small>現在の有効ユーザー</small>
-              </article>
-            ))}
-          </div>
-          {expiringSoon.length > 0 && (
-            <details className="membership-expiring-list">
-              <summary>7日以内に期限が切れるメンバーを見る</summary>
-              <div>
-                {expiringSoon.map((item) => (
-                  <button type="button" key={item.userId} onClick={() => {
-                    const user = users.find((candidate) => candidate.id === item.userId);
-                    if (user) void selectUser(user);
-                  }}>
-                    <strong>{item.aasUserId}</strong>
-                    <span>{item.planName}</span>
-                    <small>{formatDate(item.expiresAt)}</small>
-                  </button>
-                ))}
-              </div>
-            </details>
-          )}
-        </section>
+        <MembershipStatusSection
+          assignments={assignments}
+          expiringSoon={expiringSoon}
+          plans={plans}
+          assignmentPlanCounts={assignmentPlanCounts}
+          users={users}
+          onSelectUser={selectUser}
+        />
       )}
 
       <section className="admin-panel membership-admin-section">
@@ -529,21 +502,30 @@ export function AdminMembershipPage() {
                   onChange={(event) => patchPlan(plan.planCode, { displayName: event.target.value })}
                 />
               </label>
-              <label className="route-field">
-                <span>月額料金（税込・円）</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={1000000}
-                  step={1}
-                  inputMode="numeric"
-                  value={plan.monthlyPriceYen ?? ""}
-                  placeholder="例: 500"
-                  onChange={(event) => patchPlan(plan.planCode, {
-                    monthlyPriceYen: event.target.value === "" ? null : Number(event.target.value),
-                  })}
-                />
-              </label>
+              <SelectWithCustom
+                className="route-field"
+                label="月額料金（税込・円）"
+                value={plan.monthlyPriceYen === null ? "" : String(plan.monthlyPriceYen)}
+                onChange={(value) => patchPlan(plan.planCode, {
+                  monthlyPriceYen: value === "" ? null : Math.max(0, Math.min(1000000, Number(value) || 0)),
+                })}
+                options={[
+                  { value: "0", label: "0円（無料）" },
+                  { value: "300", label: "300円" },
+                  { value: "500", label: "500円" },
+                  { value: "980", label: "980円" },
+                  { value: "1480", label: "1,480円" },
+                  { value: "1980", label: "1,980円" },
+                  { value: "2980", label: "2,980円" },
+                  { value: "4980", label: "4,980円" },
+                  { value: "9800", label: "9,800円" },
+                ]}
+                placeholder="料金を選択"
+                customPlaceholder="その他の月額料金を入力"
+                inputType="number"
+                min={0}
+                max={1000000}
+              />
               <label className="route-field">
                 <span>ユーザー向けプラン説明</span>
                 <textarea
@@ -708,43 +690,9 @@ export function AdminMembershipPage() {
         )}
       </section>
 
-      {operationsReady && (
-        <section className="admin-panel membership-admin-section">
-          <div className="admin-panel-heading">
-            <div>
-              <p className="eyebrow">AUDIT LOG</p>
-              <h2>メンバー特典の変更履歴</h2>
-            </div>
-            <span className="availability-badge">直近{auditActions.length}件</span>
-          </div>
-          <p className="trial-admin-note">特典の付与・更新・取消をDB側で記録します。UI操作だけに依存しません。</p>
-          <div className="membership-audit-list">
-            {auditActions.map((item) => (
-              <article key={item.id}>
-                <strong>{item.targetAasUserId}</strong>
-                <span>{item.action === "grant" ? "付与" : item.action === "revoke" ? "取消" : "更新"}</span>
-                <small>{item.productCode}</small>
-                <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
-              </article>
-            ))}
-            {!auditActions.length && <p className="admin-empty-copy">まだメンバー特典の変更履歴はありません。</p>}
-          </div>
-        </section>
-      )}
+      {operationsReady && <MembershipAuditSection auditActions={auditActions} />}
 
-      <section className="admin-panel membership-admin-section membership-recommendations">
-        <div className="admin-panel-heading">
-          <div>
-            <p className="eyebrow">NEXT OPTION</p>
-            <h2>次に追加できる運用機能</h2>
-          </div>
-        </div>
-        <div className="membership-recommendation-grid">
-          <article><strong>クラウド容量</strong><p>メンバーごとの画像保存容量と使用量を確認し、プラン別上限を設定できます。</p></article>
-          <article><strong>期限更新の一括操作</strong><p>同じ更新月のユーザーをまとめて延長する運用にも拡張できます。</p></article>
-          <article><strong>加入確認の自動化</strong><p>将来note側に公式な連携手段が用意された場合、手動確認から安全に切り替えられます。</p></article>
-        </div>
-      </section>
+      <MembershipRecommendationsSection />
 
       {message && state !== "error" && (
         <div className="route-notice" role="status" aria-live="polite">{message}</div>

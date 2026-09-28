@@ -1,8 +1,19 @@
+"use client";
+
 import Link from "next/link";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { ADMIN_SECTION_GROUPS, ADMIN_SECTIONS } from "@/lib/admin-sections";
 
 export default function AdminPage() {
+  const { state } = useSharedAccessState();
+  const activeAdmin =
+    state.kind === "ready" &&
+    state.profile.role === "admin" &&
+    state.profile.status === "active";
+
+  if (!activeAdmin) return null;
+
   return (
     <main className="admin-page">
       <header className="admin-head admin-dashboard-head">

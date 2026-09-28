@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { SideHustlePromptStep } from "@/components/side-hustles/side-hustle-prompt-step";
@@ -35,6 +35,12 @@ function formatKnowledgeDate(value: string | null): string {
 }
 
 export function SideHustleWizardPage({ slug }: { slug: string }) {
+  const { state } = useSharedAccessState();
+  const userId = state.kind === "ready" ? state.profile.id : "";
+  return <SideHustleWizardContent key={`${userId}:${slug}`} slug={slug} />;
+}
+
+function SideHustleWizardContent({ slug }: { slug: string }) {
   const definition = getSideHustleDefinition(slug);
   const { state, client } = useSharedAccessState();
   const userId = state.kind === "ready" ? state.profile.id : "";
@@ -42,8 +48,9 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
     () => definition ? initialSideHustleDraft(definition) : null,
   );
   const [message, setMessage] = useState("");
+  const [storageError, setStorageError] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [knowledgeRevision, setKnowledgeRevision] = useState(0);
+  const [, setKnowledgeRevision] = useState(0);
 
   useEffect(() => {
     if (!definition || !userId) return;
@@ -77,11 +84,14 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!definition || !draft || !hydrated || !userId) return;
-    writeSideHustleDraft(userId, definition, draft);
+    const saved = writeSideHustleDraft(userId, definition, draft);
+    let active = true;
+    queueMicrotask(() => { if (active) setStorageError(!saved); });
+    return () => { active = false; };
   }, [definition, draft, hydrated, userId]);
 
   useEffect(() => {
-    if (!definition || !draft || !userId) return;
+    if (!definition || !draft || !hydrated || !userId) return;
     const persist = () => writeSideHustleDraft(userId, definition, draft);
     const persistWhenHidden = () => {
       if (document.visibilityState === "hidden") persist();
@@ -94,18 +104,12 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
       window.removeEventListener("beforeunload", persist);
       document.removeEventListener("visibilitychange", persistWhenHidden);
     };
-  }, [definition, draft, userId]);
+  }, [definition, draft, hydrated, userId]);
 
-  const built = useMemo(
-    () => definition && draft ? buildSideHustlePrompt(definition, draft) : null,
-    [definition, draft, knowledgeRevision],
-  );
-  const runtimeState = useMemo(
-    () => getRuntimeKnowledgeState(),
-    [knowledgeRevision],
-  );
+  const built = definition && draft ? buildSideHustlePrompt(definition, draft) : null;
+  const runtimeState = getRuntimeKnowledgeState();
 
-  if (!definition || !draft) return null;
+  if (!definition || !draft || !hydrated) return null;
 
   const fields = definition.fields.filter((field) =>
     draft.step === 0 ? field.group === "basic" : field.group === "detail",
@@ -163,8 +167,13 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
 
     if (openAi && copied) {
       const nextDraft = { ...draft, step: 4 };
-      writeSideHustleDraft(userId, definition, nextDraft);
+      const saved = writeSideHustleDraft(userId, definition, nextDraft);
+      setStorageError(!saved);
       setDraft(nextDraft);
+      if (!saved) {
+        setMessage("プロンプトはコピーしました。進捗を端末へ保存できないため、この画面を開いたまま別タブでAIを使用してください。");
+        return;
+      }
       launchAiApp(openAi);
       return;
     }
@@ -315,6 +324,7 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
 
 
       {message && <div className="route-notice" role="status">{message}</div>}
+      {storageError && <div className="route-notice" role="alert">進捗を端末に保存できません。画面を閉じる前に、入力内容とAIの結果をコピーして保管してください。</div>}
 
       <nav className="side-hustle-wizard-nav" aria-label="副業機能ステップ操作">
         <button

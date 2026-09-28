@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { SharedMobileBottomNav } from "@/components/shared-mobile-bottom-nav";
+import { NotificationHeaderButton } from "@/components/notification-header-button";
 import type { MobileNavItemKey } from "@/lib/mobile-nav-preference";
 import { useEffect, useMemo, useState } from "react";
 
@@ -43,6 +44,7 @@ export function AasReferenceHeader({
         build {AAS_BUILD_SHA}
       </span>
       <nav className="aas-reference-header-actions" aria-label="クイックメニュー">
+        <NotificationHeaderButton />
         <Link href={notificationHref} aria-label={notificationLabel}><span aria-hidden="true">♧</span>{hasUnreadNotifications ? <i aria-hidden="true" /> : null}</Link>
         <Link href="/settings" aria-label="メニュー"><span aria-hidden="true">☰</span></Link>
       </nav>

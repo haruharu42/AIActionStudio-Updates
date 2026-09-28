@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { PresetNumberSelectWithCustom, SelectWithCustom } from "@/components/select-with-custom";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { workspacePresetSocialDefaults, workspacePresetWorkflowDefaults } from "@/features/presets/preset-adapters";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
@@ -258,29 +259,24 @@ export function ContentWorkflowPage() {
     () => preflightDetail ? runPrePublishChecks(preflightDetail) : null,
     [preflightDetail],
   );
-  const preflightPrompt = useMemo(
-    () => preflightDetail && preflightReport ? buildPrePublishReviewPrompt(preflightDetail, preflightReport) : "",
-    [preflightDetail, preflightReport, workspacePreference],
-  );
+  const preflightPrompt = preflightDetail && preflightReport
+    ? buildPrePublishReviewPrompt(preflightDetail, preflightReport)
+    : "";
   const enabledReuseChannels = useMemo(
     () => reuseChannels.filter((item) => reuseEnabled[item.platform]),
     [reuseChannels, reuseEnabled],
   );
-  const reusePrompt = useMemo(
-    () => reuseDetail ? buildArticleReusePrompt(reuseDetail, enabledReuseChannels) : "",
-    [reuseDetail, enabledReuseChannels, workspacePreference],
-  );
-  const seriesPrompt = useMemo(
-    () => buildSeriesPlanPrompt({
-      platform: seriesPlatform,
-      name: seriesName,
-      audience: seriesAudience,
-      purpose: seriesPurpose,
-      monetization: seriesMonetization,
-      articleCount: seriesCount,
-    }),
-    [seriesPlatform, seriesName, seriesAudience, seriesPurpose, seriesMonetization, seriesCount, workspacePreference],
-  );
+  const reusePrompt = reuseDetail
+    ? buildArticleReusePrompt(reuseDetail, enabledReuseChannels)
+    : "";
+  const seriesPrompt = buildSeriesPlanPrompt({
+    platform: seriesPlatform,
+    name: seriesName,
+    audience: seriesAudience,
+    purpose: seriesPurpose,
+    monetization: seriesMonetization,
+    articleCount: seriesCount,
+  });
 
   const changeTab = (next: WorkflowTab) => {
     setTab(next);
@@ -521,8 +517,26 @@ export function ContentWorkflowPage() {
               return (
                 <article key={platform.value} className={reuseEnabled[platform.value] ? "enabled" : ""}>
                   <label className="workflow-toggle"><input type="checkbox" checked={reuseEnabled[platform.value]} onChange={(event) => setReuseEnabled((current) => ({ ...current, [platform.value]: event.target.checked }))} /><strong>{platform.label}</strong></label>
-                  <label><span>目標文字数</span><input type="number" min={1} max={25000} value={plan.targetChars} disabled={!reuseEnabled[platform.value]} onChange={(event) => setReuseChannels((current) => current.map((item) => item.platform === platform.value ? { ...item, targetChars: Math.max(1, Math.min(25000, Number(event.target.value) || 1)) } : item))} /></label>
-                  <label><span>公開から何日後</span><input type="number" min={0} max={30} value={plan.delayDays} disabled={!reuseEnabled[platform.value]} onChange={(event) => setReuseChannels((current) => current.map((item) => item.platform === platform.value ? { ...item, delayDays: Math.max(0, Math.min(30, Number(event.target.value) || 0)) } : item))} /></label>
+                  <PresetNumberSelectWithCustom
+                    label="目標文字数"
+                    value={plan.targetChars}
+                    disabled={!reuseEnabled[platform.value]}
+                    presets={[100, 150, 280, 300, 500, 1000, 2000, 5000, 10000]}
+                    min={1}
+                    max={25000}
+                    suffix="文字"
+                    onChange={(targetChars) => setReuseChannels((current) => current.map((item) => item.platform === platform.value ? { ...item, targetChars } : item))}
+                  />
+                  <PresetNumberSelectWithCustom
+                    label="公開から何日後"
+                    value={plan.delayDays}
+                    disabled={!reuseEnabled[platform.value]}
+                    presets={[0, 1, 2, 3, 4, 5, 7, 10, 14, 21, 30]}
+                    min={0}
+                    max={30}
+                    suffix="日"
+                    onChange={(delayDays) => setReuseChannels((current) => current.map((item) => item.platform === platform.value ? { ...item, delayDays } : item))}
+                  />
                 </article>
               );
             })}
@@ -552,10 +566,36 @@ export function ContentWorkflowPage() {
           <div className="workflow-series-form">
             <label><span>掲載先</span><select value={seriesPlatform} onChange={(event) => setSeriesPlatform(event.target.value as SeriesPlatform)}><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></select></label>
             <label><span>シリーズ名</span><input value={seriesName} maxLength={200} onChange={(event) => setSeriesName(event.target.value)} placeholder="空欄でもAIに提案してもらえます" /></label>
-            <label><span>想定読者</span><select value={seriesAudience} onChange={(event) => setSeriesAudience(event.target.value)}>{SERIES_AUDIENCES.map((value) => <option key={value}>{value}</option>)}</select></label>
-            <label><span>シリーズの目的</span><select value={seriesPurpose} onChange={(event) => setSeriesPurpose(event.target.value)}>{SERIES_PURPOSES.map((value) => <option key={value}>{value}</option>)}</select></label>
-            <label><span>収益化方針</span><select value={seriesMonetization} onChange={(event) => setSeriesMonetization(event.target.value)}>{SERIES_MONETIZATION.map((value) => <option key={value}>{value}</option>)}</select></label>
-            <label><span>記事数</span><select value={seriesCount} onChange={(event) => setSeriesCount(Number(event.target.value))}>{[3,4,5,6,8,10,12,15,20].map((value) => <option key={value} value={value}>{value}記事</option>)}</select></label>
+            <SelectWithCustom
+              label="想定読者"
+              value={seriesAudience}
+              onChange={setSeriesAudience}
+              options={SERIES_AUDIENCES}
+              customPlaceholder="その他の想定読者を入力"
+            />
+            <SelectWithCustom
+              label="シリーズの目的"
+              value={seriesPurpose}
+              onChange={setSeriesPurpose}
+              options={SERIES_PURPOSES}
+              customPlaceholder="その他の目的を入力"
+            />
+            <SelectWithCustom
+              label="収益化方針"
+              value={seriesMonetization}
+              onChange={setSeriesMonetization}
+              options={SERIES_MONETIZATION}
+              customPlaceholder="その他の収益化方針を入力"
+            />
+            <PresetNumberSelectWithCustom
+              label="記事数"
+              value={seriesCount}
+              onChange={setSeriesCount}
+              presets={[3, 4, 5, 6, 8, 10, 12, 15, 20]}
+              min={1}
+              max={100}
+              suffix="記事"
+            />
           </div>
 
           <div className="workflow-prompt-actions">

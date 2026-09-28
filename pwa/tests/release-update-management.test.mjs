@@ -146,6 +146,13 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(gate, /preview_allowed/);
   assert.match(gate, /is_release_tester/);
   assert.match(gate, /ALWAYS_PUBLIC_PREVIEW_PATHS/);
+  const publicPreviewPaths = gate.split("\n").find((line) => line.startsWith("const ALWAYS_PUBLIC_PREVIEW_PATHS = ")) ?? "";
+  for (const route of ["/support", "/commercial-transactions", "/plans"]) {
+    assert.ok(publicPreviewPaths.includes(`"${route}"`), `missing signed-out preview route: ${route}`);
+  }
+  for (const route of ["/billing", "/admin"]) {
+    assert.equal(publicPreviewPaths.includes(`"${route}"`), false, `unexpected signed-out preview route: ${route}`);
+  }
   assert.match(gate, /\/auth\/callback/);
   assert.match(gate, /pathname === "\/"/);
   assert.match(gate, /if \(gate\.kind === "loading"\) return null/);
@@ -157,7 +164,21 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(layout, /ReleaseAudienceGate/);
 
   assert.match(manager, /is_admin_preview \|\| state\.is_tester_preview/);
+  assert.match(manager, /HIDDEN_PREFIXES/);
+  for (const route of ["/support", "/commercial-transactions", "/plans"]) {
+    assert.ok(manager.includes(`"${route}"`), `missing release-manager public route: ${route}`);
+  }
+  assert.ok(
+    manager.indexOf("if (hiddenRoute(pathname) || !accessUserId || !client)") < manager.indexOf("loadMyAppReleaseState(client)"),
+    "signed-out and public legal/support routes must skip release RPC before refresh is defined",
+  );
+  assert.match(manager, /useSharedAccessState\(\)/);
+  assert.match(manager, /\}, \[accessUserId, client, pathname\]\);/);
+  assert.doesNotMatch(manager, /client\.auth\.onAuthStateChange/);
   assert.match(manager, /return null/);
+  assert.match(previewStatus, /useSharedAccessState\(\)/);
+  assert.match(previewStatus, /if \(!accessUserId \|\| !client\)/);
+  assert.doesNotMatch(previewStatus, /client\.auth\.onAuthStateChange/);
   assert.match(previewStatus, /is_admin_preview/);
   assert.match(previewStatus, /is_tester_preview/);
   assert.match(previewStatus, /管理者確認/);
@@ -170,6 +191,23 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(page, /第2段階：指定テスターへ反映/);
   assert.match(page, /第3段階：全一般ユーザーへ公開承認/);
   assert.match(page, /AAS-000002/);
+  assert.match(page, /PUBLISH_VERIFICATION_ITEMS/);
+  assert.match(page, /全体公開前チェック/);
+  assert.match(page, /最新PreviewとCIを確認/);
+  assert.match(page, /指定テスターで主要導線を確認/);
+  assert.match(page, /iPhone実機PWAを確認/);
+  assert.match(page, /停止・ロールバック経路を確認/);
+  assert.match(page, /publishVerificationReady/);
+  assert.match(page, /getAuthenticatorAssuranceLevel/);
+  assert.match(page, /currentSessionAal/);
+  assert.match(page, /currentSessionAal !== "aal2"/);
+  assert.match(page, /disabled=\{busy \|\| !publishVerificationReady \|\| currentSessionAal !== "aal2"\}/);
+  assert.match(page, /管理者MFAで再認証/);
+  assert.match(page, /href="\/admin\/security"/);
+  assert.match(page, /publishVerificationStorageKey/);
+  assert.match(page, /window\.localStorage\.setItem/);
+  assert.match(css, /\.release-publish-checklist/);
+  assert.match(css, /\.release-publish-checklist label\.checked/);
 
   assert.match(nextConfig, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE/);
   assert.match(previewWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: preview/);
@@ -239,4 +277,25 @@ test("preview release identity is subtle and rendered only by the home screen", 
   assert.match(css, /border-radius:\s*999px/);
   assert.match(css, /opacity:\s*\.86/);
   assert.match(css, /box-shadow:\s*none/);
+});
+
+
+test("public release publish requires current admin AAL2 while rollback remains an emergency admin operation", async () => {
+  const [migration, client, page] = await Promise.all([
+    readRepo("supabase/migrations/20260928042314_pwa_release_publish_aal2_v1.sql"),
+    read("lib/app-release.ts"),
+    read("components/admin-release-page.tsx"),
+  ]);
+
+  assert.match(migration, /v_aal text := coalesce\(\(select auth\.jwt\(\)->>'aal'\), 'aal1'\)/);
+  assert.match(migration, /if v_aal <> 'aal2' then[\s\S]*?aal2 required for public release publish/);
+  assert.match(migration, /candidate must pass tester stage before publish/);
+  assert.match(migration, /active release tester required before publish/);
+  assert.doesNotMatch(migration, /admin_rollback_app_release/);
+  assert.match(client, /aal2 required for public release publish/);
+  assert.match(client, /全体公開には現在の管理者セッションでMFA認証（AAL2）が必要/);
+  assert.match(page, /getAuthenticatorAssuranceLevel/);
+  assert.match(page, /currentSessionAal !== "aal2"/);
+  assert.match(page, /管理者MFAで再認証/);
+  assert.match(page, /adminRollbackAppRelease/);
 });

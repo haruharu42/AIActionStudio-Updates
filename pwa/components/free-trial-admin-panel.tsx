@@ -17,7 +17,7 @@ import {
   getAdminPermanentDailyFreeEnabled,
   updateAdminFreeTierSettings,
 } from "@/lib/free-tier-mode";
-import type { AdminUser } from "@/lib/phase10-admin";
+import type { PwaAdminUser } from "@/lib/pwa-admin-users";
 import { getSupabaseClient } from "@/lib/supabase";
 
 function localInput(value: string | null): string {
@@ -63,7 +63,7 @@ function UsageCell({ label, used, limit }: { label: string; used: number; limit:
   return <div><span>{label}</span><strong>{used} / {limit}</strong></div>;
 }
 
-export function FreeTrialAdminPanel({ selectedUser }: { selectedUser: AdminUser | null }) {
+export function FreeTrialAdminPanel({ selectedUser }: { selectedUser: PwaAdminUser | null }) {
   const [settings, setSettings] = useState<FreeTrialSettings | null>(null);
   const [permanentDailyFreeEnabled, setPermanentDailyFreeEnabled] = useState(true);
   const [userTrial, setUserTrial] = useState<AdminUserFreeTrial | null>(null);

@@ -6,10 +6,11 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readNotePromptSource = async () => (await Promise.all(["lib/note-operations.ts", "lib/note-operation-prompts.ts"].map((relative) => read(relative)))).join("\n");
 const readRepo = (relative) => readFile(path.join(root, "..", relative), "utf8");
 
 test("workspace preset preferences are owner scoped and admin-only AAS is enforced by RLS", async () => {
-  const migration = await readRepo("supabase/migrations/20260921035000_user_workspace_preset_preferences.sql");
+  const migration = await readRepo("supabase/migrations/20260921034342_user_workspace_preset_preferences.sql");
 
   assert.match(migration, /create table if not exists public\.user_workspace_preset_preferences/);
   assert.match(migration, /preset_key in \('balanced','note_growth','longform','sns_growth','aas_official'\)/);
@@ -31,9 +32,12 @@ test("shared presets include an admin-only AAS official operating profile", asyn
   for (const key of ["balanced", "note_growth", "longform", "sns_growth", "aas_official"]) {
     assert.match(presets, new RegExp(key + ": \\{"));
   }
-  assert.match(presets, /label: "AI Article Studio（AAS）公式運営"/);
+  assert.match(presets, /label: "AI Action Studio（AAS）公式運営"/);
   assert.match(presets, /adminOnly: true/);
-  assert.match(presets, /AI Article Studio（AAS）自体の公式発信/);
+  assert.match(presets, /AI Action Studio（AAS）自体の公式発信/);
+  assert.match(presets, /副業専用プロンプト/);
+  assert.match(presets, /Knowledge/);
+  assert.doesNotMatch(presets, /AI Article Studio（AAS）/);
   assert.match(presets, /実際に確認していないPV・売上・ユーザー反応・レビュー・改善効果を作らない/);
   assert.match(presets, /styleContext: "AAS公式発信では、白・明るいブルー・濃いネイビー/);
   assert.match(presets, /availableWorkspacePresets/);
@@ -81,7 +85,7 @@ test("shared preset is injected into prompt generation and visible across featur
     read("lib/phase13-image-prompts.ts"),
     read("components/phase13-image-page.tsx"),
     read("components/phase14-sns-page.tsx"),
-    read("lib/note-operations.ts"),
+    readNotePromptSource(),
     read("components/note-operations-page.tsx"),
     read("lib/platform-account-starter.ts"),
     read("lib/content-lifecycle.ts"),
@@ -156,10 +160,14 @@ test("workspace preset provider persists across routes and recomputes dependent 
   assert.match(provider, /accountPresetsLoading/);
   assert.match(provider, /saveAccountPreset/);
   assert.match(provider, /deleteAccountPreset/);
-  assert.match(workflow, /\[preflightDetail, preflightReport, workspacePreference\]/);
-  assert.match(workflow, /\[reuseDetail, enabledReuseChannels, workspacePreference\]/);
+  assert.match(workflow, /const preflightPrompt = preflightDetail && preflightReport[\s\S]*?buildPrePublishReviewPrompt/);
+  assert.match(workflow, /const reusePrompt = reuseDetail[\s\S]*?buildArticleReusePrompt/);
+  assert.match(workflow, /const seriesPrompt = buildSeriesPlanPrompt/);
+  assert.doesNotMatch(workflow, /\[preflightDetail, preflightReport, workspacePreference\]/);
+  assert.doesNotMatch(workflow, /\[reuseDetail, enabledReuseChannels, workspacePreference\]/);
   assert.match(promotion, /\[facts, article, workspacePreference\]/);
-  assert.match(promotion, /\[facts, preview, socialLengths, workspacePreference\]/);
+  assert.match(promotion, /\[facts, preview, socialLengths, advancedSocialStyle, workspacePreference\]/);
+  assert.match(promotion, /void workspacePreference; \/\/ Prompt context reads the runtime workspace preset\./);
 });
 
 

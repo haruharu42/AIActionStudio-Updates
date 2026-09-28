@@ -117,6 +117,10 @@
 }
 
 @media (max-width: 700px) {
+  .note-post-batch-copy-desktop {
+    display: none !important;
+  }
+
   .reference-home-main,
   .reference-ranking-page,
   .reference-profile-page {

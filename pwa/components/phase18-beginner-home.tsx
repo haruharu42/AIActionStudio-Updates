@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { DirectRuntimeImage } from "@/components/direct-runtime-image";
 import { ActionStudioHomeHero, ActionStudioQuickActions } from "@/components/action-studio-home-hub";
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { useAppFeatureAccess } from "@/components/feature-access-gate";
 import { Phase7App } from "@/components/phase6-app";
 import { Phase7Library } from "@/components/phase7-library";
 import { NoteTodayPanel } from "@/components/note-today-panel";
@@ -23,14 +25,11 @@ import {
 import { listCloudArticles, type ArticleStatus, type ArticleSummary } from "@/lib/phase7-articles";
 import { getSupportNotificationSummary } from "@/lib/support-center";
 import {
-  HOME_WIDGET_PREFERENCE_EVENT,
-  defaultHomeWidgetPreferences,
+  createDefaultHomeWidgetPreferences,
   loadHomeWidgetPreferences,
-  readLocalHomeWidgetLayout,
-  writeLocalHomeWidgetLayout,
-  type HomeWidgetDevice,
+  parseHomeWidgetPreferences,
+  type HomeWidgetItem,
   type HomeWidgetKey,
-  type HomeWidgetLayoutItem,
 } from "@/lib/home-widget-preferences";
 import {
   AGE_GROUP_OPTIONS,
@@ -110,6 +109,30 @@ function AiLaunchCard({ appKey }: { appKey: AiAppKey }) {
   );
 }
 
+function HomeWidgetSlot({
+  layout,
+  widgetKey,
+  children,
+}: {
+  layout: readonly HomeWidgetItem[];
+  widgetKey: HomeWidgetKey;
+  children: ReactNode;
+}) {
+  const order = layout.findIndex((item) => item.key === widgetKey);
+  const item = order >= 0 ? layout[order] : null;
+  if (!item?.visible) return null;
+
+  return (
+    <div
+      className={"home-widget-slot " + item.size}
+      data-home-widget={widgetKey}
+      style={{ order }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function BeginnerAccessFallback({ unavailable = false }: { unavailable?: boolean }) {
   return (
     <div className="reference-home">
@@ -126,26 +149,6 @@ function BeginnerAccessFallback({ unavailable = false }: { unavailable?: boolean
           </section>
         ) : null}
       </main>
-    </div>
-  );
-}
-
-function HomeWidgetSlot({
-  item,
-  index,
-  device,
-  children,
-}: {
-  item: HomeWidgetLayoutItem;
-  index: number;
-  device: HomeWidgetDevice;
-  children: ReactNode;
-}) {
-  if (!item.visible) return null;
-  const size = device === "desktop" && item.size === "half" ? "half" : "wide";
-  return (
-    <div className={`home-widget-slot widget-${size}`} style={{ order: index }}>
-      {children}
     </div>
   );
 }
@@ -171,6 +174,7 @@ function MissionRows({ missions }: { missions: CreatorMission[] }) {
 
 export function Phase18BeginnerHome() {
   const { state, client } = useSharedAccessState();
+  const articleLibraryAccess = useAppFeatureAccess("article-library");
   const [section, setSection] = useState<Section>("home");
   const [imageUnsaved, setImageUnsaved] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
@@ -186,69 +190,44 @@ export function Phase18BeginnerHome() {
   const [rankingError, setRankingError] = useState(false);
   const [quickSetup, setQuickSetup] = useState<QuickSetup>(QUICK_SETUP_INITIAL);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
-  const [homeWidgetDevice, setHomeWidgetDevice] = useState<HomeWidgetDevice>("desktop");
-  const [homeWidgetPreferences, setHomeWidgetPreferences] = useState(() => defaultHomeWidgetPreferences());
-  const homeWidgetUserId = state.kind === "ready" ? state.profile.id : "";
+  const [homeWidgetPreferences, setHomeWidgetPreferences] = useState(() => createDefaultHomeWidgetPreferences());
+  const [homeWidgetTarget, setHomeWidgetTarget] = useState<"desktop" | "mobile">("desktop");
 
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 820px)");
+    const syncTarget = () => setHomeWidgetTarget(media.matches ? "mobile" : "desktop");
+    syncTarget();
+    media.addEventListener("change", syncTarget);
+    return () => media.removeEventListener("change", syncTarget);
+  }, []);
+
+  useEffect(() => {
+    if (state.kind !== "ready" || !client) return;
+    let active = true;
+    void loadHomeWidgetPreferences(client, state.profile.id).then(
+      (value) => {
+        if (active) setHomeWidgetPreferences(value);
+      },
+      () => {
+        if (active) setHomeWidgetPreferences(createDefaultHomeWidgetPreferences());
+      },
+    );
+    return () => { active = false; };
+  }, [client, state]);
+
+  useEffect(() => {
+    const handleUpdate = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      setHomeWidgetPreferences(parseHomeWidgetPreferences(event.detail));
+    };
+    window.addEventListener("aas:home-widgets-updated", handleUpdate);
+    return () => window.removeEventListener("aas:home-widgets-updated", handleUpdate);
+  }, []);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("section") !== "library") return;
     queueMicrotask(() => setSection("library"));
   }, []);
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 820px)");
-    const syncDevice = () => setHomeWidgetDevice(media.matches ? "mobile" : "desktop");
-    syncDevice();
-    media.addEventListener("change", syncDevice);
-    return () => media.removeEventListener("change", syncDevice);
-  }, []);
-
-  useEffect(() => {
-    if (!homeWidgetUserId) return;
-    let active = true;
-    queueMicrotask(() => {
-      if (!active) return;
-      setHomeWidgetPreferences({
-        desktop: readLocalHomeWidgetLayout(homeWidgetUserId, "desktop"),
-        mobile: readLocalHomeWidgetLayout(homeWidgetUserId, "mobile"),
-      });
-    });
-
-    if (client) {
-      void loadHomeWidgetPreferences(client, homeWidgetUserId).then(
-        (cloud) => {
-          if (!active) return;
-          setHomeWidgetPreferences(cloud);
-          writeLocalHomeWidgetLayout(homeWidgetUserId, "desktop", cloud.desktop);
-          writeLocalHomeWidgetLayout(homeWidgetUserId, "mobile", cloud.mobile);
-        },
-        () => {
-          // Keep the local layout when cloud preferences are temporarily unavailable.
-        },
-      );
-    }
-
-    return () => { active = false; };
-  }, [client, homeWidgetUserId]);
-
-  useEffect(() => {
-    if (!homeWidgetUserId) return;
-    const handlePreference = (event: Event) => {
-      const detail = (event as CustomEvent<{
-        userId: string;
-        device: HomeWidgetDevice;
-        layout: HomeWidgetLayoutItem[];
-      }>).detail;
-      if (!detail || detail.userId !== homeWidgetUserId) return;
-      setHomeWidgetPreferences((current) => ({
-        ...current,
-        [detail.device]: detail.layout,
-      }));
-    };
-    window.addEventListener(HOME_WIDGET_PREFERENCE_EVENT, handlePreference);
-    return () => window.removeEventListener(HOME_WIDGET_PREFERENCE_EVENT, handlePreference);
-  }, [homeWidgetUserId]);
 
   useEffect(() => {
     if (state.kind !== "ready" || !client) return;
@@ -345,6 +324,9 @@ export function Phase18BeginnerHome() {
     [dashboard],
   );
   const myRank = useMemo(() => ranking.find((row) => row.isMe) ?? null, [ranking]);
+  const homeWidgetLayout = homeWidgetTarget === "mobile"
+    ? homeWidgetPreferences.mobileLayout
+    : homeWidgetPreferences.desktopLayout;
 
   if (state.kind === "loading") return <BeginnerAccessFallback />;
   if (state.kind === "unavailable") return <BeginnerAccessFallback unavailable />;
@@ -378,20 +360,30 @@ export function Phase18BeginnerHome() {
     }));
   };
 
-  const activeHomeWidgetLayout = homeWidgetDevice === "mobile"
-    ? homeWidgetPreferences.mobile
-    : homeWidgetPreferences.desktop;
+  if (section === "library" && articleLibraryAccess.loading) {
+    return <BeginnerAccessFallback />;
+  }
 
-  const renderHomeWidget = (key: HomeWidgetKey, children: ReactNode) => {
-    const index = activeHomeWidgetLayout.findIndex((item) => item.key === key);
-    const item = index >= 0 ? activeHomeWidgetLayout[index] : null;
-    if (!item) return children;
+  if (section === "library" && !articleLibraryAccess.allowed) {
+    const message = articleLibraryAccess.feature?.maintenanceMessage
+      || (articleLibraryAccess.feature?.maintenanceMode
+        ? "記事ライブラリは現在メンテナンス中です。修正確認後に再開します。"
+        : "記事ライブラリは現在、管理者または指定テストユーザーで動作確認中です。");
     return (
-      <HomeWidgetSlot key={key} item={item} index={index} device={homeWidgetDevice}>
-        {children}
-      </HomeWidgetSlot>
+      <div className="reference-home">
+        <AasReferenceHeader hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
+        <main className="reference-home-main beginner-library-main">
+          <section className="standalone-card feature-unavailable-card">
+            <p className="eyebrow">{articleLibraryAccess.feature?.maintenanceMode ? "MAINTENANCE" : "FEATURE PREVIEW"}</p>
+            <h1>記事ライブラリ</h1>
+            <p className="route-notice">{message}</p>
+            <button className="primary-action" type="button" onClick={() => openSection("home")}>ホームへ戻る</button>
+          </section>
+        </main>
+        <AasReferenceBottomNav active="library" onHome={() => openSection("home")} onLibrary={() => openSection("library")} />
+      </div>
     );
-  };
+  }
 
   if (section === "library") {
     return (
@@ -424,10 +416,10 @@ export function Phase18BeginnerHome() {
         </div>
 
         <div className="home-widget-grid">
-        {renderHomeWidget("creator", (
-          <section className="reference-creator-card" aria-label="Creatorステータス">
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="creator">
+        <section className="reference-creator-card" aria-label="Creatorステータス">
           <span className="reference-avatar" aria-hidden="true">
-            {dashboard?.avatarUrl ? <img src={dashboard.avatarUrl} alt="" /> : avatarLetter(displayName)}
+            {dashboard?.avatarUrl ? <DirectRuntimeImage src={dashboard.avatarUrl} alt="" /> : avatarLetter(displayName)}
           </span>
           <div className="reference-creator-main">
             <div className="reference-name-row">
@@ -450,15 +442,17 @@ export function Phase18BeginnerHome() {
             <strong>🔥 {dashboard ? `${dashboard.currentStreak}日連続` : "—"}</strong>
             <small>継続は力なり！</small>
           </div>
-          </section>
-        ))}
+        </section>
+        </HomeWidgetSlot>
 
-        {renderHomeWidget("todayNote", <NoteTodayPanel client={client} ownerId={profile.id} />)}
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="todayNote">
+          <NoteTodayPanel client={client} ownerId={profile.id} />
+        </HomeWidgetSlot>
 
-        {renderHomeWidget("missions", (
-          <section className="reference-home-section">
-            <div className="reference-section-heading">
-              <h2>🎯 今日のミッション</h2>
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="missions">
+        <section className="reference-home-section">
+          <div className="reference-section-heading">
+            <h2>🎯 今日のミッション</h2>
             <Link href="/missions">すべて見る ›</Link>
           </div>
           {missionsError ? (
@@ -467,11 +461,12 @@ export function Phase18BeginnerHome() {
             <p className="beginner-right-muted" role="status" aria-live="polite">ミッションを読み込んでいます…</p>
           ) : (
             <MissionRows missions={missions.filter((mission) => mission.cadence === "daily").length ? missions.filter((mission) => mission.cadence === "daily") : missions} />
-            )}
-          </section>
-        ))}
+          )}
+        </section>
+        </HomeWidgetSlot>
 
-        {dashboard && renderHomeWidget("membership", (
+        {dashboard && (
+          <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="membership">
           <section className="reference-home-section">
             <div className="reference-member-banner">
               <span aria-hidden="true">♛</span>
@@ -486,12 +481,13 @@ export function Phase18BeginnerHome() {
               <Link href="/membership">特典を見る ›</Link>
             </div>
           </section>
-        ))}
+          </HomeWidgetSlot>
+        )}
 
-        {renderHomeWidget("library", (
-          <section className="reference-home-section">
-            <div className="reference-section-heading">
-              <h2>▤ 記事ライブラリ / noteマガジン</h2>
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="library">
+        <section className="reference-home-section">
+          <div className="reference-section-heading">
+            <h2>▤ 記事ライブラリ / noteマガジン</h2>
             <button type="button" className="reference-link-button" onClick={() => openSection("library")}>ライブラリを開く ›</button>
           </div>
           {dashboard && (
@@ -520,18 +516,22 @@ export function Phase18BeginnerHome() {
               <strong>まだ記事がありません</strong>
               <Link href="/create">最初の記事を作る →</Link>
             </div>
-            )}
-          </section>
-        ))}
+          )}
+        </section>
+        </HomeWidgetSlot>
 
-        {renderHomeWidget("releaseStatus", <ReleasePreviewHomeStatus />)}
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="releaseStatus">
+          <ReleasePreviewHomeStatus />
+        </HomeWidgetSlot>
 
-        {renderHomeWidget("hero", <ActionStudioHomeHero />)}
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="hero">
+          <ActionStudioHomeHero />
+        </HomeWidgetSlot>
 
-        {renderHomeWidget("quickStart", (
-          <section className="reference-home-section">
-            <div className="reference-section-heading">
-              <h2>⚡ クイックスタート / 使い方</h2>
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="quickStart">
+        <section className="reference-home-section">
+          <div className="reference-section-heading">
+            <h2>⚡ クイックスタート / 使い方</h2>
             <Link href="/manual">詳しい使い方 ›</Link>
           </div>
           <div className="reference-quick-grid">
@@ -542,12 +542,12 @@ export function Phase18BeginnerHome() {
           <div className="reference-help-links">
             <Link className="secondary" href="/manual">使い方を見る</Link>
             <Link href="/faq">Q&A・よくある質問</Link>
-            </div>
-          </section>
-        ))}
+          </div>
+        </section>
+        </HomeWidgetSlot>
 
-        {renderHomeWidget("articleSetup", (
-          <section className="reference-home-section beginner-quick-setup" aria-labelledby="quick-setup-title">
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="articleSetup">
+        <section className="reference-home-section beginner-quick-setup" aria-labelledby="quick-setup-title">
           <div className="beginner-card-title">
             <div><span aria-hidden="true">⚙</span><div><h2 id="quick-setup-title">記事の基本設定</h2><p>よく使う条件をプルダウンで選び、そのまま記事作成へ進めます。</p></div></div>
             <button type="button" onClick={() => setQuickSetup(QUICK_SETUP_INITIAL)}>↻ リセット</button>
@@ -562,26 +562,26 @@ export function Phase18BeginnerHome() {
             <QuickSelect label="文字数目安" value={quickSetup.targetLength} onChange={(value) => setQuickSetup((current) => ({ ...current, targetLength: Number(value) }))}>{TARGET_LENGTH_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</QuickSelect>
             <QuickSelect label="挿絵枚数" value={quickSetup.inlineCount} onChange={(value) => setQuickSetup((current) => ({ ...current, inlineCount: Number(value) }))}><option value={0}>なし</option><option value={1}>1枚</option><option value={2}>2枚</option><option value={3}>3枚</option><option value={4}>4枚</option><option value={5}>5枚</option></QuickSelect>
           </div>
-            <Link className="beginner-quick-start" href={quickCreateHref}>この条件で記事作成を始める →</Link>
-          </section>
-        ))}
+          <Link className="beginner-quick-start" href={quickCreateHref}>この条件で記事作成を始める →</Link>
+        </section>
+        </HomeWidgetSlot>
 
-        {renderHomeWidget("aiApps", (
-          <section className="reference-home-section">
-            <div className="reference-section-heading"><h2>🔗 AIアプリを開く</h2><Link href="/tools">すべての機能 ›</Link></div>
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="aiApps">
+        <section className="reference-home-section">
+          <div className="reference-section-heading"><h2>🔗 AIアプリを開く</h2><Link href="/tools">すべての機能 ›</Link></div>
           <div className="beginner-ai-grid"><AiLaunchCard appKey="chatgpt" /><AiLaunchCard appKey="claude" /><AiLaunchCard appKey="gemini" /></div>
           <p className="reference-ai-note">iPhone / iPadでは「アプリを開く」と「Web版を開く」を選べます。Androidはアプリを優先し、開けない場合はGoogle Playの公式ページへ移動します。PCではWeb版を開きます。</p>
           <div className="reference-feature-links">
             <Link href="/workflow"><span>◎</span><strong>運営コックピット</strong><small>今日の作業・公開前チェック・再利用</small></Link>
             <Link href="/images"><span>▧</span><strong>画像作成</strong><small>アイキャッチ・挿絵を準備</small></Link>
             <Link href="/sns"><span>↗</span><strong>SNS投稿</strong><small>記事から投稿文を作成</small></Link>
-            </div>
-          </section>
-        ))}
+          </div>
+        </section>
+        </HomeWidgetSlot>
 
-        {renderHomeWidget("ranking", (
-          <section className="reference-home-section">
-            <div className="reference-section-heading"><h2>🏆 週間ランキング</h2><Link href="/ranking">ランキングを見る ›</Link></div>
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="ranking">
+        <section className="reference-home-section">
+          <div className="reference-section-heading"><h2>🏆 週間ランキング</h2><Link href="/ranking">ランキングを見る ›</Link></div>
           <div className="reference-rank-summary">
             <span aria-hidden="true">🏆</span>
             <div>
@@ -589,10 +589,13 @@ export function Phase18BeginnerHome() {
               <b>{myRank ? `第 ${myRank.rankPosition} 位` : rankingLoaded && dashboard?.rankingOptIn ? (ranking.length ? "圏外" : "未集計") : "—"}</b>
             </div>
             <Link href="/profile">{dashboard?.rankingOptIn ? "公開設定 ›" : "プロフィール設定 ›"}</Link>
-            </div>
-          </section>
-        ))}
-        {renderHomeWidget("quickActions", <ActionStudioQuickActions showAdmin={activeAdmin} />)}
+          </div>
+        </section>
+        </HomeWidgetSlot>
+
+        <HomeWidgetSlot layout={homeWidgetLayout} widgetKey="quickActions">
+          <ActionStudioQuickActions showAdmin={activeAdmin} />
+        </HomeWidgetSlot>
         </div>
 
       </main>

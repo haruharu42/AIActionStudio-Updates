@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -25,15 +25,16 @@ test("home prioritizes creator through article library before the AAS hero and k
 });
 
 test("Axia and Rumo hero is bundled locally and used by the home hero", async () => {
-  const [assetStats, css, hub, layout] = await Promise.all([
-    stat(path.join(pwaRoot, "public/aas-axia-rumo-hero-hq.webp")),
+  const [asset, css, hub, layout] = await Promise.all([
+    read("public/aas-axia-rumo-hero.svg"),
     read("app/phase53-crystal-ui.css"),
     read("components/action-studio-home-hub.tsx"),
     read("app/layout.tsx"),
   ]);
 
-  assert.ok(assetStats.size >= 40000);
-  assert.match(css, /url\("\/aas-axia-rumo-hero-hq\.webp"\)/);
+  assert.match(asset, /AAS アクシアとルーモ/);
+  assert.match(asset, /data:image\/webp;base64,/);
+  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
   assert.match(hub, /アクシア × ルーモ/);
   assert.match(hub, /今日はAIで何を進めますか？/);
   assert.match(layout, /phase53-crystal-ui\.css/);
@@ -102,13 +103,24 @@ test("signed-out auth and access surfaces use the Axia and Rumo crystal design",
   assert.match(app, /アクシア × ルーモ/);
   assert.match(app, /auth-build-stamp/);
   assert.match(css, /auth-character-visual/);
-  assert.match(css, /url\("\/aas-axia-rumo-hero-hq\.webp"\)/);
+  assert.match(await read("app/globals.css"), /"Noto Sans JP", "Noto Sans CJK JP"/);
+  assert.match(css, /auth-character-copy \.lead \{[\s\S]*color: #536b89 !important;/);
+  assert.match(css, /auth-card\.auth-crystal-card \.form-caption \{[\s\S]*color: #566f8e !important;/);
+  assert.match(css, /auth-character-copy \{[\s\S]*width: min\(42%, 500px\)/);
+  assert.match(css, /auth-character-visual \{[\s\S]*width: min\(48%, 580px\)[\s\S]*right: 0;/);
+  assert.match(css, /url\("\/aas-login-hero-hq\.svg\?v=20260928-natural-v4"\)/);
+  assert.doesNotMatch(css, /url\("\/aas-login-tile-4\.svg\?v=/);
+  assert.match(css, /background-size: contain/);
+  assert.match(css, /mask-image: radial-gradient\(ellipse 68% 73% at 52% 51%/);
+  assert.match(css, /auth-character-visual::before/);
+  assert.match(css, /auth-character-visual::after/);
   assert.match(css, /status-card::after/);
+  assert.match(css, /@media \(min-width: 901px\) and \(max-width: 1440px\)[\s\S]*auth-character-copy \{[\s\S]*width: min\(43%, 430px\)[\s\S]*auth-character-copy h1 \{[\s\S]*max-width: 320px[\s\S]*auth-character-visual \{[\s\S]*width: min\(48%, 500px\)[\s\S]*right: 0;/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-stage/);
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-visual \{[\s\S]*position: relative;[\s\S]*width: min\(94vw, 560px\);[\s\S]*background-size: contain;/);
   assert.match(layout, /"aas-build-sha"/);
   assert.match(config, /NEXT_PUBLIC_AAS_BUILD_SHA/);
-  assert.match(sw, /runtime-v6-hq-illustration/);
-  assert.match(sw, /\/aas-axia-rumo-hero-hq\.webp/);
+  assert.match(sw, /runtime-v11-axia-generated/);
 });
 
 test("shared header exposes build identity for live deployment verification", async () => {

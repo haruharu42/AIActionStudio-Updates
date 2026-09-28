@@ -141,6 +141,11 @@
   justify-content: center;
   gap: 8px;
 }
+.auth-page + .commerce-public-shortcuts,
+.status-page + .commerce-public-shortcuts {
+  margin-top: 16px;
+}
+
 .commerce-public-shortcuts a {
   border: 1px solid #d2dfed;
   border-radius: 999px;
@@ -175,4 +180,29 @@
     margin-top: -76px;
     margin-bottom: calc(94px + env(safe-area-inset-bottom));
   }
+}
+
+
+.commerce-external-sales {
+  display: grid;
+  gap: 12px;
+}
+
+.commerce-external-purchase {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #173a62;
+  padding: 10px 16px;
+  color: #fff;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.commerce-external-purchase:focus-visible {
+  outline: 3px solid #a8cff8;
+  outline-offset: 2px;
 }

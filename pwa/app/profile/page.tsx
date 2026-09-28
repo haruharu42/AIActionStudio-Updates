@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { DirectRuntimeImage } from "@/components/direct-runtime-image";
 import {
   getMyCreatorDashboard,
   updateMyCreatorProfile,
@@ -206,7 +207,7 @@ export default function CreatorProfilePage() {
           <form onSubmit={save} className={styles.referenceProfileForm}>
             <section className="reference-status-card">
               <span className="reference-avatar" aria-hidden="true">
-                {dashboard.avatarUrl ? <img src={dashboard.avatarUrl} alt="" /> : avatarLetter(form.publicName || "Creator")}
+                {dashboard.avatarUrl ? <DirectRuntimeImage src={dashboard.avatarUrl} alt="" /> : avatarLetter(form.publicName || "Creator")}
               </span>
               <div className="reference-creator-main">
                 <div className="reference-name-row">
@@ -260,7 +261,7 @@ export default function CreatorProfilePage() {
                 <div className={styles.referenceAvatarEditor}>
                   <span className={styles.referenceAvatarPreview} aria-hidden="true">
                     {avatarPreview || (!removeAvatarRequested && dashboard.avatarUrl)
-                      ? <img src={avatarPreview || dashboard.avatarUrl} alt="" />
+                      ? <DirectRuntimeImage src={avatarPreview || dashboard.avatarUrl} alt="" />
                       : avatarLetter(form.publicName || "Creator")}
                   </span>
                   <div className={styles.referenceAvatarActions}>

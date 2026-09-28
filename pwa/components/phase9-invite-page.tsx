@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { redeemPwaInvite } from "@/lib/phase9-invite";
@@ -18,6 +18,7 @@ export function Phase9InvitePage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const inFlight = useRef(false);
 
   const state = useMemo<State>(() => {
     if (accessState.kind === "loading") return { kind: "loading" };
@@ -28,16 +29,21 @@ export function Phase9InvitePage() {
 
     const profile = accessState.profile;
     if (profile.role !== "user") {
-      return { kind: "error", message: "招待コードは一般ユーザーアカウントで利用してください。" };
+      return { kind: "error", message: "利用コードは一般ユーザーアカウントで利用してください。" };
     }
     if (profile.status !== "pending" && profile.status !== "active") {
-      return { kind: "error", message: "現在のアカウント状態では招待コードを利用できません。" };
+      return { kind: "error", message: "現在のアカウント状態では利用コードを利用できません。" };
     }
     return { kind: "ready", aasId: profile.aas_user_id, status: profile.status };
   }, [accessState]);
 
   const redeem = async () => {
-    if (!client) return;
+    if (inFlight.current) return;
+    if (!client) {
+      setMessage("アカウント接続を確認できません。");
+      return;
+    }
+    inFlight.current = true;
     setBusy(true);
     setMessage("");
     setSuccess(false);
@@ -52,8 +58,9 @@ export function Phase9InvitePage() {
       );
       setCode("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "招待コードの利用に失敗しました。");
+      setMessage(error instanceof Error ? error.message : "利用コードの利用に失敗しました。");
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -63,9 +70,9 @@ export function Phase9InvitePage() {
   return (
     <main className="standalone-page">
       <section className="standalone-card">
-        <p className="eyebrow">PWA INVITATION</p>
-        <h1>PWA招待コード</h1>
-        <p className="standalone-lead">購入・招待で受け取ったコードを、このAASアカウントへ登録します。Windows利用権とは別に管理されます。</p>
+        <p className="eyebrow">PWA ACCESS CODE</p>
+        <h1>PWA利用コード</h1>
+        <p className="standalone-lead">購入・案内で受け取った利用コードを、このAASアカウントへ登録します。登録後のPWA利用権はPC・スマホ・タブレットで共通です。</p>
 
         {state.kind === "signed_out" && (
           <div className="route-notice error">先にホームからログインしてください。</div>
@@ -78,12 +85,22 @@ export function Phase9InvitePage() {
               <div><dt>アカウント状態</dt><dd>{state.status}</dd></div>
             </dl>
             <label className="route-field">
-              <span>招待コード</span>
-              <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autoComplete="off" />
+              <span>利用コード</span>
+              <input
+                value={code}
+                onChange={(event) => setCode(event.target.value)}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="text"
+                enterKeyHint="done"
+              />
             </label>
-            {message && <div className={success ? "route-notice" : "route-notice error"}>{message}</div>}
+            {message && <div className={success ? "route-notice" : "route-notice error"} role="status">{message}</div>}
             <button className="primary-action" type="button" disabled={busy || !code.trim()} onClick={() => void redeem()}>
-              {busy ? "確認中…" : "招待コードを登録"}
+              {busy ? "確認中…" : "利用コードを登録"}
             </button>
           </>
         )}
