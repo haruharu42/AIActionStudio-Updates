@@ -176,11 +176,35 @@ export function validateArticleCreateStep(
   step: number,
   draft: ArticleCreationDraft,
 ): string | null {
+  if (step === 2 && draft.inlineEnabled && (
+    !Number.isSafeInteger(draft.inlineCount)
+    || draft.inlineCount < 1
+    || draft.inlineCount > 10
+  )) {
+    return "挿絵枚数は1〜10枚で指定してください。";
+  }
   if (step === 3 && (!draft.genre.trim() || draft.genre === "その他")) {
     return "「その他」を選んだ場合はジャンル名を入力してください。";
   }
   if (step === 3 && (!draft.subgenre.trim() || draft.subgenre === "その他")) {
     return "「その他」を選んだ場合はサブジャンル名を入力してください。";
+  }
+  if (step === 3 && (
+    !Number.isSafeInteger(draft.targetLength)
+    || draft.targetLength < 500
+    || draft.targetLength > 50000
+  )) {
+    return "文字数目安は500〜50000文字で指定してください。";
+  }
+  if (step === 3 && draft.articleType === "paid" && (
+    draft.price === null
+    || !Number.isSafeInteger(draft.price)
+    || draft.price <= 0
+  )) {
+    return "有料記事は1以上の整数価格を設定してください。";
+  }
+  if (step === 4 && (!draft.title.trim() || draft.title.trim().length > 500)) {
+    return "タイトルを1〜500文字で入力してください。候補を選ぶか、タイトルを直接入力してください。";
   }
   if (step === 5 && draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
     return "有料記事には有料エリア開始位置が必要です。本文に「<!-- PAID_AREA -->」を入れてください。";
