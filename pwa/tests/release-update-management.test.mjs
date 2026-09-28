@@ -318,6 +318,7 @@ test("admin public deployment pipeline keeps Preview and public release coupled 
   assert.match(migration, /source_sha ~ '\^\[0-9a-f\]\{40\}\$'/);
   assert.match(migration, /aal2 required for public release deploy/);
   assert.match(migration, /candidate must pass tester stage before deploy/);
+  assert.match(migration, /candidate build does not match approved preview sha/);
   assert.match(migration, /service_finalize_app_release_deployment/);
   assert.match(migration, /deployed sha does not match approved preview sha/);
   assert.match(migration, /grant execute on function public\.service_finalize_app_release_deployment[\s\S]*to service_role/);
@@ -333,6 +334,9 @@ test("admin public deployment pipeline keeps Preview and public release coupled 
   assert.match(client, /loadPublicPwaDeployments/);
   assert.match(page, /第3段階：一般公開PWAへ反映/);
   assert.match(page, /NEXT_PUBLIC_AAS_BUILD_SHA/);
+  assert.match(page, /PREVIEW_BUILD_SHORT/);
+  assert.match(page, /releaseMatchesPreviewBuild/);
+  assert.match(page, /候補版と現在のPreview Buildが一致しません/);
   assert.match(page, /Preview PWAの管理者画面から実行/);
 
   assert.match(workflow, /permissions:\s*\n\s*contents: write/);
