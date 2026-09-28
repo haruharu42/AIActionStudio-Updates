@@ -26,6 +26,7 @@ import {
   ADMIN_PROMOTION_CHANNELS,
   buildAdminChannelDirectScreenshotPrompt,
   buildAdminChannelPromotionPrompt,
+  resolveAdminPromotionCta,
   type AdminPromotionChannel,
 } from "@/lib/admin-promotion-channel";
 import type { PromotionScreenshotAnalysis, PromotionScreenshotChannel } from "@/lib/promotion-screenshot-analysis";
@@ -68,6 +69,10 @@ export function AdminPromotionChannelBuilder({
 
   const meta = ADMIN_PROMOTION_CHANNELS[channel];
   const socialPlatform = meta.socialPlatform;
+  const ctaResolution = useMemo(
+    () => resolveAdminPromotionCta(facts, { phase, cta }),
+    [cta, facts, phase],
+  );
 
   const prompt = useMemo(
     () => buildAdminChannelPromotionPrompt(facts, {
@@ -230,13 +235,18 @@ export function AdminPromotionChannelBuilder({
             options={featureOptions}
             customPlaceholder="紹介したい機能・内容を入力"
           />
-          <SelectWithCustomField
-            label="CTA・誘導先"
-            value={cta}
-            onChange={setCta}
-            options={CTA_OPTIONS}
-            customPlaceholder="CTA・誘導先を入力"
-          />
+          <div>
+            <SelectWithCustomField
+              label="CTA・誘導先"
+              value={cta}
+              onChange={setCta}
+              options={CTA_OPTIONS}
+              customPlaceholder="CTA・誘導先を入力"
+            />
+            {ctaResolution.corrected && (
+              <small className="admin-promo-cta-safety">{ctaResolution.reason}</small>
+            )}
+          </div>
           {meta.kind === "social" && (
             <SelectField
               label="作成数"
