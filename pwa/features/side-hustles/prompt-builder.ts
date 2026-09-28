@@ -61,6 +61,18 @@ function interpolate(template: string, definition: SideHustleDefinition, draft: 
     resolveSideHustleFieldValue(definition, key, draft.values[key]));
 }
 
+function buildSideHustleBrief(
+  definition: SideHustleDefinition,
+  resolved: Readonly<Record<string, string>>,
+): string {
+  return [
+    "【SIDE HUSTLE BRIEF】",
+    `副業機能: ${definition.title}`,
+    `カテゴリ: ${definition.category}`,
+    ...definition.fields.map((field) => `${field.label}: ${resolved[field.key] ?? "未指定"}`),
+  ].join("\n");
+}
+
 export function buildSideHustlePrompt(
   definition: SideHustleDefinition,
   draft: SideHustleDraft,
@@ -92,6 +104,7 @@ export function buildSideHustlePrompt(
 
   const sections = [
     interpolate(definition.promptTemplate, definition, draft),
+    buildSideHustleBrief(definition, resolved),
     knowledge.promptBlock,
     scenarioKnowledge.promptBlock,
     combinationKnowledge.promptBlock,
@@ -101,6 +114,8 @@ export function buildSideHustlePrompt(
     "- 価格、在庫、規約、手数料、ランキング、アルゴリズム、最新仕様など変動情報は、確認済みでない限り断定せず「最新の公式情報を確認」と明記する。",
     "- 架空例を使う場合は「例」「想定」と明示する。",
     "- 使える状態の成果物を優先し、一般論の水増しをしない。",
+    "- SIDE HUSTLE BRIEFの全条件を最終出力前に内部確認し、選択された媒体・経験段階・目的・制作方法・販売/集客条件・リスク条件の取りこぼしをなくす。",
+    "- 最終回答にはそのまま使える完成成果物だけを出し、内部検討・自己点検の途中経過は出さない。",
   ].filter(Boolean);
 
   return {
