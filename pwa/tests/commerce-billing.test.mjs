@@ -208,11 +208,13 @@ test("Worker routes billing before the application handler, filters public billi
   assert.match(entry, /if \(billingResponse\) \{/);
   assert.match(entry, /BILLING_REQUEST_FAILED/);
   assert.match(entry, /WEBHOOK_REJECTED/);
-  assert.match(entry, /filterPublicBillingConfig\(request, url, billingResponse\)/);
-  assert.match(entry, /return withSecurityHeaders\(await filterPublicBillingConfig\(request, url, billingResponse\)\)/);
+  assert.match(entry, /filterPublicBillingConfig\(request, url, billingResponse, env\)/);
+  assert.match(entry, /loadEffectiveSalesSettings/);
+  assert.match(entry, /effectivePlanEnabled/);
+  assert.match(entry, /return withSecurityHeaders\(await filterPublicBillingConfig\(request, url, billingResponse, env\)\)/);
   assert.match(entry, /withSecurityHeaders\(await handler\.fetch\(request, env, ctx\)\)/);
   assert.ok(entry.indexOf("handleBillingRequest(request") < entry.indexOf("handler.fetch(request"));
-  assert.ok(entry.indexOf("filterPublicBillingConfig(request, url, billingResponse)") < entry.indexOf("handler.fetch(request"));
+  assert.ok(entry.indexOf("filterPublicBillingConfig(request, url, billingResponse, env)") < entry.indexOf("handler.fetch(request"));
   for (const header of [
     "x-content-type-options",
     "x-frame-options",
