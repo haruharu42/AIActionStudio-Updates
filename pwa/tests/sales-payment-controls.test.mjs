@@ -253,6 +253,11 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(preflight, /公開販売を承認する/);
   assert.match(preflight, /公開販売を停止する/);
   assert.match(preflight, /手動確認項目を確認済み/);
+  assert.match(preflight, /getAuthenticatorAssuranceLevel/);
+  assert.match(preflight, /currentSessionAal/);
+  assert.match(preflight, /currentSessionAal === "aal2"/);
+  assert.match(preflight, /管理者MFAで再認証/);
+  assert.match(preflight, /href="\/admin\/security"/);
   assert.match(preflight, /persistedAutomatedReady/);
   assert.match(preflight, /hasUnsavedChanges/);
   assert.match(preflight, /販売設定または販売者情報を変更すると承認は自動解除/);
