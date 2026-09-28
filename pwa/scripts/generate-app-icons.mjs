@@ -9,9 +9,9 @@ const publicDir = path.join(pwaRoot, "public");
 const sourcePath = path.join(publicDir, "aas-axia-app-icon-v1.svg");
 
 const sourceSvg = await readFile(sourcePath, "utf8");
-const embedded = sourceSvg.match(/data:image\/jpeg;base64,([^"]+)/);
+const embedded = sourceSvg.match(/data:image\/(?:webp|jpeg);base64,([^"]+)/);
 if (!embedded?.[1]) {
-  throw new Error("Axia raster source is missing from aas-axia-app-icon-v1.svg");
+  throw new Error("Axia WebP/JPEG raster source is missing from aas-axia-app-icon-v1.svg");
 }
 
 const sourceRaster = Buffer.from(embedded[1], "base64");
