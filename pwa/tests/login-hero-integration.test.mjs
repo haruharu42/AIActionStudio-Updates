@@ -14,7 +14,7 @@ test("login hero renders as one masked composition on desktop and mobile", async
   ]);
 
   assert.match(css, /auth-character-visual/);
-  assert.match(css, /aas-login-hero-hq\.svg\?v=20260928-natural-v3/);
+  assert.match(css, /aas-login-hero-hq\.svg\?v=20260928-natural-v4/);
   assert.match(css, /background-size: contain/);
   assert.match(css, /mask-image: radial-gradient/);
   assert.match(css, /ellipse 68% 73% at 52% 51%/);
@@ -23,9 +23,12 @@ test("login hero renders as one masked composition on desktop and mobile", async
   assert.doesNotMatch(css, /51\.5% 51\.4%/);
 
   assert.match(hero, /viewBox="0 0 690 750"/);
-  for (const tile of [1, 2, 3, 4]) {
-    assert.match(hero, new RegExp(`aas-login-tile-${tile}\\.svg`));
-  }
+  assert.doesNotMatch(hero, /aas-login-tile-/);
+  assert.equal((hero.match(/data:image\\/webp;base64,/g) ?? []).length, 4);
+  assert.match(hero, /id="aas-right-seam-mask"/);
+  assert.match(hero, /id="aas-bottom-seam-mask"/);
+  assert.match(hero, /x="335" y="0" width="355" height="385"/);
+  assert.match(hero, /x="0" y="365" width="355" height="385"/);
 
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*?auth-character-visual[\s\S]*?background-size: contain/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*?auth-character-visual[\s\S]*?mask-image: radial-gradient/);
