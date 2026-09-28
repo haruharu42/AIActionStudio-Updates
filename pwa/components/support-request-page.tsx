@@ -25,7 +25,11 @@ export function SupportRequestPage() {
     void Promise.all([fetchPublicSalesSettings(), fetchCommerceConfig()]).then(
       ([settings, commerce]) => {
         if (!active) return;
-        setExternalSalesUrl(settings.externalSalesEnabled ? safeExternalSalesUrl(settings.externalSalesUrl) : "");
+        setExternalSalesUrl(
+          settings.externalSalesEnabled && commerce.legalReady
+            ? safeExternalSalesUrl(settings.externalSalesUrl)
+            : "",
+        );
         setSupportUrl(safeHttpsUrl(commerce.seller.supportUrl));
       },
       () => {
