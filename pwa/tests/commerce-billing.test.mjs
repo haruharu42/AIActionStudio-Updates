@@ -96,15 +96,26 @@ test("individual seller on-request mode keeps private identity out of public con
   const client = await read("lib/commerce.ts");
   const disclosure = await read("components/commercial-transactions-page.tsx");
   const vars = await read(".dev.vars.example");
+  const migration = await readRepo("supabase/migrations/20260928032442_commerce_seller_admin_settings_v1.sql");
 
   assert.match(worker, /AAS_SELLER_TYPE/);
   assert.match(worker, /AAS_SELLER_DISCLOSURE_MODE/);
-  assert.match(worker, /function privateSellerConfig/);
+  assert.match(worker, /function sellerConfigFromEnv/);
+  assert.match(worker, /async function loadSellerConfig/);
+  assert.match(worker, /commerce_sales_settings\?id=eq\.1&select=seller_type,seller_disclosure_mode,seller_name,seller_address,seller_phone,seller_email,seller_support_url/);
+  assert.match(worker, /hasDatabaseSellerData/);
+  assert.match(worker, /return hasDatabaseSellerData \? databaseConfig : fallback/);
   assert.match(worker, /function publicSellerConfig/);
   assert.match(worker, /name: discloseDirectly \? seller\.name : ""/);
   assert.match(worker, /address: discloseDirectly \? seller\.address : ""/);
   assert.match(worker, /phone: discloseDirectly \? seller\.phone : ""/);
-  assert.match(worker, /seller: publicSellerConfig\(env\)/);
+  assert.match(worker, /seller: publicSellerConfig\(seller\)/);
+  assert.match(worker, /safeHttpsUrl\(seller\.supportUrl\)/);
+  assert.match(migration, /admin_get_commerce_seller_settings/);
+  assert.match(migration, /admin_update_commerce_seller_settings/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /seller_disclosure_mode/);
+  assert.match(migration, /seller_support_url/);
   assert.match(client, /disclosureMode: SellerDisclosureMode/);
   assert.match(disclosure, /請求があった場合には遅滞なく開示します/);
   assert.match(disclosure, /問い合わせ・開示請求窓口/);
