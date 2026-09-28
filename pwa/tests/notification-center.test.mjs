@@ -54,6 +54,9 @@ test("automatic notifications cover releases, feature maintenance, rollout, and 
   assert.match(migration, /notify_knowledge_refresh_completed/);
   assert.match(migration, /AAS Knowledge が更新されました/);
   assert.match(migration, /knowledge_refresh_requests/);
+  assert.match(migration, /app_release_published_notification/);
+  assert.match(migration, /app_feature_control_notification/);
+  assert.match(migration, /knowledge_refresh_completed_notification/);
 });
 
 test("header places notification bell before mission shortcut and shows unread count", async () => {
