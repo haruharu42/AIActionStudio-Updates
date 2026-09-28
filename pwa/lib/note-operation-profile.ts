@@ -2,7 +2,22 @@ export type NoteOperationGoal = "habit" | "growth" | "monetize" | "portfolio";
 export type NoteAccountGenre = "ai" | "sidejob" | "business" | "lifestyle" | "gadget" | "learning" | "parenting" | "health_beauty" | "money" | "creative" | "entertainment" | "other";
 export type NoteAccountStyle = "beginner" | "howto" | "experience" | "essay" | "review" | "trend" | "expert" | "creative" | "other";
 export type NoteAudiencePreset = "beginner" | "employee" | "sidejob_beginner" | "student" | "parent" | "senior" | "creator" | "business_owner" | "broad" | "other";
-export type NoteTonePreset = "friendly" | "gentle" | "professional" | "casual" | "expert" | "energetic" | "other";
+export type NoteTonePreset =
+  | "friendly"
+  | "gentle"
+  | "professional"
+  | "casual"
+  | "expert"
+  | "energetic"
+  | "logical"
+  | "empathetic"
+  | "storytelling"
+  | "concise"
+  | "essay"
+  | "warm"
+  | "formal"
+  | "humorous"
+  | "other";
 export type NoteMonetizationStyle = "free_first" | "free_to_paid" | "paid_expertise" | "membership_future" | "no_monetization" | "other";
 
 export type NoteOperationProfile = {
@@ -23,8 +38,13 @@ export type NoteOperationProfile = {
   monetizationStyle: NoteMonetizationStyle;
   customMonetizationStyle: string;
   operationGoal: NoteOperationGoal;
+  articleGenre: string;
+  articleSubgenre: string;
   weeklyPostCount: number;
+  freePostsPerMonth: number;
   paidPostsPerMonth: number;
+  freeTargetLength: number;
+  paidTargetLength: number;
   preferredTime: string;
   secondaryTime: string;
   timezone: string;
@@ -88,6 +108,14 @@ export const NOTE_TONE_PRESETS: readonly { value: NoteTonePreset; label: string 
   { value: "casual", label: "カジュアル・会話調" },
   { value: "expert", label: "専門的・簡潔" },
   { value: "energetic", label: "明るく前向き" },
+  { value: "logical", label: "論理的・整理して説明" },
+  { value: "empathetic", label: "共感重視・読者に寄り添う" },
+  { value: "storytelling", label: "ストーリー・体験談調" },
+  { value: "concise", label: "短くテンポよく・要点重視" },
+  { value: "essay", label: "読み物・エッセイ調" },
+  { value: "warm", label: "温かみ・人柄重視" },
+  { value: "formal", label: "フォーマル・端正" },
+  { value: "humorous", label: "軽いユーモアを交える" },
   { value: "other", label: "その他（自由入力）" },
 ] as const;
 
@@ -134,8 +162,13 @@ export function defaultNoteOperationProfile(userId: string): NoteOperationProfil
     monetizationStyle: "free_to_paid",
     customMonetizationStyle: "",
     operationGoal: "habit",
+    articleGenre: "AI副業",
+    articleSubgenre: "AIおまかせ",
     weeklyPostCount: 3,
+    freePostsPerMonth: 10,
     paidPostsPerMonth: 2,
+    freeTargetLength: 4000,
+    paidTargetLength: 7000,
     preferredTime: "20:00",
     secondaryTime: "12:00",
     timezone: "Asia/Tokyo",
