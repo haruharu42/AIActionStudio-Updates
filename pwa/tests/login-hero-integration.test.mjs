@@ -17,6 +17,7 @@ test("login hero renders as one masked composition on desktop and mobile", async
   assert.match(css, /aas-login-hero-hq\.svg\?v=20260928-natural-v3/);
   assert.match(css, /background-size: contain/);
   assert.match(css, /mask-image: radial-gradient/);
+  assert.match(css, /ellipse 68% 73% at 52% 51%/);
   assert.doesNotMatch(css, /url\("\/aas-login-tile-1\.svg\?v=/);
   assert.doesNotMatch(css, /background-position: left top, right top, left bottom, right bottom/);
 
