@@ -21,6 +21,19 @@ function clean(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function safeExternalSalesUrl(value: unknown): string {
+  const cleaned = clean(value);
+  if (!cleaned) return "";
+  try {
+    const parsed = new URL(cleaned);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
     status,
@@ -56,7 +69,7 @@ async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | 
   return {
     externalSalesEnabled: row.external_sales_enabled === true,
     accessCodeEnabled: row.access_code_enabled === true,
-    externalSalesUrl: clean(row.external_sales_url),
+    externalSalesUrl: safeExternalSalesUrl(row.external_sales_url),
     stripeCheckoutEnabled: row.stripe_checkout_enabled === true,
     pwa7DayEnabled: row.pwa_7day_enabled === true,
     pwaMonthlyEnabled: row.pwa_monthly_enabled === true,
