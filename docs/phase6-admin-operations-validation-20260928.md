@@ -1,0 +1,31 @@
+# Phase 6 Admin & Operations Validation — 2026-09-28
+
+## Verified runtime state
+
+- Supabase project is active and healthy.
+- Feature Control is server-authoritative and staged as admin -> tester -> public.
+- Direct admin -> public promotion is blocked at both UI/client and database boundaries.
+- Public PWA release requires an active tester stage and admin AAL2.
+- Feature maintenance mode keeps admin/tester verification paths while stopping general-user access.
+- Notification Center is connected to release publication, feature rollout/maintenance changes, and completed Knowledge refreshes.
+- Web Push is enabled with device-scoped subscriptions, Vault-backed secrets, worker-token authentication, immediate enqueue, and cron recovery.
+- Knowledge research automation is active; automated research creates candidates, while user-wide Knowledge notifications occur only after reviewed/published refresh completion.
+- Supabase/GitHub infrastructure usage remains admin-only and does not embed privileged GitHub or Supabase secrets in the browser.
+
+## Supabase live checks
+
+- Feature registry: 52 entries.
+- Active release tester exists.
+- PWA candidate is currently at tester stage.
+- Push delivery queue has no pending/processing failures at validation time.
+- Knowledge automation most recently completed successfully with no recorded error.
+- Notification, Knowledge research, and refresh queue cron jobs are active.
+
+## Security advisor disposition
+
+- RLS-without-policy INFO findings for the inspected control/notification/release/Knowledge tables are intentional: direct anon/authenticated table privileges are revoked and access is RPC-only.
+- SECURITY DEFINER RPC warnings are not being mass-converted; sensitive RPCs inspected use explicit authorization checks and empty search_path, while worker-only RPCs are service-role-only.
+- pg_net extension warning remains an operational item. The deployed pg_net 0.20.4 is non-relocatable and its objects live in the net schema; changing it in production without a planned dependency-safe migration could break cron HTTP invocation.
+- Leaked-password protection is not available on the current Supabase Free organization plan; enabling it requires a supported paid plan.
+
+This document records validation results only and does not change runtime behavior.
