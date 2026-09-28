@@ -317,3 +317,50 @@ test("combination knowledge adds 5 high-value patterns per side-hustle without c
   assert.match(autoUpdate, /網羅的な直積を作らず/);
   assert.match(autoUpdate, /note × 完全初心者 × 有料記事/);
 });
+
+
+test("side-hustle scenario and combination knowledge only reference live definition fields", async () => {
+  const definitions = (
+    await Promise.all([
+      read("features/side-hustles/definitions-content-media.ts"),
+      read("features/side-hustles/definitions-sales.ts"),
+      read("features/side-hustles/definitions-client-work.ts"),
+      read("features/side-hustles/definitions-productivity.ts"),
+    ])
+  ).join("\n");
+  const scenario = await read("features/side-hustles/scenario-knowledge.ts");
+  const combination = await read("features/side-hustles/combination-knowledge.ts");
+  const slugs = [
+    "content-sales", "sns-management", "youtube-video", "affiliate", "resale", "crowdsourcing",
+    "skill-sales", "digital-product", "outreach", "research", "workflow-efficiency", "sidejob-planner",
+  ];
+
+  const blockFor = (source, marker, slug) => {
+    const start = source.indexOf(marker(slug));
+    assert.notEqual(start, -1, "missing block for " + slug);
+    const later = slugs
+      .map((candidate) => source.indexOf(marker(candidate), start + 1))
+      .filter((index) => index > start);
+    const end = later.length ? Math.min(...later) : source.length;
+    return source.slice(start, end);
+  };
+
+  for (const slug of slugs) {
+    const definitionBlock = blockFor(definitions, (value) => `slug: "${value}"`, slug);
+    const fields = [...definitionBlock.matchAll(/sideField\("([^"]+)"/g)].map((match) => match[1]);
+    assert.equal(fields.length, 6, slug + " should keep six guided fields");
+
+    const scenarioBlock = blockFor(scenario, (value) => `"${value}": [`, slug);
+    const scenarioFields = [...scenarioBlock.matchAll(/\bR\("([^"]+)"/g)].map((match) => match[1]);
+    assert.deepEqual([...scenarioFields].sort(), [...fields].sort(), slug + " scenario knowledge must map one-to-one to live fields");
+
+    const combinationBlock = blockFor(combination, (value) => `"${value}": [`, slug);
+    const conditionKeys = new Set(
+      [...combinationBlock.matchAll(/\bC\("[^"]+",\s*\{([^}]*)\}/g)]
+        .flatMap((match) => [...match[1].matchAll(/([A-Za-z0-9_]+)\s*:/g)].map((keyMatch) => keyMatch[1])),
+    );
+    for (const key of conditionKeys) {
+      assert.ok(fields.includes(key), slug + " combination knowledge references unknown field " + key);
+    }
+  }
+});
