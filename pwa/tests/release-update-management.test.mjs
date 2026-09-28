@@ -355,3 +355,37 @@ test("admin public deployment pipeline keeps Preview and public release coupled 
   assert.match(workflow, /Deploy general-public PWA Worker/);
   assert.match(previewWorkflow, /- preview\/current/);
 });
+
+
+test("admin release management records update and fix details separately", async () => {
+  const [migration, client, page, css] = await Promise.all([
+    readRepo("supabase/migrations/20260929081500_release_change_details_v1.sql"),
+    read("lib/app-release.ts"),
+    read("components/admin-release-page.tsx"),
+    read("app/phase37-release-management.css"),
+  ]);
+
+  assert.match(migration, /add column if not exists update_notes text/);
+  assert.match(migration, /add column if not exists fix_notes text/);
+  assert.match(migration, /function public\.admin_create_app_release_v2/);
+  assert.match(migration, /'update_notes', r\.update_notes/);
+  assert.match(migration, /'fix_notes', r\.fix_notes/);
+
+  assert.match(client, /update_notes: string/);
+  assert.match(client, /fix_notes: string/);
+  assert.match(client, /admin_create_app_release_v2/);
+  assert.match(client, /p_update_notes: input\.updateNotes/);
+  assert.match(client, /p_fix_notes: input\.fixNotes/);
+
+  assert.match(page, /アップデート・追加内容/);
+  assert.match(page, /修正内容/);
+  assert.match(page, /ユーザー向け案内/);
+  assert.match(page, /candidate\.update_notes/);
+  assert.match(page, /candidate\.fix_notes/);
+  assert.match(page, /release\.update_notes/);
+  assert.match(page, /release\.fix_notes/);
+
+  assert.match(css, /\.release-change-details/);
+  assert.match(css, /\.release-change-block\.update/);
+  assert.match(css, /\.release-change-block\.fix/);
+});
