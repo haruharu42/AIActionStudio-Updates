@@ -86,27 +86,37 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
       | { kind: "title"; id: string; label: string }
       | { kind: "cover"; id: string; label: string; record: LocalArticleImageRecord }
       | { kind: "body"; id: string; label: string; item: Extract<NotePostSequenceItem, { kind: "body" }> }
+      | { kind: "paid-boundary"; id: string; label: string }
       | { kind: "inline"; id: string; label: string; item: Extract<NotePostSequenceItem, { kind: "inline-image" }>; record?: LocalArticleImageRecord }
     > = [{ kind: "title", id: "title", label: "タイトル" }];
 
     if (cover) steps.push({ kind: "cover", id: "cover", label: "アイキャッチ", record: cover });
+
     let bodyNumber = 1;
+    let freeBodyNumber = 1;
+    let paidBodyNumber = 1;
     for (const item of sequence) {
       if (item.kind === "body") {
-        steps.push({ kind: "body", id: item.id, label: `本文 ${bodyNumber}`, item });
-        bodyNumber += 1;
+        const label = detail.articleType === "paid"
+          ? item.paid
+            ? `有料本文 ${paidBodyNumber++}`
+            : `無料本文 ${freeBodyNumber++}`
+          : `本文 ${bodyNumber++}`;
+        steps.push({ kind: "body", id: item.id, label, item });
+      } else if (item.kind === "paid-boundary") {
+        steps.push({ kind: "paid-boundary", id: item.id, label: "有料エリア" });
       } else {
         steps.push({
           kind: "inline",
           id: item.id,
-          label: `挿絵 ${item.order}`,
+          label: detail.articleType === "paid" && item.paid ? `有料挿絵 ${item.order}` : `挿絵 ${item.order}`,
           item,
           record: imageMap.get(recordKey("inline", item.order)),
         });
       }
     }
     return steps;
-  }, [cover, imageMap, sequence]);
+  }, [cover, detail.articleType, imageMap, sequence]);
 
   const saveImage = async (kind: LocalArticleImageKind, order: number, file?: File) => {
     if (!file) return;
@@ -155,6 +165,8 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
         await navigator.clipboard.writeText(detail.title);
       } else if (step.kind === "body") {
         await copyNoteRichText(step.item.markdown);
+      } else if (step.kind === "paid-boundary") {
+        await navigator.clipboard.writeText("【ここから有料エリア】");
       } else if (step.kind === "cover") {
         await copyImageBlobToClipboard(step.record.blob);
       } else {
@@ -162,7 +174,11 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
         await copyImageBlobToClipboard(step.record.blob);
       }
       setNextStep(Math.min(postingSteps.length, index + 1));
-      setMessage(`${step.label}をコピーしました。noteへ貼り付けたら次の項目へ進んでください。`);
+      setMessage(
+        step.kind === "paid-boundary"
+          ? "有料エリアの目印をコピーしました。noteへ貼り付け、この位置でnoteの有料ラインを設定したら目印を削除してください。"
+          : `${step.label}をコピーしました。noteへ貼り付けたら次の項目へ進んでください。`,
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "コピーできませんでした。");
     } finally {
@@ -184,8 +200,14 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
       </div>
 
       <div className="route-notice" role="note">
-        AASが本文中の挿絵位置を読み取り、投稿順を自動で並べます。noteでは「コピー → 貼り付け」を上から順に進めてください。
+        AASが本文中の挿絵位置{detail.articleType === "paid" ? "と有料エリア" : ""}を読み取り、投稿順を自動で並べます。noteでは「コピー → 貼り付け」を上から順に進めてください。
       </div>
+
+      {detail.articleType === "paid" && !sequence.some((item) => item.kind === "paid-boundary") && (
+        <div className="route-notice" role="alert">
+          有料記事ですが有料エリアの位置が見つかりません。記事本文に有料エリアを設定してから投稿アシストを利用してください。
+        </div>
+      )}
 
       <div className="note-post-image-slots">
         <ImageSlot
@@ -225,20 +247,28 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
         )}
         <div className="note-post-preview-title">{detail.title}</div>
         <div className="note-post-preview-body">
-          {sequence.map((item) => item.kind === "body" ? (
-            <div
-              key={item.id}
-              className="note-post-preview-text"
-              dangerouslySetInnerHTML={{ __html: markdownToNoteHtml(item.markdown) }}
-            />
-          ) : (
-            <InlinePreview
-              key={item.id}
-              order={item.order}
-              record={imageMap.get(recordKey("inline", item.order))}
-              previewUrl={previewUrls[recordKey("inline", item.order)]}
-            />
-          ))}
+          {sequence.map((item) => {
+            if (item.kind === "body") {
+              return (
+                <div
+                  key={item.id}
+                  className="note-post-preview-text"
+                  dangerouslySetInnerHTML={{ __html: markdownToNoteHtml(item.markdown) }}
+                />
+              );
+            }
+            if (item.kind === "paid-boundary") {
+              return <div key={item.id} className="route-notice">ここから有料エリア</div>;
+            }
+            return (
+              <InlinePreview
+                key={item.id}
+                order={item.order}
+                record={imageMap.get(recordKey("inline", item.order))}
+                previewUrl={previewUrls[recordKey("inline", item.order)]}
+              />
+            );
+          })}
         </div>
       </section>
 
@@ -258,6 +288,7 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
                     {step.kind === "title" && "noteのタイトル欄へ貼り付け"}
                     {step.kind === "cover" && "noteの見出し画像欄へ貼り付け"}
                     {step.kind === "body" && "note本文の現在位置へ装飾付きで貼り付け"}
+                    {step.kind === "paid-boundary" && "この目印を貼り付けた位置でnoteの有料ラインを設定し、公開前に目印を削除"}
                     {step.kind === "inline" && (missingImage ? "画像未設定" : "note本文の現在位置へ画像を貼り付け")}
                   </small>
                 </div>
@@ -267,7 +298,7 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
                   disabled={busyKey === step.id || missingImage}
                   onClick={() => void copyPostingStep(index)}
                 >
-                  {busyKey === step.id ? "コピー中…" : "コピー"}
+                  {busyKey === step.id ? "コピー中…" : step.kind === "paid-boundary" ? "位置をコピー" : "コピー"}
                 </button>
               </li>
             );
