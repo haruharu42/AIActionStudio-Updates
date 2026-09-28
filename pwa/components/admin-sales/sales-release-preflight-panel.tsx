@@ -79,7 +79,14 @@ export function SalesReleasePreflightPanel({
             const maxUses = typeof invite.max_uses === "number" ? invite.max_uses : null;
             const useCount = typeof invite.use_count === "number" ? invite.use_count : 0;
             const expiresAt = typeof invite.expires_at === "string" ? Date.parse(invite.expires_at) : Number.NaN;
-            return (maxUses === null || useCount < maxUses) && (!Number.isFinite(expiresAt) || expiresAt > now);
+            const entitlementExpiresAt = typeof invite.entitlement_expires_at === "string"
+              ? Date.parse(invite.entitlement_expires_at)
+              : Number.NaN;
+            return (
+              (maxUses === null || useCount < maxUses) &&
+              (!Number.isFinite(expiresAt) || expiresAt > now) &&
+              (!Number.isFinite(entitlementExpiresAt) || entitlementExpiresAt > now)
+            );
           }).length;
           setInviteCheckFailed(false);
           setUsableInviteCount(usable);
