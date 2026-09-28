@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { CommercePlanCode } from "@/lib/commerce";
+import { notifySalesLaunchStateChanged } from "@/lib/sales-launch-readiness";
 
 export type SalesSettings = {
   externalSalesEnabled: boolean;
@@ -83,6 +84,7 @@ export async function updateAdminSalesSettings(client: SupabaseClient, settings:
     p_bundle_monthly_enabled: false,
   });
   if (error) throw new Error("販売・決済設定を保存できませんでした。");
+  notifySalesLaunchStateChanged();
 }
 
 export function planSalesEnabled(settings: SalesSettings | null, planCode: CommercePlanCode): boolean {
