@@ -16,13 +16,14 @@ function pngSize(buffer) {
 }
 
 test("AAS generates high-resolution Axia icons for desktop, PWA, iPhone, and notifications", async () => {
-  const [icon180, icon192, icon512, manifestRaw, layout, generator] = await Promise.all([
+  const [icon180, icon192, icon512, manifestRaw, layout, generator, sourceSvg] = await Promise.all([
     readFile(path.join(pwaRoot, "public/aas-axia-icon-180.png")),
     readFile(path.join(pwaRoot, "public/aas-axia-icon-192.png")),
     readFile(path.join(pwaRoot, "public/aas-axia-icon-512.png")),
     readFile(path.join(pwaRoot, "public/manifest.webmanifest"), "utf8"),
     readFile(path.join(pwaRoot, "app/layout.tsx"), "utf8"),
     readFile(path.join(pwaRoot, "scripts/generate-app-icons.mjs"), "utf8"),
+    readFile(path.join(pwaRoot, "public/aas-axia-app-icon-v1.svg"), "utf8"),
   ]);
 
   assert.deepEqual(pngSize(icon180), { width: 180, height: 180 });
@@ -35,6 +36,8 @@ test("AAS generates high-resolution Axia icons for desktop, PWA, iPhone, and not
   assert.match(generator, /aas-axia-app-icon-v1\.svg/);
   assert.match(generator, /sharp\(source, \{ density: 384 \}\)/);
   assert.match(generator, /stats\.entropy < 3/);
+  assert.match(sourceSvg, /xmlns:xlink="http:\/\/www\.w3\.org\/1999\/xlink"/);
+  assert.match(sourceSvg, /<image xlink:href="data:image\/jpeg;base64,/);
 
   const manifest = JSON.parse(manifestRaw);
   assert.equal(manifest.name, "AI Action Studio");
