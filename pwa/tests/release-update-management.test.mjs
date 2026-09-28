@@ -303,6 +303,13 @@ test("public release publish requires current admin AAL2 while rollback remains 
 });
 
 
+test("interactive admins cannot bypass the guarded public deployment pipeline", async () => {
+  const migration = await readRepo("supabase/migrations/20260928143200_disable_direct_public_release_publish.sql");
+  assert.match(migration, /revoke execute on function public\.admin_publish_app_release\(uuid\) from authenticated/);
+  assert.match(migration, /grant execute on function public\.admin_publish_app_release\(uuid\) to service_role/);
+  assert.match(migration, /Interactive admin clients must use the Preview-to-public deployment pipeline/);
+});
+
 test("admin public deployment pipeline keeps Preview and public release coupled to the exact approved SHA", async () => {
   const [migration, buildGuardMigration, edgeFunction, client, page, workflow, previewWorkflow] = await Promise.all([
     readRepo("supabase/migrations/20260928133500_admin_pwa_public_deploy_pipeline.sql"),
