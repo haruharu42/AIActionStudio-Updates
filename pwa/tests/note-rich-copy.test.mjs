@@ -117,3 +117,24 @@ test('html export renders structured article html and txt export is plain', () =
   assert.doesNotMatch(html, /<pre style="white-space:pre-wrap;font:inherit">/);
   assert.doesNotMatch(text, /\*\*重要\*\*/);
 });
+
+
+test('rich copy creates visible working space around image and paid-area markers', () => {
+  const html = rich.markdownToNoteHtml(`本文A
+
+**【挿絵1をここに挿入】**
+
+本文B
+
+---
+
+**【ここから有料エリア】**
+
+---
+
+本文C`);
+
+  assert.match(html, /<p><br><\/p><p><strong>【挿絵1をここに挿入】<\/strong><\/p><p><br><\/p>/);
+  assert.match(html, /<p><br><\/p><p><strong>【ここから有料エリア】<\/strong><\/p><p><br><\/p>/);
+  assert.match(html, /<hr>/);
+});
