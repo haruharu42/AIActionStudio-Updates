@@ -212,6 +212,11 @@ test("official-source automation detects changes but never auto-publishes Knowle
   assert.match(worker, /last_content_hash/);
   assert.match(worker, /official_changelog/);
   assert.match(worker, /candidate\(runId,source,action/);
+  assert.match(worker, /knowledge_automation_candidates"\)\.upsert/);
+  assert.match(worker, /onConflict:\s*"fingerprint"/);
+  assert.match(worker, /ignoreDuplicates:\s*true/);
+  assert.match(worker, /\.select\("id"\)/);
+  assert.doesNotMatch(worker, /knowledge_automation_candidates"\)\.insert/);
   assert.match(worker, /404 \|\| res\.status === 410/);
   assert.doesNotMatch(worker, /admin_publish_knowledge_refresh_bundle/);
   assert.doesNotMatch(worker, /knowledge_catalog"\)\.insert|knowledge_catalog"\)\.update/);
