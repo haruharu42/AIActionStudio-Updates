@@ -80,6 +80,40 @@ function parseDeployment(value: unknown): PublicDeployment | null {
   };
 }
 
+async function accessToken(client: SupabaseClient): Promise<string> {
+  const { data, error } = await client.auth.getSession();
+  if (error || !data.session?.access_token) {
+    throw new Error("管理者ログインを確認できません。");
+  }
+  return data.session.access_token;
+}
+
+async function parseResponse(response: Response): Promise<Row> {
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+  const row = payload && typeof payload === "object" && !Array.isArray(payload)
+    ? payload as Row
+    : {};
+  if (!response.ok) {
+    const message = text(row.message);
+    if (message.includes("AAS_GITHUB_RELEASE_TOKEN") || text(row.error) === "github_release_token_missing") {
+      throw new Error("GitHub公開連携が未設定です。初回セットアップでAAS_GITHUB_RELEASE_TOKENを設定してください。");
+    }
+    if (message.includes("aal2 required")) {
+      throw new Error("一般公開PWAへの反映には管理者MFA（AAL2）での再認証が必要です。");
+    }
+    if (message.includes("already in progress")) {
+      throw new Error("この候補版はすでに一般公開処理中です。進捗を更新してください。");
+    }
+    throw new Error(message || "一般公開PWAのデプロイ処理に失敗しました。");
+  }
+  return row;
+}
+
 async function invokeReleaseDeploy(
   client: SupabaseClient,
   body: Record<string, unknown>,
