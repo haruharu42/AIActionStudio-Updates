@@ -103,7 +103,9 @@ export function NoteMembershipAdvisor({
   };
 
   const copyAndOpenAi = async () => {
-    if (await copyPrompt()) launchAiApp(selectedAi);
+    const copyTask = copyPrompt();
+    launchAiApp(selectedAi);
+    await copyTask;
   };
 
   return (
