@@ -742,7 +742,11 @@ export function SaveStep({
   setMessage: MessageSetter;
 }) {
   const [publicationCopied, setPublicationCopied] = useState(false);
-  const publicationBody = publicationBodyForCopy(draft.body, draft.title);
+  const publicationBody = publicationBodyForCopy(draft.body, draft.title, {
+    articleType: draft.articleType,
+    inlineEnabled: draft.inlineEnabled,
+    inlineCount: draft.inlineCount,
+  });
   const editorLink = publicationEditorLink(draft.publicationTarget);
   const publicationLabel = draft.publicationTarget === "note"
     ? "note"
