@@ -754,6 +754,7 @@ export function NoteOperationsPage() {
 
         {tab === "calendar" && (
           <NoteCalendarTab
+            profile={profile}
             calendarMonth={calendarMonth}
             groupedByDate={groupedByDate}
             articleSchedule={articleSchedule}
