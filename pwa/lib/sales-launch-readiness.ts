@@ -1,5 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export const SALES_LAUNCH_STATE_EVENT = "aas:sales-launch-state-changed";
+
+export function notifySalesLaunchStateChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(SALES_LAUNCH_STATE_EVENT));
+}
+
 export type SalesLaunchReadinessSnapshot = {
   persistedExternalSalesEnabled: boolean;
   persistedAccessCodeEnabled: boolean;
@@ -66,7 +73,9 @@ export async function loadPublicSalesApproval(
 ): Promise<PublicSalesApproval> {
   const { data, error } = await client.rpc("admin_get_public_sales_approval");
   if (error) throw new Error("公開販売承認の状態を取得できませんでした。");
-  return parseApproval(data);
+  const result = parseApproval(data);
+  notifySalesLaunchStateChanged();
+  return result;
 }
 
 export async function setPublicSalesApproval(
