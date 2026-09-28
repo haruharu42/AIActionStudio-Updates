@@ -92,6 +92,7 @@ test("admin UI exposes sales controls while PWA runtime omits legacy plan switch
   assert.match(sellerPanel, /販売者情報を保存/);
   assert.match(sellerLib, /admin_get_commerce_seller_settings/);
   assert.match(sellerLib, /admin_update_commerce_seller_settings/);
+  assert.match(sellerLib, /notifySalesLaunchStateChanged/);
   assert.match(sellerLib, /認証情報を含まないHTTPS URL/);
   assert.match(presets, /外部販売中心（推奨）/);
   assert.match(presets, /applySalesPresetToSettings/);
@@ -104,6 +105,7 @@ test("admin UI exposes sales controls while PWA runtime omits legacy plan switch
   assert.doesNotMatch(settingsPage, /title="PWA \+ Windows 月額"/);
   assert.match(settingsLib, /admin_get_commerce_sales_settings/);
   assert.match(settingsLib, /admin_update_commerce_sales_settings/);
+  assert.match(settingsLib, /notifySalesLaunchStateChanged/);
   assert.doesNotMatch(settingsLib, /windowsMonthlyEnabled/);
   assert.doesNotMatch(settingsLib, /bundleMonthlyEnabled/);
   assert.match(settingsLib, /p_windows_monthly_enabled: false/);
@@ -235,6 +237,8 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(preflight, /loadSalesLaunchReadiness/);
   assert.match(preflight, /loadPublicSalesApproval/);
   assert.match(preflight, /setPublicSalesApproval/);
+  assert.match(preflight, /addEventListener\(SALES_LAUNCH_STATE_EVENT, refresh\)/);
+  assert.match(preflight, /removeEventListener\(SALES_LAUNCH_STATE_EVENT, refresh\)/);
   assert.match(preflight, /販売開始保留/);
   assert.match(preflight, /自動確認は通過/);
   assert.match(preflight, /販売用の利用コード/);
@@ -256,6 +260,8 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   }
 
   assert.match(readinessClient, /admin_get_sales_launch_readiness/);
+  assert.match(readinessClient, /SALES_LAUNCH_STATE_EVENT/);
+  assert.match(readinessClient, /notifySalesLaunchStateChanged/);
   assert.match(readinessClient, /admin_get_public_sales_approval/);
   assert.match(readinessClient, /admin_set_public_sales_approval/);
   assert.match(readinessClient, /sales launch readiness requirements not met/);
