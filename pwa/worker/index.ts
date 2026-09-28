@@ -3,7 +3,11 @@ import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } fr
 import handler from "vinext/server/app-router-entry";
 import { handleBillingRequest, type BillingEnv } from "./billing";
 import { recordSystemEvent, safeOpsHealthResponse } from "./ops";
-import { handleSalesControlRequest } from "./sales-controls";
+import {
+  handleSalesControlRequest,
+  loadEffectiveSalesSettings,
+  type EffectiveSalesSettings,
+} from "./sales-controls";
 
 interface Env extends BillingEnv {
   ASSETS: {
@@ -69,7 +73,19 @@ async function rejectLegacyCheckout(request: Request, url: URL): Promise<Respons
   return jsonError("このプランは新規受付を終了しました。現在はPWAプランのみ購入できます。", 400);
 }
 
-async function filterPublicBillingConfig(request: Request, url: URL, response: Response): Promise<Response> {
+function effectivePlanEnabled(settings: EffectiveSalesSettings | null, planCode: unknown): boolean {
+  if (!settings?.stripeCheckoutEnabled || typeof planCode !== "string") return false;
+  if (planCode === "AAS-PWA-7DAY") return settings.pwa7DayEnabled;
+  if (planCode === "AAS-PWA-MONTHLY") return settings.pwaMonthlyEnabled;
+  return false;
+}
+
+async function filterPublicBillingConfig(
+  request: Request,
+  url: URL,
+  response: Response,
+  env: Env,
+): Promise<Response> {
   if (url.pathname !== "/api/billing/config" || request.method !== "GET" || !response.ok) return response;
 
   let payload: unknown;
@@ -83,14 +99,18 @@ async function filterPublicBillingConfig(request: Request, url: URL, response: R
   const config = payload as Record<string, unknown>;
   if (!Array.isArray(config.plans)) return response;
 
-  const plans = config.plans.filter((item) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
-    const planCode = (item as Record<string, unknown>).planCode;
-    return typeof planCode === "string" && PWA_NEW_SALE_PLAN_CODES.has(planCode);
+  const salesSettings = await loadEffectiveSalesSettings(env);
+  const plans = config.plans.flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const plan = item as Record<string, unknown>;
+    const planCode = plan.planCode;
+    if (typeof planCode !== "string" || !PWA_NEW_SALE_PLAN_CODES.has(planCode)) return [];
+    return [{
+      ...plan,
+      available: plan.available === true && effectivePlanEnabled(salesSettings, planCode),
+    }];
   });
-  const commerceReady = plans.some((item) => (
-    item && typeof item === "object" && !Array.isArray(item) && (item as Record<string, unknown>).available === true
-  ));
+  const commerceReady = plans.some((item) => item.available === true);
   const headers = new Headers(response.headers);
   headers.set("content-type", "application/json; charset=utf-8");
   headers.set("cache-control", "no-store");
@@ -142,7 +162,7 @@ const worker = {
             requestId,
           }));
         }
-        return withSecurityHeaders(await filterPublicBillingConfig(request, url, billingResponse));
+        return withSecurityHeaders(await filterPublicBillingConfig(request, url, billingResponse, env));
       }
 
       if (url.pathname === "/_vinext/image") {
