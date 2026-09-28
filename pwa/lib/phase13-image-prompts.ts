@@ -66,6 +66,32 @@ function articleBodyContext(body: string | undefined): string {
   ].filter(Boolean).join("\n");
 }
 
+function contextParagraphs(value: string): string[] {
+  const paragraphs = value
+    .split(/\n\s*\n+/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+  if (paragraphs.length > 1) return paragraphs;
+
+  return value
+    .split(/(?=^#{1,6}\s+)/m)
+    .map((section) => section.trim())
+    .filter(Boolean);
+}
+
+function joinContextParagraphs(paragraphs: string[], maxLength = 1400): string {
+  const selected: string[] = [];
+  let length = 0;
+  for (const paragraph of paragraphs) {
+    const extra = paragraph.length + (selected.length ? 2 : 0);
+    if (selected.length && length + extra > maxLength) break;
+    selected.push(paragraph);
+    length += extra;
+    if (length >= maxLength) break;
+  }
+  return selected.join("\n\n").trim();
+}
+
 function inlineBodyContext(body: string | undefined, order: number): string {
   const normalized = (body ?? "").replace(/\r\n?/g, "\n").trim();
   if (!normalized) return "";
@@ -73,15 +99,22 @@ function inlineBodyContext(body: string | undefined, order: number): string {
   const marker = `<!-- IMAGE:${number} -->`;
   const index = normalized.indexOf(marker);
   if (index >= 0) {
-    const start = Math.max(0, index - 500);
-    const end = Math.min(normalized.length, index + marker.length + 500);
-    return normalized.slice(start, end).replace(marker, "").trim();
+    const before = contextParagraphs(normalized.slice(0, index));
+    const after = contextParagraphs(normalized.slice(index + marker.length));
+    const surrounding = [
+      ...before.slice(-3),
+      ...after.slice(0, 3),
+    ];
+    const context = joinContextParagraphs(surrounding);
+    if (context) return context;
   }
   const sections = normalized
     .split(/(?=^#{1,6}\s+)/m)
     .map((section) => section.trim())
     .filter(Boolean);
-  return (sections[Math.min(Math.max(0, order - 1), Math.max(0, sections.length - 1))] ?? normalized).slice(0, 900);
+  return joinContextParagraphs([
+    sections[Math.min(Math.max(0, order - 1), Math.max(0, sections.length - 1))] ?? normalized,
+  ], 1400);
 }
 
 function common(input: ImagePromptPlanInput): string {
