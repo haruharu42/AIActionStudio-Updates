@@ -224,6 +224,14 @@ test("sales center groups legal support and access-code review without auto-appr
   assert.match(preflight, /「販売可能」の自動判定にはしません/);
   assert.match(preflight, /価格・返金条件・販売者情報・サポート方針・公開段階は自動確定しません/);
   assert.match(preflight, /未保存の販売設定/);
+  assert.match(preflight, /販売開始保留/);
+  assert.match(preflight, /自動確認は通過/);
+  assert.match(preflight, /automatedBlockers/);
+  assert.match(preflight, /active管理者に確認済みMFAがありません/);
+  assert.match(preflight, /解消するまで販売開始扱いにしないでください/);
+  assert.match(css, /\.sales-release-gate/);
+  assert.match(css, /\.sales-release-gate\.blocked/);
+  assert.match(css, /\.sales-release-gate\.review/);
   assert.match(css, /\.sales-release-preflight-grid/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.sales-release-preflight-grid/);
 });
