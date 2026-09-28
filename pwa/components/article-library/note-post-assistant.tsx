@@ -15,6 +15,7 @@ import {
   buildNotePostSequence,
   copyImageBlobToClipboard,
   inlineImageOrders,
+  readNotePostImagePlanMetadata,
   type NotePostSequenceItem,
 } from "@/lib/note-post-assistant";
 import { copyNoteRichText, markdownToNoteHtml } from "@/lib/note-rich-text";
@@ -25,7 +26,18 @@ function recordKey(kind: LocalArticleImageKind, order: number): string {
 }
 
 export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; body: string }) {
-  const sequence = useMemo(() => buildNotePostSequence(body, detail.title), [body, detail.title]);
+  const imagePlanMetadata = useMemo(
+    () => readNotePostImagePlanMetadata(detail.workspace.imagePlanJson),
+    [detail.workspace.imagePlanJson],
+  );
+  const sequence = useMemo(
+    () => buildNotePostSequence(body, detail.title, {
+      articleType: detail.articleType,
+      inlineEnabled: imagePlanMetadata.inlineEnabled,
+      inlineCount: imagePlanMetadata.inlineCount,
+    }),
+    [body, detail.articleType, detail.title, imagePlanMetadata.inlineCount, imagePlanMetadata.inlineEnabled],
+  );
   const inlineOrders = useMemo(() => inlineImageOrders(sequence), [sequence]);
   const [images, setImages] = useState<LocalArticleImageRecord[]>([]);
   const [message, setMessage] = useState("");
@@ -181,6 +193,7 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
           record={cover}
           previewUrl={previewUrls[recordKey("cover", 0)]}
           busy={busyKey === recordKey("cover", 0)}
+          suggestedFilename={imagePlanMetadata.suggestedFilenames[recordKey("cover", 0)]}
           onSelect={(file) => void saveImage("cover", 0, file)}
           onRemove={() => void removeImage("cover", 0)}
         />
@@ -191,6 +204,7 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
             record={imageMap.get(recordKey("inline", order))}
             previewUrl={previewUrls[recordKey("inline", order)]}
             busy={busyKey === recordKey("inline", order)}
+            suggestedFilename={imagePlanMetadata.suggestedFilenames[recordKey("inline", order)]}
             onSelect={(file) => void saveImage("inline", order, file)}
             onRemove={() => void removeImage("inline", order)}
           />
@@ -274,6 +288,7 @@ function ImageSlot({
   record,
   previewUrl,
   busy,
+  suggestedFilename,
   onSelect,
   onRemove,
 }: {
@@ -281,6 +296,7 @@ function ImageSlot({
   record?: LocalArticleImageRecord;
   previewUrl?: string;
   busy: boolean;
+  suggestedFilename?: string;
   onSelect: (file?: File) => void;
   onRemove: () => void;
 }) {
@@ -292,6 +308,10 @@ function ImageSlot({
       <div className="note-post-image-slot-info">
         <strong>{label}</strong>
         <small>{record?.filename ?? "PNG・JPEG・WebPなどを選択"}</small>
+        {suggestedFilename && !record && <small>推奨保存名: {suggestedFilename}</small>}
+        {suggestedFilename && record && record.filename !== suggestedFilename && (
+          <small>推奨保存名: {suggestedFilename}（選択済み画像は {record.filename}）</small>
+        )}
         <label className="secondary-action note-post-file-action">
           {record ? "画像を変更" : "画像を選択"}
           <input
