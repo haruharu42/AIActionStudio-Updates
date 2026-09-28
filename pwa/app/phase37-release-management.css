@@ -531,3 +531,68 @@
     text-align: left;
   }
 }
+
+
+.release-change-details,
+.release-history-change-details {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.release-change-block,
+.release-history-change-details > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid rgb(203 213 225 / 78%);
+  border-radius: 12px;
+  background: rgb(248 250 252 / 76%);
+}
+
+.release-change-block > strong,
+.release-history-change-details b {
+  font-size: 11px;
+  color: #334155;
+}
+
+.release-change-block.update {
+  border-color: rgb(59 130 246 / 24%);
+  background: rgb(239 246 255 / 62%);
+}
+
+.release-change-block.fix {
+  border-color: rgb(245 158 11 / 28%);
+  background: rgb(255 251 235 / 68%);
+}
+
+.release-change-block.user {
+  border-color: rgb(148 163 184 / 34%);
+}
+
+.release-change-block pre,
+.release-history-change-details pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #475569;
+}
+
+.release-history-change-details {
+  margin-top: 9px;
+}
+
+.release-history-change-details > div {
+  padding: 9px 10px;
+}
+
+@media (max-width: 760px) {
+  .release-change-block,
+  .release-history-change-details > div {
+    padding: 10px;
+  }
+}
