@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { fetchCommerceConfig } from "@/lib/commerce";
 import type { SalesSettings } from "@/lib/sales-settings";
 import { getSupabaseClient } from "@/lib/supabase";
 
@@ -35,6 +36,27 @@ export function SalesReleasePreflightPanel({
   const purchaseUrl = externalPurchaseUrl(settings.externalSalesUrl);
   const [verifiedMfaCount, setVerifiedMfaCount] = useState<number | null>(null);
   const [mfaCheckFailed, setMfaCheckFailed] = useState(false);
+  const [legalReady, setLegalReady] = useState<boolean | null>(null);
+  const [legalCheckFailed, setLegalCheckFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void fetchCommerceConfig().then(
+      (config) => {
+        if (!active) return;
+        setLegalReady(config.legalReady);
+        setLegalCheckFailed(false);
+      },
+      () => {
+        if (!active) return;
+        setLegalReady(null);
+        setLegalCheckFailed(true);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -89,6 +111,13 @@ export function SalesReleasePreflightPanel({
         : !mfaReady
           ? "active管理者に確認済みMFAがありません。"
           : "",
+    legalCheckFailed
+      ? "販売者情報の設定状態を確認できません。"
+      : legalReady === null
+        ? "販売者情報の設定状態を確認中です。"
+        : !legalReady
+          ? "販売者情報（氏名・所在地・電話・メール・サポートURL）が未完了です。"
+          : "",
   ].filter(Boolean);
   const automatedReady = automatedBlockers.length === 0;
 
@@ -138,6 +167,16 @@ export function SalesReleasePreflightPanel({
           <div><strong>購入ページ</strong><span className={purchaseUrl ? "ready" : "action"}>{purchaseUrl ? "設定あり" : "未設定"}</span></div>
           <small>実際に公開する外部購入ページのURLを確認します。</small>
           {purchaseUrl && <a href={purchaseUrl} target="_blank" rel="noopener noreferrer">購入ページを開く ↗</a>}
+        </article>
+        <article>
+          <div>
+            <strong>販売者情報</strong>
+            <span className={legalReady ? "ready" : legalCheckFailed ? "review" : "action"}>
+              {legalCheckFailed ? "確認失敗" : legalReady === null ? "確認中" : legalReady ? "設定済み" : "未完了"}
+            </span>
+          </div>
+          <small>特商法・開示請求に必要な販売者情報をWorker側の非公開設定で保持し、公開方式に応じて表示します。</small>
+          <Link href="/commercial-transactions">特商法表示を確認 →</Link>
         </article>
         <article>
           <div>
