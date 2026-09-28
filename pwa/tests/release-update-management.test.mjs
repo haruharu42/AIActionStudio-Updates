@@ -85,7 +85,7 @@ test("admin release control provides candidate publish and rollback flows", asyn
 
   for (const label of [
     "管理者テスト版として登録",
-    "アップデートを公開",
+    "一般公開PWAへ反映",
     "この版へ戻す",
     "任意アップデート",
     "必須アップデート",
@@ -94,7 +94,7 @@ test("admin release control provides candidate publish and rollback flows", asyn
   }
 
   assert.match(page, /adminCreateAppRelease/);
-  assert.match(page, /adminPublishAppRelease/);
+  assert.match(page, /requestPublicPwaDeployment/);
   assert.match(page, /adminRollbackAppRelease/);
   assert.match(sections, /id: "releases"/);
   assert.match(sections, /href: "\/admin\/releases"/);
@@ -189,7 +189,7 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.doesNotMatch(css, /\.release-admin-preview\s*\{/);
   assert.doesNotMatch(css, /\.release-preview-home-status\s*\{[^}]*position:\s*fixed/);
   assert.match(page, /第2段階：指定テスターへ反映/);
-  assert.match(page, /第3段階：全一般ユーザーへ公開承認/);
+  assert.match(page, /第3段階：一般公開PWAへ反映/);
   assert.match(page, /AAS-000002/);
   assert.match(page, /PUBLISH_VERIFICATION_ITEMS/);
   assert.match(page, /全体公開前チェック/);
@@ -201,7 +201,9 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(page, /getAuthenticatorAssuranceLevel/);
   assert.match(page, /currentSessionAal/);
   assert.match(page, /currentSessionAal !== "aal2"/);
-  assert.match(page, /disabled=\{busy \|\| !publishVerificationReady \|\| currentSessionAal !== "aal2"\}/);
+  assert.match(page, /deploymentInProgress/);
+  assert.match(page, /!IS_PREVIEW_DEPLOYMENT/);
+  assert.match(page, /requestPublicPwaDeployment/);
   assert.match(page, /管理者MFAで再認証/);
   assert.match(page, /href="\/admin\/security"/);
   assert.match(page, /publishVerificationStorageKey/);
@@ -298,4 +300,46 @@ test("public release publish requires current admin AAL2 while rollback remains 
   assert.match(page, /currentSessionAal !== "aal2"/);
   assert.match(page, /管理者MFAで再認証/);
   assert.match(page, /adminRollbackAppRelease/);
+});
+
+
+test("admin public deployment pipeline keeps Preview and public release coupled to the exact approved SHA", async () => {
+  const [migration, edgeFunction, client, page, workflow, previewWorkflow] = await Promise.all([
+    readRepo("supabase/migrations/20260928133500_admin_pwa_public_deploy_pipeline.sql"),
+    readRepo("supabase/functions/pwa-release-deploy/index.ts"),
+    read("lib/release-deployment.ts"),
+    read("components/admin-release-page.tsx"),
+    readRepo(".github/workflows/pwa-admin-public-release.yml"),
+    readRepo(".github/workflows/pwa-preview-deploy.yml"),
+  ]);
+
+  assert.match(migration, /create table if not exists public\.app_release_deployments/);
+  assert.match(migration, /source_branch = 'preview\/current'/);
+  assert.match(migration, /source_sha ~ '\^\[0-9a-f\]\{40\}\$'/);
+  assert.match(migration, /aal2 required for public release deploy/);
+  assert.match(migration, /candidate must pass tester stage before deploy/);
+  assert.match(migration, /service_finalize_app_release_deployment/);
+  assert.match(migration, /deployed sha does not match approved preview sha/);
+  assert.match(migration, /grant execute on function public\.service_finalize_app_release_deployment[\s\S]*to service_role/);
+
+  assert.match(edgeFunction, /AAS_GITHUB_RELEASE_TOKEN/);
+  assert.match(edgeFunction, /admin_request_app_release_deploy/);
+  assert.match(edgeFunction, /pwa-admin-public-release\.yml/);
+  assert.match(edgeFunction, /service_finalize_app_release_deployment/);
+  assert.doesNotMatch(edgeFunction, /AAS_GITHUB_RELEASE_TOKEN\s*=\s*["']/);
+
+  assert.match(client, /AAS_PREVIEW_RELEASE_BRANCH = "preview\/current"/);
+  assert.match(client, /requestPublicPwaDeployment/);
+  assert.match(client, /loadPublicPwaDeployments/);
+  assert.match(page, /第3段階：一般公開PWAへ反映/);
+  assert.match(page, /NEXT_PUBLIC_AAS_BUILD_SHA/);
+  assert.match(page, /Preview PWAの管理者画面から実行/);
+
+  assert.match(workflow, /permissions:\s*\n\s*contents: write/);
+  assert.match(workflow, /Only preview\/current may be promoted/);
+  assert.match(workflow, /git merge-base --is-ancestor/);
+  assert.match(workflow, /git push origin "\$SOURCE_SHA:refs\/heads\/main"/);
+  assert.match(workflow, /Admin public release Cloudflare contract: PASS/);
+  assert.match(workflow, /Deploy general-public PWA Worker/);
+  assert.match(previewWorkflow, /- preview\/current/);
 });
