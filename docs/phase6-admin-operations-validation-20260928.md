@@ -82,3 +82,11 @@ This document records validation results only and does not change runtime behavi
 - Leaked-password protection remains an Advisor warning because Supabase documents it as Pro-plan-and-above functionality; AAS operations capacity is currently configured as Free. No unsupported setting change was attempted.
 - `pg_net` is reported as installed in the public schema, but the installed 0.20.4 extension is marked `relocatable=false`. It was not force-moved or reinstalled because current cron/http automation depends on it and a destructive reinstall is outside this maintenance pass.
 - Performance Advisor currently reports unused indexes at INFO level only. No indexes were removed solely from current usage counters; low-traffic/new indexes can legitimately remain unused until more production traffic exists.
+
+
+## Phase 7 opaque browser diagnostic checkpoint
+
+- `WINDOW_SCRIPT_ERROR_OPAQUE` is now classified at the database boundary as warning/warning instead of error/error because the browser supplies no Error object, source filename, line, or column.
+- Actionable client/runtime diagnostics remain error/error.
+- The previously open opaque browser event was resolved during the migration; current open ops events are zero at verification time.
+- Supabase Security and Performance Advisors were rerun after the migration and showed only the previously documented known items.
