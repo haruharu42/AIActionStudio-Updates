@@ -201,3 +201,19 @@ test("promotion knowledge is wired into the shared knowledge compiler for all si
   assert.match(engineSource, /PROMOTION_PUBLICATION_KNOWLEDGE/);
   assert.match(engineSource, /input\.task === "promotion"/);
 });
+
+
+test("three-step promotion workflow stays responsive and visually distinguishes optional screenshot settings", async () => {
+  const css = await readFile(
+    new URL("../app/phase24-admin-promotion.css", import.meta.url),
+    "utf8",
+  );
+  assert.match(builderSource, /3ステップでプロモーション素材を作る/);
+  assert.match(builderSource, /②の追加設定です/);
+  assert.match(builderSource, /<span>③<\/span><strong>プロンプトをコピーしてAIへ渡す<\/strong>/);
+  assert.doesNotMatch(builderSource, /\{meta\.kind === "social" \? "④" : "③"\}/);
+  assert.match(css, /\.admin-promo-channel-optional/);
+  assert.match(css, /\.admin-promo-channel-substep/);
+  assert.match(css, /\.admin-promo-cta-safety/);
+  assert.match(css, /@media \(max-width: 560px\)/);
+});
