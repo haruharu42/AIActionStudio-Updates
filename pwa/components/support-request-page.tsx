@@ -17,6 +17,8 @@ function safeHttpsUrl(value: string): string {
 
 export function SupportRequestPage() {
   const [externalSalesUrl, setExternalSalesUrl] = useState("");
+  const [externalSalesConfigured, setExternalSalesConfigured] = useState(false);
+  const [legalReady, setLegalReady] = useState(false);
   const [supportUrl, setSupportUrl] = useState("");
   const [message, setMessage] = useState("");
 
@@ -25,11 +27,12 @@ export function SupportRequestPage() {
     void Promise.all([fetchPublicSalesSettings(), fetchCommerceConfig()]).then(
       ([settings, commerce]) => {
         if (!active) return;
-        setExternalSalesUrl(
-          settings.externalSalesEnabled && commerce.legalReady
-            ? safeExternalSalesUrl(settings.externalSalesUrl)
-            : "",
-        );
+        const configuredExternalSalesUrl = settings.externalSalesEnabled
+          ? safeExternalSalesUrl(settings.externalSalesUrl)
+          : "";
+        setExternalSalesConfigured(Boolean(configuredExternalSalesUrl));
+        setLegalReady(commerce.legalReady);
+        setExternalSalesUrl(commerce.legalReady ? configuredExternalSalesUrl : "");
         setSupportUrl(safeHttpsUrl(commerce.seller.supportUrl));
       },
       () => {
@@ -50,7 +53,9 @@ export function SupportRequestPage() {
         <p className="legal-commerce-lead">
           {externalSalesUrl
             ? "現在の新規販売は、note・Brain・Tips等の外部販売ページと利用コードによる受付を基本としています。AAS内のStripe新規購入は停止中です。"
-            : "外部販売と利用コードを初回販売経路として準備していますが、購入ページURLは現在未設定です。AAS内のStripe新規購入も停止中です。"}
+            : externalSalesConfigured && !legalReady
+              ? "外部販売ページURLは設定済みですが、販売者情報・公開サポート等の販売前情報が未完了のため、購入導線はまだ公開していません。"
+              : "外部販売と利用コードを初回販売経路として準備していますが、購入ページURLは現在未設定です。AAS内のStripe新規購入も停止中です。"}
         </p>
 
         <section className="legal-commerce-notes">
@@ -77,6 +82,8 @@ export function SupportRequestPage() {
           </p>
           {externalSalesUrl ? (
             <p><a href={externalSalesUrl} target="_blank" rel="noreferrer">外部販売ページを開く</a></p>
+          ) : externalSalesConfigured && !legalReady ? (
+            <p>外部販売ページURLは設定済みですが、販売前情報が未完了のため購入導線は非公開です。開示請求・問い合わせは上の公開サポート窓口、またはAAS内問い合わせセンターをご利用ください。</p>
           ) : (
             <p>購入ページURLは現在未設定です。販売開始前の開示請求や問い合わせ方法は、運用担当者が購入前に確認できる窓口を確定してから公開します。</p>
           )}
