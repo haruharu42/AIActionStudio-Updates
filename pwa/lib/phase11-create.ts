@@ -103,8 +103,45 @@ export function publicationEditorLink(target: PublicationTarget): string | null 
   return null;
 }
 
-export function publicationBodyForCopy(body: string, title: string): string {
-  return stripLeadingArticleTitle(body, title)
+export type PublicationBodyOptions = {
+  articleType?: ArticleType;
+  inlineEnabled?: boolean;
+  inlineCount?: number;
+};
+
+export function normalizePublicationMarkers(
+  body: string,
+  options: PublicationBodyOptions,
+): string {
+  let normalized = body.replace(/\r\n?/g, "\n");
+
+  if (options.articleType === "free") {
+    normalized = normalized.replace(/^\s*<!--\s*PAID_AREA\s*-->\s*$/gim, "");
+  }
+
+  if (options.inlineEnabled === false) {
+    normalized = normalized.replace(/^\s*<!--\s*IMAGE:\d+\s*-->\s*$/gim, "");
+  } else if (options.inlineEnabled === true && Number.isSafeInteger(options.inlineCount)) {
+    const maxInline = Math.max(0, Math.trunc(options.inlineCount ?? 0));
+    normalized = normalized.replace(
+      /^\s*<!--\s*IMAGE:(\d+)\s*-->\s*$/gim,
+      (match, order: string) => {
+        const numericOrder = Number(order);
+        return numericOrder >= 1 && numericOrder <= maxInline ? match.trim() : "";
+      },
+    );
+  }
+
+  return normalized.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+export function publicationBodyForCopy(
+  body: string,
+  title: string,
+  options?: PublicationBodyOptions,
+): string {
+  const source = options ? normalizePublicationMarkers(body, options) : body;
+  return stripLeadingArticleTitle(source, title)
     .replace(/^\s*<!--\s*IMAGE:(\d+)\s*-->\s*$/gim, (_match, order: string) => `**【挿絵${Number(order)}をここに挿入】**`)
     .replace(/^\s*<!--\s*PAID_AREA\s*-->\s*$/gim, "---\n**【ここから有料エリア】**\n---")
     .replace(/\n{3,}/g, "\n\n")
@@ -452,7 +489,11 @@ export async function createArticleFromWizard(
       prompt_plan: imagePrompts,
     },
     source_body: draft.body || null,
-    publish_body: draft.body || null,
+    publish_body: normalizePublicationMarkers(draft.body, {
+      articleType: draft.articleType,
+      inlineEnabled: draft.inlineEnabled,
+      inlineCount: draft.inlineCount,
+    }) || null,
   };
 
   const { data, error } = await client.rpc("create_article_with_workspace", {
