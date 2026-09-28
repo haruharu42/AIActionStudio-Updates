@@ -169,8 +169,8 @@ export function AdminPromotionChannelBuilder({
       <div className="admin-promo-channel-head">
         <div>
           <p className="eyebrow">CHANNEL FIRST</p>
-          <h2>まず、投稿する場所を選ぶ</h2>
-          <p>note・Brain・Tips・X・Threads・Instagramから1つ選ぶだけで、その媒体専用の設定とプロンプトへ切り替わります。</p>
+          <h2>3ステップでプロモーション素材を作る</h2>
+          <p>①媒体を選ぶ → ②内容を選ぶ → ③プロンプトをコピー、の3ステップです。SNSのスクショ追加は②の任意設定として使えます。</p>
         </div>
         <strong>媒体ごとに専用設計</strong>
       </div>
@@ -263,17 +263,17 @@ export function AdminPromotionChannelBuilder({
       </div>
 
       {meta.kind === "social" && socialPlatform && (
-        <>
-          <div className="admin-promo-channel-step">
-            <div><span>③</span><strong>紹介したいスクショを追加（任意）</strong></div>
-            <p>アップロードした実画面をAASが読み取り、画像から確認できる事実・訴求ポイント・隠すべき情報をSNS専用プロンプトへ反映します。</p>
+        <div className="admin-promo-channel-optional">
+          <div className="admin-promo-channel-step admin-promo-channel-substep">
+            <div><span>任意</span><strong>紹介したいスクショを追加</strong></div>
+            <p>②の追加設定です。実画面がある場合だけ使います。AASが確認できる事実・訴求ポイント・隠すべき情報をSNS専用プロンプトへ反映します。</p>
           </div>
           <AdminPromotionScreenshotAnalyzer
             key={channel}
             channel={channel as PromotionScreenshotChannel}
             onAnalysisChange={setScreenshotAnalysis}
           />
-        </>
+        </div>
       )}
 
       {meta.kind === "social" && (
@@ -308,7 +308,7 @@ export function AdminPromotionChannelBuilder({
       )}
 
       <div className="admin-promo-channel-step">
-        <div><span>{meta.kind === "social" ? "④" : "③"}</span><strong>プロンプトをコピーしてAIへ渡す</strong></div>
+        <div><span>③</span><strong>プロンプトをコピーしてAIへ渡す</strong></div>
         <p>{meta.kind === "social"
           ? "解析済みスクショがある場合は、その画面内容と添付順まで含めた専用プロンプトになります。スクショなしでも従来どおり作成できます。"
           : "スクリーンショットは自分で撮影します。記事系は本文中の最適位置へ挿入マーカーを入れ、必要な画面・撮影範囲・挿入位置を指示します。"}</p>
