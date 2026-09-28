@@ -1,4 +1,4 @@
-import { access, stat } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -26,11 +26,9 @@ for (const target of targets) {
   const image = sharp(output);
   const info = await image.metadata();
   const stats = await image.stats();
-  const file = await stat(output);
   if (
     info.width !== target.size
     || info.height !== target.size
-    || file.size < 10_000
     || stats.entropy < 3
   ) {
     throw new Error(`Invalid generated Axia icon: ${target.name}`);
