@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { DirectRuntimeImage } from "@/components/direct-runtime-image";
+
 import { formatRefreshCadence, getMyCreatorDashboard, xpProgress, type CreatorDashboard } from "@/lib/creator-system";
 import { getSupabaseClient } from "@/lib/supabase";
 import styles from "@/components/creator-system.module.css";
@@ -48,7 +50,7 @@ export function CreatorHud() {
       <div className={styles.hudInner}>
         <div className={styles.identity}>
           <span className={styles.avatar} aria-hidden="true">
-            {dashboard.avatarUrl ? <img src={dashboard.avatarUrl} alt="" /> : avatarLetter(displayName)}
+            {dashboard.avatarUrl ? <DirectRuntimeImage src={dashboard.avatarUrl} alt="" /> : avatarLetter(displayName)}
           </span>
           <div className={styles.identityText}>
             <p className={styles.eyebrow}>CREATOR STATUS</p>

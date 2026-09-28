@@ -9,6 +9,7 @@ const vite = await createServer({ appType: 'custom', configFile: false, root, re
 after(() => vite.close());
 
 const rich = await vite.ssrLoadModule('/lib/note-rich-text.ts');
+const creator = await vite.ssrLoadModule('/lib/phase11-create.ts');
 const postAssistant = await vite.ssrLoadModule('/lib/note-post-assistant.ts');
 const exporter = await vite.ssrLoadModule('/lib/article-export.ts');
 const exportUi = await fs.readFile(`${root}/components/article-export-page.tsx`, 'utf8');
@@ -116,4 +117,119 @@ test('html export renders structured article html and txt export is plain', () =
   assert.match(html, /<strong>重要<\/strong>/);
   assert.doesNotMatch(html, /<pre style="white-space:pre-wrap;font:inherit">/);
   assert.doesNotMatch(text, /\*\*重要\*\*/);
+});
+
+
+test('rich copy creates visible working space around image and paid-area markers', () => {
+  const html = rich.markdownToNoteHtml(`本文A
+
+**【挿絵1をここに挿入】**
+
+本文B
+
+---
+
+**【ここから有料エリア】**
+
+---
+
+本文C`);
+
+  assert.match(html, /<p><br><\/p><p><strong>【挿絵1をここに挿入】<\/strong><\/p><p><br><\/p>/);
+  assert.match(html, /<p><br><\/p><p><strong>【ここから有料エリア】<\/strong><\/p><p><br><\/p>/);
+  assert.match(html, /<hr>/);
+});
+
+
+test('publication marker normalization removes stale paid and image markers without mutating the editing source', () => {
+  const source = `導入
+
+<!-- IMAGE:01 -->
+
+本文1
+
+<!-- IMAGE:02 -->
+
+本文2
+
+<!-- IMAGE:03 -->
+
+<!-- PAID_AREA -->
+
+有料本文`;
+
+  const freeNoImages = creator.normalizePublicationMarkers(source, {
+    articleType: 'free',
+    inlineEnabled: false,
+    inlineCount: 0,
+  });
+  assert.doesNotMatch(freeNoImages, /PAID_AREA/);
+  assert.doesNotMatch(freeNoImages, /IMAGE:/);
+  assert.match(freeNoImages, /導入/);
+  assert.match(freeNoImages, /有料本文/);
+
+  const paidOneImage = creator.normalizePublicationMarkers(source, {
+    articleType: 'paid',
+    inlineEnabled: true,
+    inlineCount: 1,
+  });
+  assert.match(paidOneImage, /<!-- PAID_AREA -->/);
+  assert.match(paidOneImage, /<!-- IMAGE:01 -->/);
+  assert.doesNotMatch(paidOneImage, /IMAGE:02/);
+  assert.doesNotMatch(paidOneImage, /IMAGE:03/);
+
+  const copiedFree = creator.publicationBodyForCopy(source, '', {
+    articleType: 'free',
+    inlineEnabled: false,
+    inlineCount: 0,
+  });
+  assert.doesNotMatch(copiedFree, /ここから有料エリア/);
+  assert.doesNotMatch(copiedFree, /挿絵1をここに挿入/);
+
+  assert.match(source, /<!-- PAID_AREA -->/);
+  assert.match(source, /<!-- IMAGE:03 -->/);
+});
+
+
+test('note post assistant follows saved image plan metadata and suggested filenames', () => {
+  const metadata = postAssistant.readNotePostImagePlanMetadata({
+    inline: { enabled: true, count: 1 },
+    prompt_plan: [
+      { kind: 'cover', order: 0, suggestedFilename: 'article_cover.png' },
+      { kind: 'inline', order: 1, suggestedFilename: 'article_inline01.png' },
+      { kind: 'inline', order: 2, suggestedFilename: 'article_inline02.png' },
+    ],
+  });
+
+  assert.equal(metadata.inlineEnabled, true);
+  assert.equal(metadata.inlineCount, 1);
+  assert.equal(metadata.suggestedFilenames['cover-0'], 'article_cover.png');
+  assert.equal(metadata.suggestedFilenames['inline-1'], 'article_inline01.png');
+
+  const body = `導入
+
+<!-- IMAGE:01 -->
+
+本文1
+
+<!-- IMAGE:02 -->
+
+本文2
+
+<!-- PAID_AREA -->
+
+後半`;
+  const sequence = postAssistant.buildNotePostSequence(body, '', {
+    articleType: 'free',
+    inlineEnabled: metadata.inlineEnabled,
+    inlineCount: metadata.inlineCount,
+  });
+
+  assert.deepEqual(postAssistant.inlineImageOrders(sequence), [1]);
+  const bodyText = sequence
+    .filter((item) => item.kind === 'body')
+    .map((item) => item.markdown)
+    .join('\n');
+  assert.doesNotMatch(bodyText, /ここから有料エリア/);
+  assert.doesNotMatch(bodyText, /挿絵2をここに挿入/);
 });

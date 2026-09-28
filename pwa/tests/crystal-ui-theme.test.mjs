@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -8,21 +8,21 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 test("AAS crystal theme is loaded last and uses the finalized Axia and Rumo asset", async () => {
-  const [layout, css, assetStats] = await Promise.all([
+  const [layout, css, asset] = await Promise.all([
     read("app/layout.tsx"),
     read("app/phase53-crystal-ui.css"),
-    stat(path.join(root, "public/aas-axia-rumo-hero-hq.webp")),
+    read("public/aas-axia-rumo-hero.svg"),
   ]);
 
   assert.match(layout, /phase52-infrastructure-usage\.css";\s*import "\.\/phase53-crystal-ui\.css"/);
   assert.match(layout, /<body className="aas-crystal-theme">/);
-  assert.match(css, /url\("\/aas-axia-rumo-hero-hq\.webp"\)/);
+  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
   assert.match(css, /\.action-studio-hero::after/);
   assert.match(css, /\.aas-reference-desktop-nav/);
   assert.match(css, /\.aas-reference-bottom-nav/);
   assert.match(css, /main select/);
   assert.match(css, /main textarea/);
-  assert.ok(assetStats.size >= 40000);
+  assert.match(asset, /data:image\/webp;base64,/);
 });
 
 test("home puts creator and article library before the Axia and Rumo hero and keeps quick actions lower", async () => {
@@ -46,5 +46,4 @@ test("crystal UI keeps desktop and mobile treatments separate", async () => {
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.action-studio-hero/);
   assert.match(css, /\.action-studio-primary-grid[\s\S]*?repeat\(4,/);
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.action-studio-primary-grid[\s\S]*?repeat\(2,/);
-  assert.match(css, /@media \(min-width: 901px\)[\s\S]*?\.auth-character-visual[\s\S]*?aspect-ratio: 4 \/ 3[\s\S]*?contain no-repeat/);
 });

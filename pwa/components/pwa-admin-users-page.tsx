@@ -20,6 +20,7 @@ import {
   listCreatorMembershipEntitlements,
   listPwaAccessCodes,
   listPwaAdminUsers,
+  listPwaInviteRedemptions,
   listPwaEntitlements,
   revokePwaAccessCode,
   revokePwaEntitlement,
@@ -29,6 +30,7 @@ import {
   type PwaAdminEntitlement,
   type PwaAdminInvite,
   type PwaAdminUser,
+  type PwaInviteRedemption,
 } from "@/lib/pwa-admin-users";
 import { getSupabaseClient } from "@/lib/supabase";
 
@@ -42,6 +44,7 @@ export function PwaAdminUsersPage() {
   const [entitlements, setEntitlements] = useState<PwaAdminEntitlement[]>([]);
   const [membershipEntitlements, setMembershipEntitlements] = useState<PwaAdminEntitlement[]>([]);
   const [codes, setCodes] = useState<PwaAdminInvite[]>([]);
+  const [redemptions, setRedemptions] = useState<PwaInviteRedemption[]>([]);
   const [search, setSearch] = useState("");
   const [userFilter, setUserFilter] = useState<UserFilter>("all");
   const [message, setMessage] = useState("");
@@ -88,12 +91,14 @@ export function PwaAdminUsersPage() {
 
   const refresh = useCallback(async () => {
     const client = getSupabaseClient();
-    const [nextUsers, nextCodes] = await Promise.all([
+    const [nextUsers, nextCodes, nextRedemptions] = await Promise.all([
       listPwaAdminUsers(client),
       listPwaAccessCodes(client),
+      listPwaInviteRedemptions(client),
     ]);
     setUsers(nextUsers);
     setCodes(nextCodes);
+    setRedemptions(nextRedemptions);
 
     const currentSelectedId = selectedIdRef.current;
     const nextSelectedId = nextUsers.some((user) => user.id === currentSelectedId)
@@ -335,6 +340,7 @@ export function PwaAdminUsersPage() {
 
           <AdminAccessCodePanel
             codes={codes}
+            redemptions={redemptions}
             activeCount={codeStats.active}
             usedCount={codeStats.used}
             busy={busy}

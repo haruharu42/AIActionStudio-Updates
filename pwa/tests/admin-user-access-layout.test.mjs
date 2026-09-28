@@ -14,6 +14,7 @@ test("admin user access page keeps its scoped simplified workflow and structural
   const controller = await read("components/pwa-admin-users-page.tsx");
   const panels = await read("components/admin-users/admin-user-panels.tsx");
   const codesPanel = await read("components/admin-users/admin-access-code-panel.tsx");
+  const redemptionHistory = await read("components/admin-users/admin-access-code-redemption-history.tsx");
   const view = await read("lib/admin-users-view.ts");
   const adminUsers = await read("lib/pwa-admin-users.ts");
   const activeUi = `${controller}\n${panels}\n${codesPanel}`;
@@ -68,10 +69,15 @@ test("admin user access page keeps its scoped simplified workflow and structural
   assert.match(panels, /note購入状態の自動取得は行わず/);
   assert.match(codesPanel, /通常のユーザー管理では、この機能を操作する必要はありません/);
   assert.match(codesPanel, /販売用PWA利用コード/);
+  assert.match(codesPanel, /AdminAccessCodeRedemptionHistory/);
+  assert.match(redemptionHistory, /利用コード使用履歴/);
+  assert.match(redemptionHistory, /購入者のAAS ID/);
+  assert.match(redemptionHistory, /メール・請求情報は表示しません/);
+  assert.match(controller, /listPwaInviteRedemptions/);
   assert.match(controller, /利用コードをコピーしました/);
 
   assert.doesNotMatch(activeUi, /Windowsアプリ版|既存Windows機能|AAS-WIN-BETA/);
-  assert.doesNotMatch(`${panels}\n${codesPanel}`, /getSupabaseClient|setPwaAdminUserStatus\(|grantPwaEntitlement\(|revokePwaEntitlement\(|createPwaAccessCode\(|revokePwaAccessCode\(/);
+  assert.doesNotMatch(`${panels}\n${codesPanel}\n${redemptionHistory}`, /getSupabaseClient|setPwaAdminUserStatus\(|grantPwaEntitlement\(|revokePwaEntitlement\(|createPwaAccessCode\(|revokePwaAccessCode\(/);
   assert.match(controller, /getSupabaseClient/);
   assert.match(controller, /setPwaAdminUserStatus/);
   assert.match(controller, /grantPwaEntitlement/);
@@ -87,6 +93,8 @@ test("admin user access page keeps its scoped simplified workflow and structural
   assert.match(view, /summarizeAdminUsers/);
   assert.match(view, /summarizeAccessCodes/);
   assert.match(adminUsers, /export const PWA_PRODUCT = "AAS-PWA-BETA" as const/);
+  assert.match(adminUsers, /admin_list_pwa_invite_redemptions/);
+  assert.match(adminUsers, /export type PwaInviteRedemption/);
   assert.doesNotMatch(adminUsers, /PWA_(?:PC|MOBILE)_PRODUCT/);
 
   assert.match(baseCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);

@@ -11,7 +11,7 @@ const publicFeatureFiles = [
   "components/phase6-app.tsx",
   "components/phase-tools-page.tsx",
   "components/phase9-invite-page.tsx",
-  "components/phase10-admin-page.tsx",
+  "components/pwa-admin-users-page.tsx",
   "components/admin-promotion-page.tsx",
   "components/phase13-image-page.tsx",
   "components/phase14-sns-page.tsx",
@@ -46,7 +46,7 @@ test("active PWA access shell avoids frozen Windows and hands successful login b
   assert.doesNotMatch(home, /handleAccessReady|onAccessReady/);
   assert.match(home, /useSharedAccessState\(\)/);
   assert.match(provider, /const loadAccessStateOnce = useCallback/);
-  assert.match(provider, /inFlightRef/);
+  assert.match(provider, /requestLoaderRef/);
   assert.match(provider, /const refresh = useCallback[\s\S]*?loadAccessStateOnce\(activeClient\)/);
   assert.match(provider, /onAuthStateChange/);
 });
@@ -73,15 +73,25 @@ test("feature hub keeps four desktop, three tablet and two mobile columns", asyn
   assert.match(css, /@media \(max-width:\s*720px\)[\s\S]*?\.tool-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
 });
 
-test("admin dashboard exposes readable operations summary and management sections", async () => {
-  const admin = await read("components/phase10-admin-page.tsx");
-  for (const label of ["運用サマリー", "要対応", "利用権・販売状況", "ユーザー管理", "アカウント詳細", "PWA招待コード"]) {
-    assert.match(admin, new RegExp(label));
-  }
-  assert.match(admin, /PWA利用者/);
-  assert.match(admin, /Windows利用者/);
-  assert.match(admin, /AAS ID・表示名/);
-  assert.match(admin, /コードをコピー/);
+test("admin user dashboard exposes the current PWA-only management workflow", async () => {
+  const [admin, panels, codes, history] = await Promise.all([
+    read("components/pwa-admin-users-page.tsx"),
+    read("components/admin-users/admin-user-panels.tsx"),
+    read("components/admin-users/admin-access-code-panel.tsx"),
+    read("components/admin-users/admin-access-code-redemption-history.tsx"),
+  ]);
+
+  assert.match(admin, /PWAユーザー利用管理/);
+  assert.match(admin, /承認待ち/);
+  assert.match(admin, /利用中/);
+  assert.match(admin, /有効コード/);
+  assert.match(panels, /ユーザーを選ぶ/);
+  assert.match(panels, /PWA利用権/);
+  assert.match(panels, /Creator Club特典/);
+  assert.match(codes, /販売用PWA利用コード/);
+  assert.match(codes, /利用コードを作成する/);
+  assert.match(history, /利用コード使用履歴/);
+  assert.doesNotMatch(`${admin}\n${panels}\n${codes}`, /Windows利用者|AAS-WIN-BETA/);
 });
 
 test("admin dashboard keeps two-column summary cards on narrow mobile screens", async () => {

@@ -51,6 +51,9 @@ function parseFields(value: unknown): ActionPromptField[] {
       label: row.label,
       placeholder: row.placeholder,
       multiline: row.multiline === true,
+      options: Array.isArray(row.options)
+        ? row.options.filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean).slice(0, 30)
+        : undefined,
     }];
   }).slice(0, 20);
 }
@@ -160,6 +163,7 @@ export async function saveActionPromptTemplate(
       label: field.label.trim(),
       placeholder: field.placeholder.trim(),
       multiline: field.multiline === true,
+      options: field.options?.map((option) => option.trim()).filter(Boolean).slice(0, 30) ?? [],
     })),
     prompt_template: input.prompt.trim(),
     status: input.status,

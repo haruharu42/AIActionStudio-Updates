@@ -2,19 +2,21 @@
 
 import { useEffect, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { loadMyAppReleaseState, type AppReleaseState } from "@/lib/app-release";
-import { getSupabaseClient } from "@/lib/supabase";
 
 export function ReleasePreviewHomeStatus() {
+  const { state: accessState, client } = useSharedAccessState();
+  const accessUserId = accessState.kind === "ready" ? accessState.profile.id : "";
   const [state, setState] = useState<AppReleaseState | null>(null);
 
   useEffect(() => {
     let active = true;
-    let client: ReturnType<typeof getSupabaseClient>;
-    try {
-      client = getSupabaseClient();
-    } catch {
-      return;
+    if (!accessUserId || !client) {
+      queueMicrotask(() => {
+        if (active) setState(null);
+      });
+      return () => { active = false; };
     }
 
     const refresh = async () => {
@@ -27,15 +29,11 @@ export function ReleasePreviewHomeStatus() {
     };
 
     void refresh();
-    const { data } = client.auth.onAuthStateChange(() => {
-      window.setTimeout(() => { if (active) void refresh(); }, 0);
-    });
 
     return () => {
       active = false;
-      data.subscription.unsubscribe();
     };
-  }, []);
+  }, [accessUserId, client]);
 
   if (
     !state?.signed_in ||

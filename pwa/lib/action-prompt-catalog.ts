@@ -3,6 +3,7 @@ export type ActionPromptField = {
   label: string;
   placeholder: string;
   multiline?: boolean;
+  options?: readonly string[];
 };
 
 export type ActionPromptTemplate = {
@@ -16,13 +17,39 @@ export type ActionPromptTemplate = {
   prompt: string;
 };
 
+const AUDIENCE_OPTIONS = [
+  "完全初心者",
+  "初心者",
+  "経験者",
+  "会社員・働く人",
+  "副業を始めたい人",
+  "クリエイター・発信者",
+  "個人事業主・経営者",
+  "既存フォロワー",
+  "購入を検討している人",
+  "幅広い読者",
+] as const;
+
+const GOAL_OPTIONS = [
+  "認知を広げる",
+  "保存・ブックマークにつなげる",
+  "プロフィール閲覧・フォローにつなげる",
+  "購入判断を助ける",
+  "商品・サービス購入につなげる",
+  "問い合わせ・相談につなげる",
+  "応募・案件獲得につなげる",
+  "理解・学習を助ける",
+  "継続して読んでもらう",
+  "作業を効率化する",
+] as const;
+
 const commonFields = (
   topicLabel = "テーマ・対象",
   goalLabel = "目的",
 ): readonly ActionPromptField[] => [
   { key: "topic", label: topicLabel, placeholder: "例：AI初心者向けの副業、ゲーム配信、家計管理など" },
-  { key: "audience", label: "想定する相手", placeholder: "例：30代会社員、初心者、既存フォロワーなど" },
-  { key: "goal", label: goalLabel, placeholder: "例：保存される投稿、購入判断の支援、応募につなげるなど" },
+  { key: "audience", label: "想定する相手", placeholder: "一覧から選ぶか、その他を自由入力", options: AUDIENCE_OPTIONS },
+  { key: "goal", label: goalLabel, placeholder: "一覧から選ぶか、その他を自由入力", options: GOAL_OPTIONS },
   { key: "notes", label: "追加条件・素材", placeholder: "事実として使ってよい情報、避けたい表現、文字数など", multiline: true },
 ];
 

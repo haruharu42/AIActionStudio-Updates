@@ -3,8 +3,10 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 
+import { SelectWithCustom } from "@/components/select-with-custom";
 import type { NoteMagazineRole, NoteMagazineSettings, NoteMagazineType } from "@/lib/article-library-v2";
 import type { ArticleDetail, ArticlePatch, ArticleStatus } from "@/lib/phase7-articles";
+import { GENRE_OPTIONS, PAID_ARTICLE_PRICE_OPTIONS, subgenreOptionsFor } from "@/lib/phase18-content-options";
 import {
   ARTICLE_STATUS_LABELS,
   articleLibraryEditValuesFromDetail,
@@ -43,6 +45,13 @@ export function ArticleLibraryEditor({
       setValidation(parsed.message);
       return;
     }
+    if (
+      parsed.value.article.status === "published" &&
+      (!detail.publishedAt || !detail.publishedUrl)
+    ) {
+      setValidation("公開済みへの変更は「公開管理」で公開日時と公開URLを登録して行ってください。");
+      return;
+    }
     await onSave(
       parsed.value.article,
       parsed.value.sourceBody,
@@ -63,16 +72,20 @@ export function ArticleLibraryEditor({
           <span>タイトル</span>
           <input value={values.title} maxLength={500} onChange={(event) => change("title", event.target.value)} />
         </label>
-        <label className="editor-field">
-          <span>掲載先</span>
-          <input
-            value={values.publicationTarget}
-            maxLength={50}
-            pattern="[a-z][a-z0-9_-]{0,49}"
-            required
-            onChange={(event) => change("publicationTarget", event.target.value)}
-          />
-        </label>
+        <SelectWithCustom
+          className="editor-field"
+          label="掲載先"
+          value={values.publicationTarget}
+          onChange={(value) => change("publicationTarget", value.slice(0, 50))}
+          options={[
+            { value: "note", label: "note" },
+            { value: "tips", label: "Tips" },
+            { value: "brain", label: "Brain" },
+            { value: "blog", label: "ブログ" },
+          ]}
+          customPlaceholder="その他の掲載先IDを入力"
+          maxLength={50}
+        />
         <label className="editor-field">
           <span>種別</span>
           <select value={values.articleType} onChange={(event) => change("articleType", event.target.value as "free" | "paid")}>
@@ -81,17 +94,20 @@ export function ArticleLibraryEditor({
           </select>
         </label>
         {values.articleType === "paid" && (
-          <label className="editor-field">
-            <span>価格（円）</span>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              inputMode="numeric"
-              value={values.price}
-              onChange={(event) => change("price", event.target.value)}
-            />
-          </label>
+          <SelectWithCustom
+            className="editor-field"
+            label="価格（円）"
+            value={values.price}
+            onChange={(value) => change("price", value)}
+            options={PAID_ARTICLE_PRICE_OPTIONS.map((option) => ({
+              value: String(option.value),
+              label: option.label,
+            }))}
+            placeholder="価格を選択"
+            customPlaceholder="自由な価格を入力"
+            inputType="number"
+            min={1}
+          />
         )}
         <label className="editor-field">
           <span>状態</span>
@@ -101,14 +117,24 @@ export function ArticleLibraryEditor({
             ))}
           </select>
         </label>
-        <label className="editor-field">
-          <span>ジャンル</span>
-          <input value={values.genre} maxLength={200} onChange={(event) => change("genre", event.target.value)} />
-        </label>
-        <label className="editor-field">
-          <span>サブジャンル</span>
-          <input value={values.subgenre} maxLength={200} onChange={(event) => change("subgenre", event.target.value)} />
-        </label>
+        <SelectWithCustom
+          className="editor-field"
+          label="ジャンル"
+          value={values.genre}
+          onChange={(value) => change("genre", value.slice(0, 200))}
+          options={GENRE_OPTIONS.filter((value) => value !== "その他")}
+          customPlaceholder="その他のジャンルを入力"
+          maxLength={200}
+        />
+        <SelectWithCustom
+          className="editor-field"
+          label="サブジャンル"
+          value={values.subgenre}
+          onChange={(value) => change("subgenre", value.slice(0, 200))}
+          options={subgenreOptionsFor(values.genre).filter((value) => value !== "その他")}
+          customPlaceholder="その他のサブジャンルを入力"
+          maxLength={200}
+        />
         <label className="editor-field full">
           <span>タグ（カンマ区切り）</span>
           <input value={values.tags} onChange={(event) => change("tags", event.target.value)} />
@@ -164,15 +190,20 @@ export function ArticleLibraryEditor({
                     placeholder="任意"
                   />
                 </label>
-                <label className="editor-field">
-                  <span>マガジン内の順番</span>
-                  <input
-                    inputMode="numeric"
-                    value={values.seriesOrder}
-                    onChange={(event) => change("seriesOrder", event.target.value)}
-                    placeholder="例：1"
-                  />
-                </label>
+                <SelectWithCustom
+                  className="editor-field"
+                  label="マガジン内の順番"
+                  value={values.seriesOrder}
+                  onChange={(value) => change("seriesOrder", value)}
+                  options={Array.from({ length: 20 }, (_, index) => ({
+                    value: String(index + 1),
+                    label: `${index + 1}番目`,
+                  }))}
+                  placeholder="順番を選択"
+                  customPlaceholder="20以上など自由入力"
+                  inputType="number"
+                  min={1}
+                />
               </>
             )}
           </>

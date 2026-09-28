@@ -10,20 +10,8 @@ import { KnowledgeRefreshPanel } from "@/components/knowledge-refresh-panel";
 import {
   adminListKnowledgeCandidates,
   adminReviewKnowledgeCandidate,
-  parseKnowledgeCatalogRow,
   type KnowledgeCandidate,
 } from "@/lib/knowledge-catalog";
-import {
-  adminGetKnowledgeProductionHealth,
-  type KnowledgeProductionHealth,
-} from "@/lib/knowledge-auto-update";
-import {
-  KNOWLEDGE_TASKS,
-  KNOWLEDGE_TASK_LABELS,
-  previewCloudKnowledgeSelection,
-  type KnowledgeTask,
-} from "@/lib/knowledge-engine";
-import { evaluateSidejobKnowledgeRegression } from "@/lib/knowledge-regression";
 
 type Filter = "all" | "pending" | "approved" | "rejected";
 type CatalogRow = {
@@ -33,17 +21,6 @@ type CatalogRow = {
   parent_label: string | null;
   status: string;
   priority: number;
-  release_channel: string;
-  catalog_version: number;
-  aliases: string[];
-  guidance: string[];
-  deliverables: string[];
-  cautions: string[];
-  source_urls: string[];
-  source_summary: string | null;
-  source_checked_at: string | null;
-  stable_available_at: string;
-  tasks: KnowledgeTask[];
   updated_at: string;
 };
 
@@ -52,61 +29,48 @@ type Editor = {
   guidance: string;
   deliverables: string;
   cautions: string;
-  tasks: KnowledgeTask[];
+  tasks: string[];
   priority: number;
   notes: string;
 };
+
+const TASKS = [
+  ["title", "タイトル"],
+  ["article", "記事"],
+  ["image", "画像"],
+  ["social", "SNS"],
+  ["promotion", "販促"],
+] as const;
 
 function lines(value: string): string[] {
   return value.split("\n").map((item) => item.trim().replace(/^[-・]\s*/, "")).filter(Boolean).slice(0, 40);
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string): string {
   if (!value) return "-";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ja-JP");
-}
-
-const KNOWLEDGE_STANDARD_DEPTH = 3;
-const KNOWLEDGE_DEEP_DEPTH = 5;
-const KNOWLEDGE_SOURCE_STALE_DAYS = 90;
-
-function isSourceStale(value: string | null): boolean {
-  if (!value) return true;
-  const checkedAt = new Date(value).getTime();
-  if (!Number.isFinite(checkedAt)) return true;
-  return Date.now() - checkedAt > KNOWLEDGE_SOURCE_STALE_DAYS * 24 * 60 * 60 * 1000;
 }
 
 export function AdminKnowledgePage() {
   const { state, client } = useSharedAccessState();
   const [candidates, setCandidates] = useState<KnowledgeCandidate[]>([]);
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
-  const [health, setHealth] = useState<KnowledgeProductionHealth | null>(null);
   const [filter, setFilter] = useState<Filter>("pending");
   const [selected, setSelected] = useState<KnowledgeCandidate | null>(null);
-  const [editor, setEditor] = useState<Editor>({ canonicalLabel: "", guidance: "", deliverables: "", cautions: "", tasks: [...KNOWLEDGE_TASKS], priority: 70, notes: "" });
+  const [editor, setEditor] = useState<Editor>({ canonicalLabel: "", guidance: "", deliverables: "", cautions: "", tasks: ["title", "article", "image", "social", "promotion"], priority: 70, notes: "" });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [compilerTask, setCompilerTask] = useState<KnowledgeTask>("sidejob_content");
-  const [compilerChannel, setCompilerChannel] = useState<"fresh" | "stable">("fresh");
-  const [compilerReferenceTime, setCompilerReferenceTime] = useState(0);
 
   const reload = async () => {
     if (!client) throw new Error("AASへ接続できませんでした。");
-    const [nextCandidates, catalogResult, nextHealth] = await Promise.all([
+    const [nextCandidates, catalogResult] = await Promise.all([
       adminListKnowledgeCandidates(client, null),
-      client.from("knowledge_catalog")
-        .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,aliases,guidance,deliverables,cautions,source_urls,source_summary,source_checked_at,stable_available_at,tasks,updated_at")
-        .order("updated_at", { ascending: false })
-        .limit(300),
-      adminGetKnowledgeProductionHealth(client),
+      client.from("knowledge_catalog").select("key,kind,label,parent_label,status,priority,updated_at").order("updated_at", { ascending: false }).limit(300),
     ]);
     if (catalogResult.error) throw new Error("正式ナレッジ一覧を取得できませんでした。");
     setCandidates(nextCandidates);
     setCatalog((catalogResult.data ?? []) as CatalogRow[]);
-    setHealth(nextHealth);
-    setCompilerReferenceTime(Date.now());
   };
 
   const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
@@ -116,20 +80,14 @@ export function AdminKnowledgePage() {
     let active = true;
     const boot = async () => {
       try {
-        const [nextCandidates, catalogResult, nextHealth] = await Promise.all([
+        const [nextCandidates, catalogResult] = await Promise.all([
           adminListKnowledgeCandidates(client, null),
-          client.from("knowledge_catalog")
-            .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,aliases,guidance,deliverables,cautions,source_urls,source_summary,source_checked_at,stable_available_at,tasks,updated_at")
-            .order("updated_at", { ascending: false })
-            .limit(300),
-          adminGetKnowledgeProductionHealth(client),
+          client.from("knowledge_catalog").select("key,kind,label,parent_label,status,priority,updated_at").order("updated_at", { ascending: false }).limit(300),
         ]);
         if (!active) return;
         if (catalogResult.error) throw new Error("正式ナレッジ一覧を取得できませんでした。");
         setCandidates(nextCandidates);
         setCatalog((catalogResult.data ?? []) as CatalogRow[]);
-        setHealth(nextHealth);
-        setCompilerReferenceTime(Date.now());
       } catch (error) {
         if (active) setMessage(error instanceof Error ? error.message : "ナレッジ管理を初期化できませんでした。");
       }
@@ -143,74 +101,7 @@ export function AdminKnowledgePage() {
     approved: candidates.filter((item) => item.decisionStatus === "approved").length,
     rejected: candidates.filter((item) => item.decisionStatus === "rejected").length,
     activeCatalog: catalog.filter((item) => item.status === "active").length,
-    activePrompt: health?.activePromptOptimizations ?? 0,
-  }), [candidates, catalog, health]);
-
-  const sidejobTasks = useMemo(
-    () => KNOWLEDGE_TASKS.filter((task): task is KnowledgeTask => task.startsWith("sidejob_")),
-    [],
-  );
-  const sidejobCoverage = useMemo(() => sidejobTasks.map((task) => {
-    const matching = catalog.filter((item) => item.status === "active" && item.tasks.includes(task));
-    const latestCheckedAt = matching
-      .map((item) => item.source_checked_at)
-      .filter((value): value is string => Boolean(value))
-      .sort()
-      .at(-1) ?? null;
-    const count = matching.length;
-    const depth = count >= KNOWLEDGE_DEEP_DEPTH
-      ? "deep"
-      : count >= KNOWLEDGE_STANDARD_DEPTH
-        ? "standard"
-        : count > 0
-          ? "basic"
-          : "missing";
-    return {
-      task,
-      label: KNOWLEDGE_TASK_LABELS[task],
-      count,
-      latestCheckedAt,
-      depth,
-      stale: isSourceStale(latestCheckedAt),
-    };
-  }).sort((a, b) => a.count - b.count || a.label.localeCompare(b.label, "ja")), [catalog, sidejobTasks]);
-  const basicSidejobCount = sidejobCoverage.filter((item) => item.count > 0).length;
-  const standardSidejobCount = sidejobCoverage.filter((item) => item.count >= KNOWLEDGE_STANDARD_DEPTH).length;
-  const deepSidejobCount = sidejobCoverage.filter((item) => item.count >= KNOWLEDGE_DEEP_DEPTH).length;
-  const staleSidejobCount = sidejobCoverage.filter((item) => item.stale).length;
-
-  const compilerRules = useMemo(() => catalog
-    .filter((item) => item.status === "active")
-    .filter((item) => compilerChannel === "fresh"
-      || item.release_channel === "both"
-      || new Date(item.stable_available_at).getTime() <= compilerReferenceTime)
-    .map((item) => parseKnowledgeCatalogRow(item as unknown as Record<string, unknown>))
-    .filter((rule): rule is NonNullable<typeof rule> => Boolean(rule)),
-  [catalog, compilerChannel, compilerReferenceTime]);
-
-  const compilerPreview = useMemo(
-    () => previewCloudKnowledgeSelection(compilerRules, { task: compilerTask }),
-    [compilerRules, compilerTask],
-  );
-
-  const regressionSummary = useMemo(
-    () => evaluateSidejobKnowledgeRegression(compilerRules, {
-      referenceTime: compilerReferenceTime,
-      staleDays: KNOWLEDGE_SOURCE_STALE_DAYS,
-      minSelected: 5,
-    }),
-    [compilerRules, compilerReferenceTime],
-  );
-
-  const compilerStableWaiting = useMemo(() => {
-    if (compilerChannel !== "stable") return 0;
-    return catalog.filter((item) =>
-      item.status === "active"
-      && item.tasks.includes(compilerTask)
-      && item.release_channel === "fresh_first"
-      && new Date(item.stable_available_at).getTime() > compilerReferenceTime
-    ).length;
-  }, [catalog, compilerChannel, compilerReferenceTime, compilerTask]);
+  }), [candidates, catalog]);
 
   const open = (candidate: KnowledgeCandidate) => {
     setSelected(candidate);
@@ -219,7 +110,7 @@ export function AdminKnowledgePage() {
       guidance: "",
       deliverables: "",
       cautions: "",
-      tasks: [...KNOWLEDGE_TASKS],
+      tasks: ["title", "article", "image", "social", "promotion"],
       priority: 70,
       notes: candidate.notes,
     });
@@ -242,7 +133,7 @@ export function AdminKnowledgePage() {
         guidance: lines(editor.guidance),
         deliverables: lines(editor.deliverables),
         cautions: lines(editor.cautions),
-        tasks: editor.tasks,
+        tasks: editor.tasks as Array<"title" | "article" | "image" | "social" | "promotion">,
         priority: editor.priority,
         notes: editor.notes,
       });
@@ -281,168 +172,9 @@ export function AdminKnowledgePage() {
 
       <section className="knowledge-stat-grid">
         <article><span>承認待ち</span><strong>{stats.pending}</strong></article>
-        <article><span>クラウドKnowledge</span><strong>{stats.activeCatalog}</strong></article>
-        <article><span>Prompt最適化</span><strong>{stats.activePrompt}</strong></article>
-        <article><span>Fresh / Stable</span><strong>v{health?.freshVersion ?? "-"} / v{health?.stableVersion ?? "-"}</strong></article>
-      </section>
-
-      <section className="knowledge-admin-panel knowledge-coverage-panel">
-        <div className="knowledge-panel-head">
-          <div>
-            <p className="eyebrow">SIDE-HUSTLE DEPTH</p>
-            <h2>副業Knowledge深度</h2>
-            <p>基礎=1件以上 / 標準=3件以上 / 深掘り=5件以上。根拠確認から{KNOWLEDGE_SOURCE_STALE_DAYS}日を超える分野は再確認対象です。</p>
-          </div>
-          <strong className={standardSidejobCount === sidejobCoverage.length ? "complete" : "incomplete"}>
-            標準 {standardSidejobCount}/{sidejobCoverage.length}
-          </strong>
-        </div>
-        <div className="knowledge-coverage-summary">
-          <span>基礎 {basicSidejobCount}/{sidejobCoverage.length}</span>
-          <span>標準 {standardSidejobCount}/{sidejobCoverage.length}</span>
-          <span>深掘り {deepSidejobCount}/{sidejobCoverage.length}</span>
-          <span className={staleSidejobCount > 0 ? "warning" : ""}>再確認 {staleSidejobCount}</span>
-        </div>
-        <div className="knowledge-coverage-grid">
-          {sidejobCoverage.map((item) => (
-            <article key={item.task} className={`${item.depth}${item.stale ? " stale" : ""}`}>
-              <span>
-                {item.depth === "deep" ? "◆ 深掘り" : item.depth === "standard" ? "✓ 標準達成" : item.depth === "basic" ? "△ 基礎のみ" : "! Knowledge不足"}
-              </span>
-              <strong>{item.label}</strong>
-              <small>{item.count}件 · 最終根拠確認 {formatDate(item.latestCheckedAt)}</small>
-              {item.stale && <small className="stale-note">根拠の再確認が必要です</small>}
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="knowledge-admin-panel knowledge-regression-lab">
-        <div className="knowledge-panel-head">
-          <div>
-            <p className="eyebrow">REGRESSION LAB</p>
-            <h2>Knowledge選択 回帰テスト</h2>
-            <p>本番Compilerと同じTop 5選択で、12副業すべての選択品質を自動診断します。副業固有Knowledgeが横断ルールに押し出されていないかも確認します。</p>
-          </div>
-          <strong className={regressionSummary.fail === 0 ? "complete" : "incomplete"}>
-            PASS {regressionSummary.pass}/{regressionSummary.total}
-          </strong>
-        </div>
-
-        <div className="knowledge-regression-summary">
-          <span className="pass">PASS {regressionSummary.pass}</span>
-          <span className="warn">WARN {regressionSummary.warn}</span>
-          <span className="fail">FAIL {regressionSummary.fail}</span>
-          <span>{compilerChannel === "fresh" ? "Fresh" : "Stable"}基準</span>
-        </div>
-
-        {compilerChannel === "stable" && (
-          <p className="knowledge-regression-channel-note">
-            StableはFresh先行Knowledgeの待機中に一時的なFAILが出る場合があります。公開済みStableだけで成立するかを確認する診断です。
-          </p>
-        )}
-
-        <div className="knowledge-regression-grid">
-          {regressionSummary.results.map((result) => (
-            <article key={result.task} className={result.status}>
-              <div className="knowledge-regression-card-head">
-                <span>{result.status.toUpperCase()}</span>
-                <strong>{result.label}</strong>
-              </div>
-              <dl>
-                <div><dt>Top 5</dt><dd>{result.selectedCount}/5</dd></div>
-                <div><dt>候補</dt><dd>{result.eligibleCount}</dd></div>
-                <div><dt>副業固有</dt><dd>{result.taskSpecificSelected}</dd></div>
-                <div><dt>選択契約</dt><dd>{result.contractGroups.filter((group) => group.passed).length}/{result.contractGroups.length}</dd></div>
-              </dl>
-              <p className="knowledge-regression-top">
-                <span>最上位</span>
-                <strong>{result.topRuleLabel ?? "該当なし"}</strong>
-              </p>
-              <div className="knowledge-contract-groups">
-                {result.contractGroups.map((group) => (
-                  <span key={group.id} className={group.passed ? "pass" : "fail"} title={group.description}>
-                    {group.passed ? "✓" : "!"} {group.label}
-                  </span>
-                ))}
-              </div>
-              {result.issues.length === 0 ? (
-                <p className="knowledge-regression-ok">選択品質に問題はありません。</p>
-              ) : (
-                <ul>{result.issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="knowledge-admin-panel knowledge-compiler-preview">
-        <div className="knowledge-panel-head">
-          <div>
-            <p className="eyebrow">COMPILER PREVIEW</p>
-            <h2>実際に採用されるKnowledge</h2>
-            <p>本番Compilerと同じ選択関数で、最大5件のCloud Knowledgeがどの順番で採用されるか確認します。</p>
-          </div>
-          <strong>{compilerPreview.selected.length}/{compilerPreview.eligibleCount}</strong>
-        </div>
-
-        <div className="knowledge-compiler-controls">
-          <label>
-            <span>副業タスク</span>
-            <select value={compilerTask} onChange={(event) => setCompilerTask(event.target.value as KnowledgeTask)}>
-              {sidejobTasks.map((task) => <option key={task} value={task}>{KNOWLEDGE_TASK_LABELS[task]}</option>)}
-            </select>
-          </label>
-          <div>
-            <span>公開チャンネル</span>
-            <div className="knowledge-channel-switch">
-              <button type="button" className={compilerChannel === "fresh" ? "active" : ""} onClick={() => setCompilerChannel("fresh")}>Fresh</button>
-              <button type="button" className={compilerChannel === "stable" ? "active" : ""} onClick={() => setCompilerChannel("stable")}>Stable</button>
-            </div>
-          </div>
-        </div>
-
-        <div className="knowledge-compiler-note">
-          <strong>{KNOWLEDGE_TASK_LABELS[compilerTask]}</strong>
-          <span>候補 {compilerPreview.eligibleCount}件 → 採用 {compilerPreview.selected.length}件 / 上限 {compilerPreview.limit}件</span>
-          {compilerStableWaiting > 0 && <span className="waiting">Stable待ち {compilerStableWaiting}件</span>}
-        </div>
-
-        {compilerPreview.selected.length === 0 ? (
-          <p className="knowledge-empty">この条件で採用可能なCloud Knowledgeはありません。</p>
-        ) : (
-          <div className="knowledge-compiler-selected">
-            {compilerPreview.selected.map((item) => (
-              <article key={item.rule.key}>
-                <div className="knowledge-compiler-rank">#{item.position}</div>
-                <div className="knowledge-compiler-rule">
-                  <span>{item.reason} · score {item.score} · priority {item.rule.priority}</span>
-                  <strong>{item.rule.label}</strong>
-                  <small>{item.rule.kind} · v{item.rule.catalogVersion ?? "-"} · 根拠確認 {formatDate(item.rule.sourceCheckedAt ?? null)}</small>
-                  {(item.rule.sourceUrls ?? []).length > 0 && (
-                    <div className="knowledge-source-links">
-                      {(item.rule.sourceUrls ?? []).map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">根拠を開く</a>)}
-                    </div>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-
-        {compilerPreview.skipped.length > 0 && (
-          <details className="knowledge-compiler-skipped">
-            <summary>採用枠から外れた候補 {compilerPreview.skipped.length}件</summary>
-            <div>
-              {compilerPreview.skipped.map((item) => (
-                <article key={item.rule.key}>
-                  <strong>{item.rule.label}</strong>
-                  <small>{item.reason} · score {item.score} · priority {item.rule.priority}</small>
-                </article>
-              ))}
-            </div>
-          </details>
-        )}
+        <article><span>承認済み候補</span><strong>{stats.approved}</strong></article>
+        <article><span>却下</span><strong>{stats.rejected}</strong></article>
+        <article><span>有効なクラウドKnowledge</span><strong>{stats.activeCatalog}</strong></article>
       </section>
 
       <KnowledgeRefreshPanel />
@@ -478,7 +210,7 @@ export function AdminKnowledgePage() {
           <label className="full"><span>制作ルール（1行1項目）</span><textarea rows={5} value={editor.guidance} onChange={(event) => setEditor((current) => ({ ...current, guidance: event.target.value }))} placeholder="例: 初心者が実行できる順番で説明する" /></label>
           <label className="full"><span>価値が出やすい成果物（1行1項目）</span><textarea rows={4} value={editor.deliverables} onChange={(event) => setEditor((current) => ({ ...current, deliverables: event.target.value }))} placeholder="例: チェックリスト" /></label>
           <label className="full"><span>注意・禁止（1行1項目）</span><textarea rows={4} value={editor.cautions} onChange={(event) => setEditor((current) => ({ ...current, cautions: event.target.value }))} placeholder="例: 未確認の効果を断定しない" /></label>
-          <fieldset className="full"><legend>適用する機能</legend><div className="knowledge-task-grid">{KNOWLEDGE_TASKS.map((key) => <label key={key}><input type="checkbox" checked={editor.tasks.includes(key)} onChange={(event) => setEditor((current) => ({ ...current, tasks: event.target.checked ? [...current.tasks, key] : current.tasks.filter((item) => item !== key) }))} />{KNOWLEDGE_TASK_LABELS[key]}</label>)}</div></fieldset>
+          <fieldset className="full"><legend>適用する機能</legend><div className="knowledge-task-grid">{TASKS.map(([key, label]) => <label key={key}><input type="checkbox" checked={editor.tasks.includes(key)} onChange={(event) => setEditor((current) => ({ ...current, tasks: event.target.checked ? [...current.tasks, key] : current.tasks.filter((item) => item !== key) }))} />{label}</label>)}</div></fieldset>
           <label className="full"><span>管理メモ</span><textarea rows={3} value={editor.notes} onChange={(event) => setEditor((current) => ({ ...current, notes: event.target.value.slice(0, 1000) }))} /></label>
         </div>
         <p className="knowledge-review-note">承認後は同じ候補名が記事・タイトル・画像・SNSなどで選ばれた際、ここで設定したルールが共通Prompt Compilerへ追加されます。ルール未入力でも一般Knowledgeは維持されます。</p>
@@ -487,13 +219,7 @@ export function AdminKnowledgePage() {
 
       <section className="knowledge-admin-panel">
         <div className="knowledge-panel-head"><div><p className="eyebrow">CATALOG</p><h2>クラウドKnowledge一覧</h2></div></div>
-        {catalog.length === 0 ? <p className="knowledge-empty">まだ管理者承認済みの追加Knowledgeはありません。基本Knowledgeはアプリ内に内蔵されています。</p> : <div className="knowledge-catalog-list">{catalog.map((item) => <article key={item.key}>
-          <span>{item.kind}{item.parent_label ? ` / ${item.parent_label}` : ""} · {item.release_channel === "fresh_first" ? "Fresh先行" : "Fresh/Stable"}</span>
-          <strong>{item.label}</strong>
-          <small>{item.status} / priority {item.priority} / v{item.catalog_version} / 根拠確認 {formatDate(item.source_checked_at)}</small>
-          {item.source_summary && <p>{item.source_summary}</p>}
-          {item.source_urls.length > 0 && <div className="knowledge-source-links">{item.source_urls.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">根拠を開く</a>)}</div>}
-        </article>)}</div>}
+        {catalog.length === 0 ? <p className="knowledge-empty">まだ管理者承認済みの追加Knowledgeはありません。基本Knowledgeはアプリ内に内蔵されています。</p> : <div className="knowledge-catalog-list">{catalog.map((item) => <article key={item.key}><span>{item.kind}{item.parent_label ? ` / ${item.parent_label}` : ""}</span><strong>{item.label}</strong><small>{item.status} / priority {item.priority}</small></article>)}</div>}
       </section>
     </main>
   );

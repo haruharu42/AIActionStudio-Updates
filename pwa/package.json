@@ -12,7 +12,10 @@
     "start": "vinext start",
     "test": "npm run build && node --test --test-concurrency=1",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:icons": "node scripts/generate-app-icons.mjs",
+    "predev": "npm run generate:icons",
+    "prebuild": "npm run generate:icons"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.112.3",
@@ -26,6 +29,8 @@
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.34",
     "eslint": "9.39.4",
     "eslint-config-next": "16.3.4",
     "react-server-dom-webpack": "19.2.8",

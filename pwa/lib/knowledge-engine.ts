@@ -1,3 +1,5 @@
+import { PROMOTION_COMMON_KNOWLEDGE, PROMOTION_PUBLICATION_KNOWLEDGE } from "@/lib/promotion-knowledge";
+
 export type KnowledgeKind = "age" | "genre" | "subgenre" | "publication" | "task" | "combination";
 
 export const KNOWLEDGE_TASKS = [
@@ -22,26 +24,6 @@ export const KNOWLEDGE_TASKS = [
 
 export type KnowledgeTask = (typeof KNOWLEDGE_TASKS)[number];
 
-export const KNOWLEDGE_TASK_LABELS: Record<KnowledgeTask, string> = {
-  title: "タイトル",
-  article: "記事",
-  image: "画像",
-  social: "SNS",
-  promotion: "販促",
-  sidejob_content: "記事・コンテンツ販売",
-  sidejob_sns: "SNS運用・集客",
-  sidejob_video: "YouTube・ショート動画",
-  sidejob_affiliate: "アフィリエイト",
-  sidejob_resale: "物販・フリマ販売",
-  sidejob_crowdsourcing: "クラウドソーシング",
-  sidejob_skill_sales: "スキル販売",
-  sidejob_digital_product: "デジタル商品・教材販売",
-  sidejob_outreach: "営業・案件獲得",
-  sidejob_research: "リサーチ・事実確認",
-  sidejob_efficiency: "業務効率化・SOP化",
-  sidejob_planning: "AI副業選定",
-};
-
 export function isKnowledgeTask(value: unknown): value is KnowledgeTask {
   return typeof value === "string" && (KNOWLEDGE_TASKS as readonly string[]).includes(value);
 }
@@ -62,7 +44,6 @@ export type KnowledgeRule = {
   sourceUrls?: string[];
   sourceSummary?: string;
   sourceCheckedAt?: string | null;
-  scenarioTags?: string[];
 };
 
 export type KnowledgeCompileInput = {
@@ -74,30 +55,12 @@ export type KnowledgeCompileInput = {
   subgenre?: string;
   audience?: string;
   purpose?: string;
-  scenarioText?: string;
-  scenarioTags?: string[];
 };
 
 export type CompiledKnowledge = {
   promptBlock: string;
   applied: string[];
   warnings: string[];
-};
-
-export type CloudKnowledgeSelectionItem = {
-  rule: KnowledgeRule;
-  score: number;
-  specificity: number;
-  selected: boolean;
-  position: number | null;
-  reason: string;
-};
-
-export type CloudKnowledgeSelectionPreview = {
-  limit: number;
-  eligibleCount: number;
-  selected: CloudKnowledgeSelectionItem[];
-  skipped: CloudKnowledgeSelectionItem[];
 };
 
 let runtimeCloudRules: KnowledgeRule[] = [];
@@ -116,124 +79,6 @@ function normalize(value: string | null | undefined): string {
 
 function list(...items: string[]): string[] {
   return items;
-}
-
-function scenarioTagFromRuleKey(key: string): string | null {
-  const match = /^auto:scenario:[^:]+:([a-z0-9_-]+):([a-z0-9._-]+):/i.exec(key);
-  return match ? `${match[1].toLowerCase()}:${match[2].toLowerCase()}` : null;
-}
-
-function explicitScenarioTags(rule: KnowledgeRule): string[] {
-  const fromKey = scenarioTagFromRuleKey(rule.key);
-  return unique([
-    ...(rule.scenarioTags ?? []),
-    ...(fromKey ? [fromKey] : []),
-  ]).map((tag) => tag.toLowerCase());
-}
-
-function addScenarioTag(tags: Set<string>, group: string, value: string): void {
-  tags.add(`${group}:${value}`);
-}
-
-function hasScenarioText(text: string, patterns: RegExp[]): boolean {
-  return patterns.some((pattern) => pattern.test(text));
-}
-
-export function buildKnowledgeScenarioTags(input: KnowledgeCompileInput): string[] {
-  const tags = new Set(
-    (input.scenarioTags ?? [])
-      .map((tag) => normalize(tag))
-      .filter((tag) => /^[a-z0-9_-]+:[a-z0-9._-]+$/.test(tag)),
-  );
-  const text = normalize([
-    input.publicationTarget,
-    input.articleType,
-    input.genre,
-    input.subgenre,
-    input.audience,
-    input.purpose,
-    input.scenarioText,
-  ].filter(Boolean).join(" "));
-
-  const mediumPatterns: Array<[string, RegExp[]]> = [
-    ["note", [/\bnote\b/]],
-    ["tips", [/\btips\b/]],
-    ["brain", [/\bbrain\b/]],
-    ["blog", [/ブログ/, /\bseo\b/, /\bblog\b/]],
-    ["newsletter", [/ニュースレター/, /\bnewsletter\b/]],
-    ["x", [/(^|\s)x(\s|$)/]],
-    ["instagram", [/instagram/]],
-    ["threads", [/threads/]],
-    ["tiktok", [/tiktok/]],
-    ["youtube", [/youtube/]],
-    ["mercari", [/メルカリ/, /mercari/]],
-    ["rakuma", [/ラクマ/, /rakuma/]],
-    ["yahoo", [/yahoo/]],
-    ["amazon", [/amazon/]],
-    ["crowdworks", [/クラウドワークス/, /crowdworks/]],
-    ["coconala", [/ココナラ/, /coconala/]],
-    ["email", [/メール/, /\bemail\b/]],
-    ["dm", [/(^|\s)dm(\s|$)/, /sns dm/]],
-    ["pdf", [/(^|\s)pdf(\s|$)/]],
-    ["notion", [/notion/]],
-  ];
-  for (const [value, patterns] of mediumPatterns) {
-    if (hasScenarioText(text, patterns)) addScenarioTag(tags, "medium", value);
-  }
-
-  const modePatterns: Array<[string, RegExp[]]> = [
-    ["sales", [/販売/, /購入/, /商品/, /収益化/, /有料/, /出品/, /価格/, /見積/]],
-    ["acquisition", [/集客/, /認知/, /信頼/, /流入/, /プロフィール閲覧/, /問い合わせ/, /相談/, /リード/]],
-    ["production", [/制作/, /作成/, /執筆/, /台本/, /編集/, /デザイン/, /動画/, /画像/, /投稿/, /成果物/, /納品物/]],
-    ["operation", [/運用/, /継続/, /改善/, /分析/, /検証/, /再開/, /sop/, /自動化/, /テンプレート化/]],
-    ["outreach", [/営業/, /応募/, /提案/, /案件獲得/, /初回連絡/, /追客/]],
-    ["delivery", [/納品/, /修正/, /検収/, /契約/, /要件/, /作業範囲/]],
-    ["research", [/調査/, /リサーチ/, /比較/, /根拠/, /一次情報/, /事実確認/]],
-    ["planning", [/計画/, /選定/, /始め方/, /候補/, /30日/, /使える時間/, /初期予算/]],
-  ];
-  for (const [value, patterns] of modePatterns) {
-    if (hasScenarioText(text, patterns)) addScenarioTag(tags, "mode", value);
-  }
-
-  if (hasScenarioText(text, [/顧客へ影響/, /金銭へ影響/, /公開情報へ影響/, /重大/, /高リスク/])) {
-    addScenarioTag(tags, "risk", "high");
-  }
-  if (hasScenarioText(text, [/低い・やり直せる/, /低リスク/])) {
-    addScenarioTag(tags, "risk", "low");
-  }
-  if (hasScenarioText(text, [/小さく試して判断/, /まず小さく/, /30日で確認/, /検証指標/])) {
-    addScenarioTag(tags, "strategy", "test");
-  }
-  if (hasScenarioText(text, [/継続/, /繰り返し/, /再利用/, /型を作/, /仕組みが完成/, /毎日/, /毎週/, /毎月/, /案件ごと/])) {
-    addScenarioTag(tags, "strategy", "repeat");
-  }
-
-  return [...tags].sort();
-}
-
-function scenarioRuleMatches(rule: KnowledgeRule, input: KnowledgeCompileInput): boolean {
-  const required = explicitScenarioTags(rule);
-  if (required.length === 0) return true;
-  const available = new Set(buildKnowledgeScenarioTags(input));
-  if (available.size === 0) return false;
-
-  const groups = new Map<string, string[]>();
-  for (const tag of required) {
-    const separator = tag.indexOf(":");
-    if (separator <= 0) continue;
-    const group = tag.slice(0, separator);
-    const values = groups.get(group) ?? [];
-    values.push(tag);
-    groups.set(group, values);
-  }
-  return [...groups.values()].every((options) => options.some((tag) => available.has(tag)));
-}
-
-function scenarioSpecificity(rule: KnowledgeRule, input: KnowledgeCompileInput): number {
-  const required = explicitScenarioTags(rule);
-  if (required.length === 0 || !scenarioRuleMatches(rule, input)) return 0;
-  const groupCount = new Set(required.map((tag) => tag.split(":", 1)[0])).size;
-  return Math.min(52, 34 + Math.max(0, groupCount - 1) * 8 + Math.min(required.length, 4) * 2);
 }
 
 const commonRule: KnowledgeRule = {
@@ -423,101 +268,41 @@ function unique(lines: string[]): string[] {
   return [...new Set(lines.map((line) => line.trim()).filter(Boolean))];
 }
 
-const MAX_CLOUD_RULES_PER_COMPILE = 5;
-const MAX_GUIDANCE_LINES = 18;
-const MAX_DELIVERABLE_LINES = 12;
-const MAX_CAUTION_LINES = 18;
-
-function cloudRuleSpecificity(rule: KnowledgeRule): number {
-  if (rule.kind === "task") return 30;
-  if (rule.kind === "subgenre") return 25;
-  if (rule.kind === "genre") return 20;
-  if (rule.kind === "publication") return 15;
-  if (rule.kind === "age") return 10;
-  return 5;
-}
-
-function cloudRuleRank(rule: KnowledgeRule, input: KnowledgeCompileInput): number {
-  return rule.priority + cloudRuleSpecificity(rule) + scenarioSpecificity(rule, input);
-}
-
-function matchesCloudRule(rule: KnowledgeRule, input: KnowledgeCompileInput): boolean {
-  if (rule.tasks?.length && !rule.tasks.includes(input.task)) return false;
-  if (!scenarioRuleMatches(rule, input)) return false;
-  if (rule.kind === "genre") return matches(rule, input.genre ?? "");
-  if (rule.kind === "subgenre") return matches(rule, input.subgenre ?? "", input.genre);
-  if (rule.kind === "age") return matches(rule, input.ageGroup ?? "");
-  if (rule.kind === "publication") return matches(rule, input.publicationTarget ?? "");
-  if (rule.kind === "task") return !rule.tasks?.length || rule.tasks.includes(input.task);
-  return rule.kind === "combination";
-}
-
-function cloudRuleReason(rule: KnowledgeRule): string {
-  if (explicitScenarioTags(rule).length > 0) return "今回の状況に一致する専用ルール";
-  if (rule.kind === "task") return "タスク固有ルール";
-  if (rule.kind === "subgenre") return "サブジャンル一致";
-  if (rule.kind === "genre") return "ジャンル一致";
-  if (rule.kind === "publication") return "掲載先一致";
-  if (rule.kind === "age") return "対象条件一致";
-  return "複数機能に共通する横断ルール";
-}
-
-export function previewCloudKnowledgeSelection(
-  rules: KnowledgeRule[],
-  input: KnowledgeCompileInput,
-  limit = MAX_CLOUD_RULES_PER_COMPILE,
-): CloudKnowledgeSelectionPreview {
-  const safeLimit = Math.max(1, Math.min(MAX_CLOUD_RULES_PER_COMPILE, Math.trunc(limit || MAX_CLOUD_RULES_PER_COMPILE)));
-  const ranked = rules
-    .filter((rule) => rule.source === "cloud")
-    .filter((rule) => matchesCloudRule(rule, input))
-    .sort((a, b) =>
-      cloudRuleRank(b, input) - cloudRuleRank(a, input)
-      || b.priority - a.priority
-      || cloudRuleSpecificity(b) - cloudRuleSpecificity(a)
-      || a.key.localeCompare(b.key, "ja"),
-    );
-
-  const items = ranked.map((rule, index): CloudKnowledgeSelectionItem => ({
-    rule,
-    score: cloudRuleRank(rule, input),
-    specificity: cloudRuleSpecificity(rule),
-    selected: index < safeLimit,
-    position: index < safeLimit ? index + 1 : null,
-    reason: cloudRuleReason(rule),
-  }));
-
-  return {
-    limit: safeLimit,
-    eligibleCount: items.length,
-    selected: items.filter((item) => item.selected),
-    skipped: items.filter((item) => !item.selected),
-  };
-}
-
 function allRules(input: KnowledgeCompileInput): KnowledgeRule[] {
-  const seedRules: KnowledgeRule[] = [commonRule, taskRules[input.task]];
+  const rules: KnowledgeRule[] = [commonRule, taskRules[input.task]];
+  if (input.task === "promotion") {
+    rules.push(PROMOTION_COMMON_KNOWLEDGE);
+    const promotionPublication = PROMOTION_PUBLICATION_KNOWLEDGE.find(
+      (rule) => matches(rule, input.publicationTarget ?? ""),
+    );
+    if (promotionPublication) rules.push(promotionPublication);
+  }
   const age = ageRules.find((rule) => matches(rule, input.ageGroup ?? ""));
-  if (age) seedRules.push(age);
+  if (age) rules.push(age);
   const genre = genreRules.find((rule) => matches(rule, input.genre ?? ""));
-  if (genre) seedRules.push(genre);
+  if (genre) rules.push(genre);
   const subgenre = subgenreRules.find((rule) => matches(rule, input.subgenre ?? "", input.genre));
-  if (subgenre) seedRules.push(subgenre);
+  if (subgenre) rules.push(subgenre);
   const publication = publicationRules.find((rule) => matches(rule, input.publicationTarget ?? ""));
-  if (publication) seedRules.push(publication);
+  if (publication) rules.push(publication);
 
-  const cloudRules = previewCloudKnowledgeSelection(runtimeCloudRules, input)
-    .selected
-    .map((item) => item.rule);
-
-  return [...seedRules, ...cloudRules].sort((a, b) => b.priority - a.priority || a.key.localeCompare(b.key, "ja"));
+  for (const rule of runtimeCloudRules) {
+    if (rule.tasks?.length && !rule.tasks.includes(input.task)) continue;
+    if (rule.kind === "genre" && matches(rule, input.genre ?? "")) rules.push(rule);
+    if (rule.kind === "subgenre" && matches(rule, input.subgenre ?? "", input.genre)) rules.push(rule);
+    if (rule.kind === "age" && matches(rule, input.ageGroup ?? "")) rules.push(rule);
+    if (rule.kind === "publication" && matches(rule, input.publicationTarget ?? "")) rules.push(rule);
+    if (rule.kind === "task" && (!rule.tasks?.length || rule.tasks.includes(input.task))) rules.push(rule);
+    if (rule.kind === "combination") rules.push(rule);
+  }
+  return rules.sort((a, b) => b.priority - a.priority || a.key.localeCompare(b.key, "ja"));
 }
 
 export function compileKnowledgeContext(input: KnowledgeCompileInput): CompiledKnowledge {
   const rules = allRules(input);
-  const guidance = unique(rules.flatMap((rule) => rule.guidance)).slice(0, MAX_GUIDANCE_LINES);
-  const deliverables = unique(rules.flatMap((rule) => rule.deliverables)).slice(0, MAX_DELIVERABLE_LINES);
-  const cautions = unique(rules.flatMap((rule) => rule.cautions)).slice(0, MAX_CAUTION_LINES);
+  const guidance = unique(rules.flatMap((rule) => rule.guidance));
+  const deliverables = unique(rules.flatMap((rule) => rule.deliverables));
+  const cautions = unique(rules.flatMap((rule) => rule.cautions));
   const warnings: string[] = [];
 
   const knownGenre = !input.genre || normalize(input.genre) === "その他" || genreRules.some((rule) => matches(rule, input.genre ?? "")) || runtimeCloudRules.some((rule) => rule.kind === "genre" && matches(rule, input.genre ?? ""));

@@ -17,7 +17,7 @@ test("root layout keeps verified access state alive across client-side route cha
   assert.match(layout, /<AccessStateProvider>[\s\S]*?\{children\}[\s\S]*?<PersistentMobileNav \/>[\s\S]*?<\/AccessStateProvider>/);
   assert.match(provider, /loadAccessState/);
   assert.match(provider, /loadAccessStateOnce/);
-  assert.match(provider, /inFlightRef/);
+  assert.match(provider, /requestLoaderRef/);
   assert.match(provider, /onAuthStateChange/);
   assert.match(provider, /if \(!session\) \{[\s\S]*?setState\(\{ kind: "signed_out" \}\)/);
   assert.match(provider, /useSharedAccessState/);
@@ -164,7 +164,7 @@ test("free trial usage verification stays invisible while loading", async () => 
   assert.doesNotMatch(gate, /利用回数を確認しています/);
 });
 
-test("member and admin route shells stay hidden until shared access verification settles", async () => {
+test("member and admin route shells stay hidden until access verification settles", async () => {
   const accessStateRoutes = await Promise.all([
     read("components/phase13-image-page.tsx"),
     read("components/phase14-sns-page.tsx"),
@@ -177,7 +177,6 @@ test("member and admin route shells stay hidden until shared access verification
 
   const localGateRoutes = await Promise.all([
     read("components/phase11-create-page.tsx"),
-    read("components/phase10-admin-page.tsx"),
     read("components/free-trial-admin-page.tsx"),
     read("components/operations-admin-page.tsx"),
     read("components/sales-settings-admin-page.tsx"),
@@ -187,34 +186,46 @@ test("member and admin route shells stay hidden until shared access verification
     assert.match(source, /if \(gate\.kind === "loading"\) return null/);
   }
 
-  const [accountDesign, invite, inquiries, noteOperations] = await Promise.all([
+  const [adminGuard, adminUsers, accountDesign, invite, inquiries, noteOperations] = await Promise.all([
+    read("components/admin-route-guard.tsx"),
+    read("components/pwa-admin-users-page.tsx"),
     read("components/platform-account-design-page.tsx"),
     read("components/phase9-invite-page.tsx"),
     read("components/user-inquiries-page.tsx"),
     read("components/note-operations-page.tsx"),
   ]);
 
+  assert.match(adminGuard, /useSharedAccessState\(\)/);
+  assert.match(adminGuard, /gate\.kind === "ready"/);
+  assert.match(adminUsers, /state === "loading"/);
   assert.match(accountDesign, /if \(state\.kind === "loading"\) return null/);
   assert.match(invite, /if \(state\.kind === "loading"\) return null/);
   assert.match(inquiries, /if \(state\.kind === "loading"\) return null/);
   assert.match(noteOperations, /if \(gate\.kind === "loading" \|\| \(gate\.kind === "ready" && !profile\)\) return null/);
 });
 
-test("admin surfaces reuse root access state instead of starting page-level account checks", async () => {
-  const sources = await Promise.all([
-    read("components/phase10-admin-page.tsx"),
+test("admin authorization stays centralized while admin feature pages avoid page-level profile queries", async () => {
+  const [guard, users, ...sharedStatePages] = await Promise.all([
+    read("components/admin-route-guard.tsx"),
+    read("components/pwa-admin-users-page.tsx"),
     read("components/operations-admin-page.tsx"),
     read("components/admin-home-topbar.tsx"),
-    read("components/admin-route-guard.tsx"),
     read("components/admin-knowledge-page.tsx"),
     read("components/free-trial-admin-page.tsx"),
     read("components/sales-settings-admin-page.tsx"),
     read("components/admin-development-prompts-page.tsx"),
   ]);
 
-  for (const source of sources) {
+  assert.match(guard, /useSharedAccessState\(\)/);
+  assert.match(guard, /profile\.role !== "admin"/);
+  assert.match(guard, /profile\.status !== "active"/);
+
+  for (const source of sharedStatePages) {
     assert.match(source, /useSharedAccessState\(\)/);
     assert.doesNotMatch(source, /auth\.getUser\(\)|\.from\("profiles"\)|loadCoreAccessState|loadAccessState/);
-    assert.doesNotMatch(source, /管理者権限を確認しています|権限を確認しています/);
   }
+
+  assert.doesNotMatch(users, /auth\.getUser\(\)|\.from\("profiles"\)|loadCoreAccessState|loadAccessState/);
+  assert.match(users, /listPwaAdminUsers/);
 });
+

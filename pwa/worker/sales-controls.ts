@@ -1,25 +1,77 @@
 export interface SalesControlEnv {
   AAS_SUPABASE_URL?: string;
-  AAS_SUPABASE_PUBLISHABLE_KEY?: string;
   AAS_SUPABASE_SERVICE_ROLE_KEY?: string;
 }
 
-type SalesSettings = {
+export type EffectiveSalesSettings = {
   externalSalesEnabled: boolean;
   accessCodeEnabled: boolean;
   externalSalesUrl: string;
   stripeCheckoutEnabled: boolean;
   pwa7DayEnabled: boolean;
   pwaMonthlyEnabled: boolean;
+  publicSalesApproved: boolean;
 };
 
-const PLAN_FLAGS: Record<string, keyof Pick<SalesSettings, "pwa7DayEnabled" | "pwaMonthlyEnabled">> = {
+type SalesLaunchRuntime = {
+  approved: boolean;
+  externalRouteReady: boolean;
+  stripeRouteReady: boolean;
+};
+
+const PLAN_FLAGS: Record<string, keyof Pick<EffectiveSalesSettings, "pwa7DayEnabled" | "pwaMonthlyEnabled">> = {
   "AAS-PWA-7DAY": "pwa7DayEnabled",
   "AAS-PWA-MONTHLY": "pwaMonthlyEnabled",
 };
 
 function clean(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function safeExternalSalesUrl(value: unknown): string {
+  const cleaned = clean(value);
+  if (!cleaned) return "";
+  try {
+    const parsed = new URL(cleaned);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+
+function serviceHeaders(serviceKey: string): Record<string, string> {
+  return {
+    apikey: serviceKey,
+    ...(!serviceKey.startsWith("sb_secret_") ? { authorization: `Bearer ${serviceKey}` } : {}),
+    accept: "application/json",
+  };
+}
+
+async function loadSalesLaunchRuntime(
+  baseUrl: string,
+  serviceKey: string,
+): Promise<SalesLaunchRuntime | null> {
+  const response = await fetch(`${baseUrl}/rest/v1/rpc/service_get_sales_launch_runtime`, {
+    method: "POST",
+    headers: {
+      ...serviceHeaders(serviceKey),
+      "content-type": "application/json",
+    },
+    body: "{}",
+  });
+  if (!response.ok) return null;
+
+  const payload = await response.json().catch(() => null);
+  const row = Array.isArray(payload) ? payload[0] : payload;
+  if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+  const value = row as Record<string, unknown>;
+  return {
+    approved: value.public_sales_approved === true,
+    externalRouteReady: value.external_route_ready === true,
+    stripeRouteReady: value.stripe_route_ready === true,
+  };
 }
 
 function jsonResponse(payload: unknown, status = 200): Response {
@@ -33,56 +85,47 @@ function jsonResponse(payload: unknown, status = 200): Response {
   });
 }
 
-function parseSalesSettingsPayload(payload: unknown): SalesSettings | null {
-  if (!Array.isArray(payload) || !payload[0] || typeof payload[0] !== "object") return null;
-  const row = payload[0] as Record<string, unknown>;
-  return {
-    externalSalesEnabled: row.external_sales_enabled === true,
-    accessCodeEnabled: row.access_code_enabled === true,
-    externalSalesUrl: clean(row.external_sales_url),
-    stripeCheckoutEnabled: row.stripe_checkout_enabled === true,
-    pwa7DayEnabled: row.pwa_7day_enabled === true,
-    pwaMonthlyEnabled: row.pwa_monthly_enabled === true,
-  };
-}
-
-async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | null> {
+export async function loadEffectiveSalesSettings(env: SalesControlEnv): Promise<EffectiveSalesSettings | null> {
   const baseUrl = clean(env.AAS_SUPABASE_URL).replace(/\/$/, "");
-  const publishableKey = clean(env.AAS_SUPABASE_PUBLISHABLE_KEY);
   const serviceKey = clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
-  if (!baseUrl) return null;
+  if (!baseUrl || !serviceKey) return null;
 
-  if (publishableKey) {
-    const publicResponse = await fetch(`${baseUrl}/rest/v1/rpc/get_public_commerce_sales_settings`, {
-      method: "POST",
-      headers: {
-        apikey: publishableKey,
-        "content-type": "application/json",
-        accept: "application/json",
-      },
-      body: "{}",
-    });
-    if (publicResponse.ok) {
-      const parsed = parseSalesSettingsPayload(await publicResponse.json().catch(() => null));
-      if (parsed) return parsed;
-    }
-  }
-
-  if (!serviceKey) return null;
-
-  const privilegedResponse = await fetch(
+  const response = await fetch(
     `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,external_sales_url,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled&limit=1`,
     {
       method: "GET",
-      headers: {
-        apikey: serviceKey,
-        ...(!serviceKey.startsWith("sb_secret_") ? { authorization: `Bearer ${serviceKey}` } : {}),
-        accept: "application/json",
-      },
+      headers: serviceHeaders(serviceKey),
     },
   );
-  if (!privilegedResponse.ok) return null;
-  return parseSalesSettingsPayload(await privilegedResponse.json().catch(() => null));
+  if (!response.ok) return null;
+
+  const payload = await response.json().catch(() => null);
+  if (!Array.isArray(payload) || !payload[0] || typeof payload[0] !== "object") return null;
+  const row = payload[0] as Record<string, unknown>;
+  const runtime = await loadSalesLaunchRuntime(baseUrl, serviceKey);
+  if (!runtime) return null;
+
+  const externalSalesUrl = safeExternalSalesUrl(row.external_sales_url);
+  const externalSalesEnabled =
+    runtime.approved &&
+    runtime.externalRouteReady &&
+    row.external_sales_enabled === true &&
+    row.access_code_enabled === true &&
+    Boolean(externalSalesUrl);
+  const stripeCheckoutEnabled =
+    runtime.approved &&
+    runtime.stripeRouteReady &&
+    row.stripe_checkout_enabled === true;
+
+  return {
+    externalSalesEnabled,
+    accessCodeEnabled: row.access_code_enabled === true,
+    externalSalesUrl: externalSalesEnabled ? externalSalesUrl : "",
+    stripeCheckoutEnabled,
+    pwa7DayEnabled: stripeCheckoutEnabled && row.pwa_7day_enabled === true,
+    pwaMonthlyEnabled: stripeCheckoutEnabled && row.pwa_monthly_enabled === true,
+    publicSalesApproved: runtime.approved,
+  };
 }
 
 export async function handleSalesControlRequest(
@@ -92,14 +135,14 @@ export async function handleSalesControlRequest(
   const url = new URL(request.url);
 
   if (url.pathname === "/api/sales/settings" && request.method === "GET") {
-    const settings = await loadSalesSettings(env);
+    const settings = await loadEffectiveSalesSettings(env);
     if (!settings) return jsonResponse({ error: "販売受付設定を確認できませんでした。" }, 503);
     return jsonResponse(settings);
   }
 
   if (url.pathname !== "/api/billing/checkout" || request.method !== "POST") return null;
 
-  const settings = await loadSalesSettings(env);
+  const settings = await loadEffectiveSalesSettings(env);
   if (!settings) return jsonResponse({ error: "販売受付設定を確認できないため、新規決済を停止しています。" }, 503);
   if (!settings.stripeCheckoutEnabled) {
     return jsonResponse({ error: "現在、Stripeでの新規購入受付は停止しています。" }, 503);

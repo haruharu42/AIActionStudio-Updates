@@ -1,0 +1,2 @@
+create index if not exists promotion_screenshot_analysis_settings_updated_by_idx
+  on public.promotion_screenshot_analysis_settings(updated_by);

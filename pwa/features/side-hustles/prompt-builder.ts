@@ -1,5 +1,7 @@
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
 import { compilePromptOptimizationContext } from "@/lib/prompt-optimization";
+import { compileSideHustleScenarioKnowledge } from "@/features/side-hustles/scenario-knowledge";
+import { compileSideHustleCombinationKnowledge } from "@/features/side-hustles/combination-knowledge";
 import type { AiPlan, AiProvider } from "@/lib/user-personalization";
 import {
   SIDE_HUSTLE_CUSTOM_VALUE,
@@ -59,13 +61,16 @@ function interpolate(template: string, definition: SideHustleDefinition, draft: 
     resolveSideHustleFieldValue(definition, key, draft.values[key]));
 }
 
-function experienceScenarioTags(value: string | undefined): string[] {
-  const normalized = (value ?? "").normalize("NFKC");
-  if (/未経験|初心者|始めたばかり|個人制作経験/.test(normalized)) return ["experience:beginner"];
-  if (/経験者|実務|業務経験|販売経験|有償案件経験|継続中/.test(normalized)) {
-    return ["experience:experienced"];
-  }
-  return [];
+function buildSideHustleBrief(
+  definition: SideHustleDefinition,
+  resolved: Readonly<Record<string, string>>,
+): string {
+  return [
+    "【SIDE HUSTLE BRIEF】",
+    `副業機能: ${definition.title}`,
+    `カテゴリ: ${definition.category}`,
+    ...definition.fields.map((field) => `${field.label}: ${resolved[field.key] ?? "未指定"}`),
+  ].join("\n");
 }
 
 export function buildSideHustlePrompt(
@@ -85,9 +90,13 @@ export function buildSideHustlePrompt(
     subgenre: definition.title,
     audience: resolved.buyer_stage ?? resolved.reader_stage ?? resolved.target ?? resolved.buyer_level ?? "",
     purpose: resolved.objective ?? resolved.goal ?? resolved.decision ?? resolved.outcome ?? resolved.video_goal ?? "",
-    scenarioText: Object.values(resolved).join(" "),
-    scenarioTags: experienceScenarioTags(resolved.experience_level ?? resolved.experience),
   });
+
+  const scenarioKnowledge = compileSideHustleScenarioKnowledge(definition, resolved);
+  const selected = Object.fromEntries(
+    definition.fields.map((field) => [field.key, draft.values[field.key]?.selected ?? ""]),
+  );
+  const combinationKnowledge = compileSideHustleCombinationKnowledge(definition, selected);
 
   const provider = draft.selectedAi as AiProvider;
   const plan = draft.selectedPlan as AiPlan;
@@ -95,21 +104,23 @@ export function buildSideHustlePrompt(
 
   const sections = [
     interpolate(definition.promptTemplate, definition, draft),
-    resolved.experience_level && resolved.experience_level !== "指定しない"
-      ? `【今回の取り組み経験】\n- ${resolved.experience_level}`
-      : "",
+    buildSideHustleBrief(definition, resolved),
     knowledge.promptBlock,
+    scenarioKnowledge.promptBlock,
+    combinationKnowledge.promptBlock,
     optimization,
     "【最終出力ルール】",
     "- ユーザーが入力していない実体験・実績・資格・レビュー・売上・使用経験を事実として作らない。",
     "- 価格、在庫、規約、手数料、ランキング、アルゴリズム、最新仕様など変動情報は、確認済みでない限り断定せず「最新の公式情報を確認」と明記する。",
     "- 架空例を使う場合は「例」「想定」と明示する。",
     "- 使える状態の成果物を優先し、一般論の水増しをしない。",
+    "- SIDE HUSTLE BRIEFの全条件を最終出力前に内部確認し、選択された媒体・経験段階・目的・制作方法・販売/集客条件・リスク条件の取りこぼしをなくす。",
+    "- 最終回答にはそのまま使える完成成果物だけを出し、内部検討・自己点検の途中経過は出さない。",
   ].filter(Boolean);
 
   return {
     prompt: sections.join("\n\n"),
-    appliedKnowledge: knowledge.applied,
+    appliedKnowledge: [...knowledge.applied, ...scenarioKnowledge.applied, ...combinationKnowledge.applied],
     warnings: knowledge.warnings,
   };
 }

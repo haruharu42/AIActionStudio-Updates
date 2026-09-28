@@ -48,6 +48,22 @@ export type PwaAdminInvite = {
   entitlementExpiresAt: string | null;
 };
 
+export type PwaInviteRedemption = {
+  redemptionId: string;
+  inviteId: string;
+  inviteCode: string;
+  inviteLabel: string | null;
+  salesChannel: string;
+  externalReference: string | null;
+  aasUserId: string;
+  displayName: string | null;
+  redeemedAt: string;
+  entitlementStatus: string | null;
+  entitlementExpiresAt: string | null;
+  entitlementSalesChannel: string | null;
+  entitlementExternalReference: string | null;
+};
+
 function rows(value: unknown): Record<string, unknown>[] {
   if (!Array.isArray(value)) throw new Error("管理APIの応答形式が不正です。");
   return value.map((item) => {
@@ -264,4 +280,37 @@ export async function createPwaAccessCode(
 export async function revokePwaAccessCode(client: SupabaseClient, inviteId: string): Promise<void> {
   const { error } = await client.rpc("admin_revoke_pwa_invite", { p_invite_id: inviteId });
   if (error) throw adminError(error, "利用コードの無効化に失敗しました。");
+}
+
+
+function parseInviteRedemption(row: Record<string, unknown>): PwaInviteRedemption {
+  return {
+    redemptionId: text(row.redemption_id, "redemption_id"),
+    inviteId: text(row.invite_id, "invite_id"),
+    inviteCode: text(row.invite_code, "invite_code"),
+    inviteLabel: nullableText(row.invite_label, "invite_label"),
+    salesChannel: text(row.sales_channel, "sales_channel"),
+    externalReference: nullableText(row.external_reference, "external_reference"),
+    aasUserId: text(row.aas_user_id, "AAS ID"),
+    displayName: nullableText(row.display_name, "display_name"),
+    redeemedAt: text(row.redeemed_at, "redeemed_at"),
+    entitlementStatus: nullableText(row.entitlement_status, "entitlement_status"),
+    entitlementExpiresAt: nullableText(row.entitlement_expires_at, "entitlement_expires_at"),
+    entitlementSalesChannel: nullableText(row.entitlement_sales_channel, "entitlement_sales_channel"),
+    entitlementExternalReference: nullableText(row.entitlement_external_reference, "entitlement_external_reference"),
+  };
+}
+
+export async function listPwaInviteRedemptions(
+  client: SupabaseClient,
+  inviteId?: string,
+  limit = 100,
+): Promise<PwaInviteRedemption[]> {
+  const safeLimit = Number.isSafeInteger(limit) ? Math.max(1, Math.min(limit, 200)) : 100;
+  const { data, error } = await client.rpc("admin_list_pwa_invite_redemptions", {
+    p_invite_id: inviteId?.trim() || null,
+    p_limit: safeLimit,
+  });
+  if (error) throw adminError(error, "利用コードの使用履歴を取得できませんでした。");
+  return rows(data).map(parseInviteRedemption);
 }

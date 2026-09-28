@@ -23,7 +23,7 @@ export const MEMBER_TOOL_GROUPS: readonly ToolGroup[] = [
         href: "/note-operations",
         category: "note副業",
         title: "note運営アシスタント",
-        description: "アカウント準備、プロフィール、無料・有料noteの投稿計画、カレンダーと今日のToDoを管理します。",
+        description: "アカウント準備、プロフィール、無料・有料noteの投稿計画、メンバーシップの料金・特典相談、カレンダーと今日のToDoを管理します。",
         badge: "専用フロー",
       },
       {

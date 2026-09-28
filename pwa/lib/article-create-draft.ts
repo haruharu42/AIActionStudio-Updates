@@ -1,8 +1,11 @@
-import type { ArticleCreationDraft } from "@/lib/phase11-create";
+import type {
+  ArticleCreationContext,
+  ArticleCreationDraft,
+  NoteMembershipArticleKind,
+} from "@/lib/phase11-create";
 import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
-  TARGET_LENGTH_OPTIONS,
   isImageStyleValue,
   subgenreOptionsFor,
 } from "@/lib/phase18-content-options";
@@ -91,7 +94,7 @@ export function createInitialArticleDraft(
   }
 
   const targetLength = Number(params.get("targetLength"));
-  if (TARGET_LENGTH_OPTIONS.some((option) => option.value === targetLength)) {
+  if (Number.isSafeInteger(targetLength) && targetLength >= 500 && targetLength <= 50000) {
     next.targetLength = targetLength;
   }
 
@@ -101,7 +104,7 @@ export function createInitialArticleDraft(
   }
 
   const inlineCount = Number(params.get("inlineCount"));
-  if (Number.isSafeInteger(inlineCount) && inlineCount >= 1 && inlineCount <= 5) {
+  if (Number.isSafeInteger(inlineCount) && inlineCount >= 1 && inlineCount <= 10) {
     next.inlineEnabled = true;
     next.inlineCount = inlineCount;
   } else if (params.get("inlineCount") === "0") {
@@ -116,6 +119,30 @@ export function initialDraftFromLocation(): ArticleCreationDraft {
   return createInitialArticleDraft(new URLSearchParams(window.location.search));
 }
 
+export function articleCreationContextFromParams(
+  params?: URLSearchParams | null,
+): ArticleCreationContext {
+  if (!params || params.get("from") !== "note-membership") {
+    return { source: null, noteMembershipArticleKind: null };
+  }
+  const rawKind = params.get("membershipArticleKind");
+  const kind: NoteMembershipArticleKind =
+    rawKind === "member" || rawKind === "announcement" || rawKind === "qa"
+      ? rawKind
+      : null;
+  return {
+    source: "note-membership",
+    noteMembershipArticleKind: kind,
+  };
+}
+
+export function initialArticleCreationContextFromLocation(): ArticleCreationContext {
+  if (typeof window === "undefined") {
+    return { source: null, noteMembershipArticleKind: null };
+  }
+  return articleCreationContextFromParams(new URLSearchParams(window.location.search));
+}
+
 export function initialMessageFromLocation(): string {
   if (typeof window === "undefined") return "";
   const source = new URLSearchParams(window.location.search).get("from");
@@ -124,6 +151,12 @@ export function initialMessageFromLocation(): string {
   }
   if (source === "series-plan") {
     return "シリーズ計画からタイトル・無料/有料設定を引き継ぎました。アカウント設定も必要に応じて反映します。";
+  }
+  if (source === "note-membership") {
+    return "noteメンバーシップ運営からテーマを引き継ぎました。メンバー限定公開の設定はnote側で行います。AASの有料記事エリアとは別扱いです。";
+  }
+  if (source === "note-operations") {
+    return "note運営カレンダーからタイトル・テーマ・無料/有料・詳細ジャンル・サブジャンル・文字数目安を引き継ぎました。内容を確認してそのまま記事作成へ進めます。";
   }
   return "";
 }
@@ -146,20 +179,74 @@ export function validateArticleCreateStep(
   step: number,
   draft: ArticleCreationDraft,
 ): string | null {
+  if (step === 2 && draft.inlineEnabled && (
+    !Number.isSafeInteger(draft.inlineCount)
+    || draft.inlineCount < 1
+    || draft.inlineCount > 10
+  )) {
+    return "挿絵枚数は1〜10枚で指定してください。";
+  }
   if (step === 3 && (!draft.genre.trim() || draft.genre === "その他")) {
     return "「その他」を選んだ場合はジャンル名を入力してください。";
   }
   if (step === 3 && (!draft.subgenre.trim() || draft.subgenre === "その他")) {
     return "「その他」を選んだ場合はサブジャンル名を入力してください。";
   }
-  if (step === 5 && draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
-    return "有料記事には有料エリア開始位置が必要です。本文に「<!-- PAID_AREA -->」を入れてください。";
+  if (step === 3 && (
+    !Number.isSafeInteger(draft.targetLength)
+    || draft.targetLength < 500
+    || draft.targetLength > 50000
+  )) {
+    return "文字数目安は500〜50000文字で指定してください。";
   }
-  if (step === 5 && draft.inlineEnabled) {
-    for (let index = 1; index <= draft.inlineCount; index += 1) {
-      const marker = new RegExp(`<!--\\s*IMAGE:0?${index}\\s*-->`, "i");
-      if (!marker.test(draft.body)) {
-        return `挿絵${index}の差し込み位置が本文にありません。「<!-- IMAGE:${String(index).padStart(2, "0")} -->」を入れてください。`;
+  if (step === 3 && draft.articleType === "paid" && (
+    draft.price === null
+    || !Number.isSafeInteger(draft.price)
+    || draft.price <= 0
+  )) {
+    return "有料記事は1以上の整数価格を設定してください。";
+  }
+  if (step === 4 && (!draft.title.trim() || draft.title.trim().length > 500)) {
+    return "タイトルを1〜500文字で入力してください。候補を選ぶか、タイトルを直接入力してください。";
+  }
+  if (step === 5) {
+    const body = draft.body;
+    const paidMarkers = body.match(/<!--\s*PAID_AREA\s*-->/gi) ?? [];
+    if (draft.articleType === "paid" && body.trim() && paidMarkers.length === 0) {
+      return "有料記事には有料エリア開始位置が必要です。本文に「<!-- PAID_AREA -->」を入れてください。";
+    }
+    if (draft.articleType === "paid" && paidMarkers.length > 1) {
+      return "有料エリア開始位置は本文に1か所だけ設定してください。";
+    }
+    if (draft.articleType === "free" && paidMarkers.length > 0) {
+      return "無料記事には有料エリア開始位置を入れないでください。";
+    }
+
+    const markerOrders = [...body.matchAll(/<!--\s*IMAGE:0*(\d+)\s*-->/gi)]
+      .map((match) => Number(match[1]))
+      .filter((order) => Number.isSafeInteger(order));
+
+    if (!draft.inlineEnabled && markerOrders.length > 0) {
+      return "挿絵をOFFにしているため、本文の挿絵マーカーを削除してください。";
+    }
+
+    if (draft.inlineEnabled) {
+      for (let order = 1; order <= draft.inlineCount; order += 1) {
+        const occurrences = markerOrders.filter((value) => value === order).length;
+        if (occurrences === 0) {
+          return `挿絵${order}の差し込み位置が本文にありません。「<!-- IMAGE:${String(order).padStart(2, "0")} -->」を入れてください。`;
+        }
+        if (occurrences > 1) {
+          return `挿絵${order}の差し込み位置が重複しています。各挿絵マーカーは1か所だけにしてください。`;
+        }
+      }
+      const unexpected = markerOrders.find((order) => order < 1 || order > draft.inlineCount);
+      if (unexpected !== undefined) {
+        return `設定枚数に含まれない挿絵${unexpected}のマーカーがあります。不要な挿絵マーカーを削除してください。`;
+      }
+      const expectedOrder = Array.from({ length: draft.inlineCount }, (_unused, index) => index + 1);
+      if (markerOrders.length !== expectedOrder.length || markerOrders.some((order, index) => order !== expectedOrder[index])) {
+        return "挿絵マーカーは本文内で挿絵1→挿絵2→…の順に1回ずつ配置してください。";
       }
     }
   }
@@ -202,7 +289,9 @@ export function parseStoredArticleDraft(value: unknown): ArticleCreationDraft | 
     || !AGE_GROUP_OPTIONS.some((option) => option === value.ageGroup)
     || !GENDER_OPTIONS.some((option) => option === value.gender)
     || typeof targetLength !== "number"
-    || !TARGET_LENGTH_OPTIONS.some((option) => option.value === targetLength)
+    || !Number.isSafeInteger(targetLength)
+    || targetLength < 500
+    || targetLength > 50000
     || (price !== null && (typeof price !== "number" || !Number.isInteger(price) || price <= 0))
     || typeof value.affiliateEnabled !== "boolean"
     || typeof value.magazineEnabled !== "boolean"
@@ -212,7 +301,7 @@ export function parseStoredArticleDraft(value: unknown): ArticleCreationDraft | 
     || typeof inlineCount !== "number"
     || !Number.isInteger(inlineCount)
     || inlineCount < 1
-    || inlineCount > 5
+    || inlineCount > 10
     || typeof value.body !== "string"
   ) {
     return null;

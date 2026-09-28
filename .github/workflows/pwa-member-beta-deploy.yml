@@ -210,13 +210,7 @@ jobs:
         run: |
           set -euo pipefail
           output_file="$RUNNER_TEMP/aas-member-beta-deploy.txt"
-          npx wrangler deploy \
-            --config "$CONFIG_PATH" \
-            --keep-vars \
-            --var "AAS_SUPABASE_URL:$NEXT_PUBLIC_AAS_SUPABASE_URL" \
-            --var "AAS_SUPABASE_PUBLISHABLE_KEY:$NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY" \
-            --message "AAS PWA member beta $GITHUB_SHA" \
-            2>&1 | tee "$output_file"
+          npx wrangler deploy --config "$CONFIG_PATH" --keep-vars --message "AAS PWA member beta $GITHUB_SHA" 2>&1 | tee "$output_file"
           production_url="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev[^[:space:]]*' "$output_file" | tail -n 1 || true)"
           production_url="${production_url%\)}"
           production_url="${production_url%\]}"

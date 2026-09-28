@@ -1,0 +1,326 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+import {
+  PromptOutput,
+  SelectField,
+  SelectWithCustomField,
+  SocialWritingStyleSettings,
+} from "@/components/admin-promotion/admin-promotion-fields";
+import { AdminPromotionScreenshotAnalyzer } from "@/components/admin-promotion/admin-promotion-screenshot-analyzer";
+import {
+  AUDIENCE_OPTIONS,
+  CTA_OPTIONS,
+  PROMOTION_PHASE_OPTIONS,
+  PURPOSE_OPTIONS,
+} from "@/components/admin-promotion/admin-promotion-options";
+import {
+  defaultSocialLengthPreset,
+  sanitizeSocialTargetChars,
+  socialLengthPresetsFor,
+  type AdminProductFacts,
+  type AdminSocialPlatform,
+} from "@/lib/admin-promotion";
+import {
+  ADMIN_PROMOTION_CHANNELS,
+  buildAdminChannelDirectScreenshotPrompt,
+  buildAdminChannelPromotionPrompt,
+  resolveAdminPromotionCta,
+  type AdminPromotionChannel,
+} from "@/lib/admin-promotion-channel";
+import type { PromotionScreenshotAnalysis, PromotionScreenshotChannel } from "@/lib/promotion-screenshot-analysis";
+import { launchAiApp } from "@/lib/ai-app-links";
+import {
+  DEFAULT_ADMIN_SOCIAL_WRITING_STYLE,
+  type AdminSocialWritingStyle,
+} from "@/lib/social-writing-style";
+
+const CHANNEL_ORDER: AdminPromotionChannel[] = [
+  "note",
+  "brain",
+  "tips",
+  "x",
+  "threads",
+  "instagram",
+];
+
+export function AdminPromotionChannelBuilder({
+  facts,
+  featureOptions,
+  onCopy,
+}: {
+  facts: AdminProductFacts;
+  featureOptions: readonly string[];
+  onCopy(prompt: string): void;
+}) {
+  const [channel, setChannel] = useState<AdminPromotionChannel>("note");
+  const [phase, setPhase] = useState("実運用テスト中（販売前）");
+  const [purpose, setPurpose] = useState(ADMIN_PROMOTION_CHANNELS.note.defaultPurpose);
+  const [audience, setAudience] = useState(facts.targetAudience || "副業初心者");
+  const [focus, setFocus] = useState("製品全体");
+  const [cta, setCta] = useState(ADMIN_PROMOTION_CHANNELS.note.defaultCta);
+  const [variants, setVariants] = useState(3);
+  const initialLength = defaultSocialLengthPreset("x");
+  const [lengthPresetId, setLengthPresetId] = useState(initialLength.id);
+  const [targetChars, setTargetChars] = useState(initialLength.targetChars);
+  const [socialStyle, setSocialStyle] = useState<AdminSocialWritingStyle>({ ...DEFAULT_ADMIN_SOCIAL_WRITING_STYLE });
+  const [screenshotAnalysis, setScreenshotAnalysis] = useState<PromotionScreenshotAnalysis | null>(null);
+
+  const meta = ADMIN_PROMOTION_CHANNELS[channel];
+  const socialPlatform = meta.socialPlatform;
+  const ctaResolution = useMemo(
+    () => resolveAdminPromotionCta(facts, { phase, cta }),
+    [cta, facts, phase],
+  );
+
+  const prompt = useMemo(
+    () => buildAdminChannelPromotionPrompt(facts, {
+      channel,
+      phase,
+      purpose,
+      audience,
+      focus,
+      cta,
+      variants,
+      targetChars,
+      socialStyle,
+      screenshotAnalysis,
+    }),
+    [facts, channel, phase, purpose, audience, focus, cta, variants, targetChars, socialStyle, screenshotAnalysis],
+  );
+
+  const directScreenshotPrompt = useMemo(
+    () => meta.kind === "social"
+      ? buildAdminChannelDirectScreenshotPrompt(facts, {
+          channel,
+          phase,
+          purpose,
+          audience,
+          focus,
+          cta,
+          variants,
+          targetChars,
+          socialStyle,
+        })
+      : "",
+    [facts, channel, meta.kind, phase, purpose, audience, focus, cta, variants, targetChars, socialStyle],
+  );
+
+  const selectChannel = (next: AdminPromotionChannel) => {
+    const nextMeta = ADMIN_PROMOTION_CHANNELS[next];
+    setChannel(next);
+    setPurpose(nextMeta.defaultPurpose);
+    setCta(nextMeta.defaultCta);
+    setScreenshotAnalysis(null);
+
+    if (nextMeta.socialPlatform) {
+      const preset = defaultSocialLengthPreset(nextMeta.socialPlatform);
+      setLengthPresetId(preset.id);
+      setTargetChars(preset.targetChars);
+    }
+  };
+
+  const renderLengthSetting = (platform: AdminSocialPlatform) => {
+    const presets = socialLengthPresetsFor(platform);
+    const selected = presets.find((item) => item.id === lengthPresetId);
+    const custom = lengthPresetId === "__custom__";
+
+    return (
+      <div className="admin-promo-channel-length">
+        <label className="admin-promo-field">
+          <span>投稿の長さ</span>
+          <select
+            value={lengthPresetId}
+            onChange={(event) => {
+              const nextId = event.target.value;
+              setLengthPresetId(nextId);
+              if (nextId === "__custom__") return;
+              const preset = presets.find((item) => item.id === nextId);
+              if (preset) setTargetChars(preset.targetChars);
+            }}
+          >
+            {presets.map((preset) => (
+              <option key={preset.id} value={preset.id}>{preset.label}</option>
+            ))}
+            <option value="__custom__">その他・自由入力</option>
+          </select>
+        </label>
+        {custom && (
+          <label className="admin-promo-field">
+            <span>目標文字数</span>
+            <input
+              type="number"
+              min={1}
+              max={25000}
+              inputMode="numeric"
+              value={targetChars}
+              onChange={(event) => setTargetChars(sanitizeSocialTargetChars(Number(event.target.value)))}
+            />
+          </label>
+        )}
+        <small>{selected?.note ?? `カスタム: 約${targetChars}文字`}</small>
+      </div>
+    );
+  };
+
+  return (
+    <section className="admin-promo-channel-builder" aria-label="媒体から選ぶかんたんプロモーション">
+      <div className="admin-promo-channel-head">
+        <div>
+          <p className="eyebrow">CHANNEL FIRST</p>
+          <h2>3ステップでプロモーション素材を作る</h2>
+          <p>①媒体を選ぶ → ②内容を選ぶ → ③プロンプトをコピー、の3ステップです。SNSのスクショ追加は②の任意設定として使えます。</p>
+        </div>
+        <strong>媒体ごとに専用設計</strong>
+      </div>
+
+      <label className="admin-promo-channel-select">
+        <span>① どこでプロモーションしますか？</span>
+        <select value={channel} onChange={(event) => selectChannel(event.target.value as AdminPromotionChannel)}>
+          {CHANNEL_ORDER.map((key) => {
+            const item = ADMIN_PROMOTION_CHANNELS[key];
+            return <option key={key} value={key}>{item.label} — {item.summary}</option>;
+          })}
+        </select>
+      </label>
+
+      <div className="admin-promo-channel-overview">
+        <div>
+          <span>選択中</span>
+          <strong>{meta.label}</strong>
+          <p>{meta.summary}</p>
+        </div>
+        <div>
+          <span>おすすめ構成</span>
+          <p>{meta.recommendedFormat}</p>
+        </div>
+        <div>
+          <span>スクショ目安</span>
+          <p>{meta.screenshotSummary}</p>
+        </div>
+      </div>
+
+      <div className="admin-promo-channel-form">
+        <div className="admin-promo-channel-step">
+          <div><span>②</span><strong>内容を選ぶ</strong></div>
+          <p>迷った場合は初期設定のままでも作れます。</p>
+        </div>
+        <div className="admin-promo-form-grid compact">
+          <SelectWithCustomField
+            label="発信フェーズ"
+            value={phase}
+            onChange={setPhase}
+            options={PROMOTION_PHASE_OPTIONS}
+            customPlaceholder="現在の発信フェーズを入力"
+          />
+          <SelectWithCustomField
+            label="目的"
+            value={purpose}
+            onChange={setPurpose}
+            options={PURPOSE_OPTIONS}
+            customPlaceholder="今回の目的を入力"
+          />
+          <SelectWithCustomField
+            label="想定読者"
+            value={audience}
+            onChange={setAudience}
+            options={AUDIENCE_OPTIONS}
+            customPlaceholder="想定読者を入力"
+          />
+          <SelectWithCustomField
+            label="特に紹介したい内容"
+            value={focus}
+            onChange={setFocus}
+            options={featureOptions}
+            customPlaceholder="紹介したい機能・内容を入力"
+          />
+          <div>
+            <SelectWithCustomField
+              label="CTA・誘導先"
+              value={cta}
+              onChange={setCta}
+              options={CTA_OPTIONS}
+              customPlaceholder="CTA・誘導先を入力"
+            />
+            {ctaResolution.corrected && (
+              <small className="admin-promo-cta-safety">{ctaResolution.reason}</small>
+            )}
+          </div>
+          {meta.kind === "social" && (
+            <SelectField
+              label="作成数"
+              value={String(variants)}
+              onChange={(value) => setVariants(Number(value) || 1)}
+              options={["1", "2", "3", "4", "5"]}
+            />
+          )}
+        </div>
+        {socialPlatform && renderLengthSetting(socialPlatform)}
+        {socialPlatform && (
+          <SocialWritingStyleSettings value={socialStyle} onChange={setSocialStyle} />
+        )}
+      </div>
+
+      {meta.kind === "social" && socialPlatform && (
+        <div className="admin-promo-channel-optional">
+          <div className="admin-promo-channel-step admin-promo-channel-substep">
+            <div><span>任意</span><strong>紹介したいスクショを追加</strong></div>
+            <p>②の追加設定です。実画面がある場合だけ使います。AASが確認できる事実・訴求ポイント・隠すべき情報をSNS専用プロンプトへ反映します。</p>
+          </div>
+          <AdminPromotionScreenshotAnalyzer
+            key={channel}
+            channel={channel as PromotionScreenshotChannel}
+            onAnalysisChange={setScreenshotAnalysis}
+          />
+        </div>
+      )}
+
+      {meta.kind === "social" && (
+        <details className="admin-promo-direct-screenshot">
+          <summary>
+            <div>
+              <span>API不要</span>
+              <strong>ChatGPTへスクショを直接渡す</strong>
+            </div>
+            <small>AAS側の画像解析APIを使わない方法</small>
+          </summary>
+          <div className="admin-promo-direct-screenshot-body">
+            <p>
+              ① 下の専用プロンプトをコピー → ② ChatGPTを開く → ③ 紹介したいスクショを同じチャットへ添付 →
+              ④ プロンプトを送信、の順で使います。
+            </p>
+            <div className="admin-promo-direct-screenshot-actions">
+              <button type="button" className="primary-action" onClick={() => onCopy(directScreenshotPrompt)}>
+                ChatGPT直接添付用プロンプトをコピー
+              </button>
+              <button type="button" className="secondary-action" onClick={() => launchAiApp("chatgpt")}>
+                ChatGPTを開く
+              </button>
+            </div>
+            <pre>{directScreenshotPrompt}</pre>
+            <small>
+              この方法ではAASのOpenAI APIキー・画像解析APIを使いません。スクショはChatGPT側へ直接添付してください。
+              ChatGPT側の利用条件・プラン上限は、利用中のChatGPTプランに従います。
+            </small>
+          </div>
+        </details>
+      )}
+
+      <div className="admin-promo-channel-step">
+        <div><span>③</span><strong>プロンプトをコピーしてAIへ渡す</strong></div>
+        <p>{meta.kind === "social"
+          ? "解析済みスクショがある場合は、その画面内容と添付順まで含めた専用プロンプトになります。スクショなしでも従来どおり作成できます。"
+          : "スクリーンショットは自分で撮影します。記事系は本文中の最適位置へ挿入マーカーを入れ、必要な画面・撮影範囲・挿入位置を指示します。"}</p>
+      </div>
+
+      <PromptOutput
+        prompt={prompt}
+        onCopy={() => onCopy(prompt)}
+        note={screenshotAnalysis
+          ? `${meta.label}専用プロンプトです。アップロード済みスクショの解析結果・裏付け可能な主張・公開前の注意を反映しています。`
+          : `${meta.label}専用プロンプトです。スクリーンショットを追加しない場合は、必要な画面・撮影範囲・挿入または添付位置だけを具体的に指示します。`}
+      />
+    </section>
+  );
+}

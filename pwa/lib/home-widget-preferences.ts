@@ -1,139 +1,113 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type HomeWidgetDevice = "desktop" | "mobile";
-export type HomeWidgetSize = "wide" | "half";
-export type HomeWidgetKey =
-  | "creator"
-  | "todayNote"
-  | "missions"
-  | "membership"
-  | "library"
-  | "releaseStatus"
-  | "hero"
-  | "quickStart"
-  | "articleSetup"
-  | "aiApps"
-  | "ranking"
-  | "quickActions";
+export const HOME_WIDGET_KEYS = [
+  "creator",
+  "todayNote",
+  "missions",
+  "membership",
+  "library",
+  "releaseStatus",
+  "hero",
+  "quickStart",
+  "articleSetup",
+  "aiApps",
+  "ranking",
+  "quickActions",
+] as const;
 
-export type HomeWidgetLayoutItem = {
+export type HomeWidgetKey = typeof HOME_WIDGET_KEYS[number];
+export type HomeWidgetSize = "wide" | "half";
+
+export type HomeWidgetItem = {
   key: HomeWidgetKey;
-  visible: boolean;
   size: HomeWidgetSize;
+  visible: boolean;
 };
 
 export type HomeWidgetPreferences = {
-  desktop: HomeWidgetLayoutItem[];
-  mobile: HomeWidgetLayoutItem[];
+  desktopLayout: HomeWidgetItem[];
+  mobileLayout: HomeWidgetItem[];
 };
 
-export type HomeWidgetDefinition = {
-  key: HomeWidgetKey;
-  label: string;
-  description: string;
-  icon: string;
-  allowHalf: boolean;
+export const HOME_WIDGET_LABELS: Record<HomeWidgetKey, string> = {
+  creator: "Creatorステータス",
+  todayNote: "今日のnote",
+  missions: "今日のミッション",
+  membership: "Creator特典 / メンバーシップ",
+  library: "記事ライブラリ / noteマガジン",
+  releaseStatus: "リリース状態",
+  hero: "アクシア × ルーモ",
+  quickStart: "クイックスタート / 使い方",
+  articleSetup: "記事の基本設定",
+  aiApps: "AIアプリ・関連機能",
+  ranking: "週間ランキング",
+  quickActions: "よく使う機能",
 };
 
-export const HOME_WIDGET_PREFERENCE_EVENT = "aas-home-widget-preference";
-const HOME_WIDGET_STORAGE_KEY = "aas-home-widget-layout";
+const DEFAULT_ORDER: readonly HomeWidgetKey[] = [
+  "creator",
+  "todayNote",
+  "missions",
+  "membership",
+  "library",
+  "releaseStatus",
+  "hero",
+  "quickStart",
+  "articleSetup",
+  "aiApps",
+  "ranking",
+  "quickActions",
+];
 
-export const HOME_WIDGET_DEFINITIONS: readonly HomeWidgetDefinition[] = [
-  { key: "creator", label: "Creatorステータス", description: "レベル・XP・連続利用日数", icon: "♛", allowHalf: false },
-  { key: "todayNote", label: "今日のnote", description: "今日の運営状況と次のアクション", icon: "✦", allowHalf: true },
-  { key: "missions", label: "今日のミッション", description: "毎日のミッションと獲得XP", icon: "🎯", allowHalf: true },
-  { key: "membership", label: "メンバー特典", description: "Creator Level・メンバーシップ特典", icon: "◇", allowHalf: true },
-  { key: "library", label: "記事ライブラリ", description: "最近の記事・noteマガジン", icon: "▤", allowHalf: false },
-  { key: "releaseStatus", label: "AAS更新状態", description: "利用中バージョン・更新案内", icon: "↻", allowHalf: true },
-  { key: "hero", label: "アクシア × ルーモ", description: "主要機能とAASホームヒーロー", icon: "✦", allowHalf: false },
-  { key: "quickStart", label: "クイックスタート", description: "記事作成までの3ステップ", icon: "⚡", allowHalf: true },
-  { key: "articleSetup", label: "記事の基本設定", description: "掲載先・ジャンル・文字数など", icon: "⚙", allowHalf: false },
-  { key: "aiApps", label: "AIアプリを開く", description: "ChatGPT・Claude・Gemini", icon: "◎", allowHalf: true },
-  { key: "ranking", label: "週間ランキング", description: "Creatorランキングと公開設定", icon: "🏆", allowHalf: true },
-  { key: "quickActions", label: "よく使う機能", description: "SNS・運営・副業機能へのショートカット", icon: "▦", allowHalf: true },
-] as const;
-
-const VALID_KEYS = new Set<HomeWidgetKey>(HOME_WIDGET_DEFINITIONS.map((item) => item.key));
-const HALF_ALLOWED = new Set<HomeWidgetKey>(
-  HOME_WIDGET_DEFINITIONS.filter((item) => item.allowHalf).map((item) => item.key),
-);
-
-export const DEFAULT_HOME_WIDGET_LAYOUT: readonly HomeWidgetLayoutItem[] = HOME_WIDGET_DEFINITIONS.map((item) => ({
-  key: item.key,
-  visible: true,
-  size: "wide" as HomeWidgetSize,
-}));
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
+function defaultLayout(): HomeWidgetItem[] {
+  return DEFAULT_ORDER.map((key) => ({ key, size: "wide", visible: true }));
 }
 
-export function normalizeHomeWidgetLayout(value: unknown, device: HomeWidgetDevice): HomeWidgetLayoutItem[] {
-  const next: HomeWidgetLayoutItem[] = [];
-  if (Array.isArray(value)) {
-    for (const raw of value) {
-      const row = asRecord(raw);
-      if (typeof row.key !== "string" || !VALID_KEYS.has(row.key as HomeWidgetKey)) continue;
-      const key = row.key as HomeWidgetKey;
-      if (next.some((item) => item.key === key)) continue;
-      const requestedSize = row.size === "half" ? "half" : "wide";
-      next.push({
-        key,
-        visible: row.visible !== false,
-        size: device === "desktop" && requestedSize === "half" && HALF_ALLOWED.has(key) ? "half" : "wide",
-      });
-    }
-  }
-
-  for (const fallback of DEFAULT_HOME_WIDGET_LAYOUT) {
-    if (!next.some((item) => item.key === fallback.key)) next.push({ ...fallback });
-  }
-  return next;
-}
-
-export function defaultHomeWidgetPreferences(): HomeWidgetPreferences {
+export function createDefaultHomeWidgetPreferences(): HomeWidgetPreferences {
   return {
-    desktop: normalizeHomeWidgetLayout(DEFAULT_HOME_WIDGET_LAYOUT, "desktop"),
-    mobile: normalizeHomeWidgetLayout(DEFAULT_HOME_WIDGET_LAYOUT, "mobile"),
+    desktopLayout: defaultLayout(),
+    mobileLayout: defaultLayout(),
   };
 }
 
-function storageKey(userId: string, device: HomeWidgetDevice): string {
-  return `${HOME_WIDGET_STORAGE_KEY}:${userId.trim() || "guest"}:${device}`;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function readLocalHomeWidgetLayout(userId: string, device: HomeWidgetDevice): HomeWidgetLayoutItem[] {
-  if (typeof window === "undefined") return normalizeHomeWidgetLayout(DEFAULT_HOME_WIDGET_LAYOUT, device);
-  const stored = window.localStorage.getItem(storageKey(userId, device));
-  if (!stored) return normalizeHomeWidgetLayout(DEFAULT_HOME_WIDGET_LAYOUT, device);
-  try {
-    return normalizeHomeWidgetLayout(JSON.parse(stored), device);
-  } catch {
-    return normalizeHomeWidgetLayout(DEFAULT_HOME_WIDGET_LAYOUT, device);
+function isHomeWidgetKey(value: unknown): value is HomeWidgetKey {
+  return typeof value === "string" && (HOME_WIDGET_KEYS as readonly string[]).includes(value);
+}
+
+function parseLayout(value: unknown, fallback: readonly HomeWidgetItem[]): HomeWidgetItem[] {
+  if (!Array.isArray(value)) return fallback.map((item) => ({ ...item }));
+
+  const seen = new Set<HomeWidgetKey>();
+  const parsed: HomeWidgetItem[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry) || !isHomeWidgetKey(entry.key) || seen.has(entry.key)) continue;
+    seen.add(entry.key);
+    parsed.push({
+      key: entry.key,
+      size: entry.size === "half" ? "half" : "wide",
+      visible: entry.visible !== false,
+    });
   }
+
+  for (const item of fallback) {
+    if (!seen.has(item.key)) parsed.push({ ...item });
+  }
+  return parsed;
 }
 
-export function writeLocalHomeWidgetLayout(
-  userId: string,
-  device: HomeWidgetDevice,
-  layout: readonly HomeWidgetLayoutItem[],
-): HomeWidgetLayoutItem[] {
-  const normalized = normalizeHomeWidgetLayout([...layout], device);
-  if (typeof window === "undefined") return normalized;
-  window.localStorage.setItem(storageKey(userId, device), JSON.stringify(normalized));
-  window.dispatchEvent(new CustomEvent(HOME_WIDGET_PREFERENCE_EVENT, {
-    detail: { userId, device, layout: normalized },
-  }));
-  return normalized;
-}
+export function parseHomeWidgetPreferences(value: unknown): HomeWidgetPreferences {
+  const defaults = createDefaultHomeWidgetPreferences();
+  if (!isRecord(value)) return defaults;
 
-function parseCloudPreferences(row: unknown): HomeWidgetPreferences {
-  const data = asRecord(row);
+  const desktop = value.desktopLayout ?? value.desktop_layout;
+  const mobile = value.mobileLayout ?? value.mobile_layout;
   return {
-    desktop: normalizeHomeWidgetLayout(data.desktop_layout, "desktop"),
-    mobile: normalizeHomeWidgetLayout(data.mobile_layout, "mobile"),
+    desktopLayout: parseLayout(desktop, defaults.desktopLayout),
+    mobileLayout: parseLayout(mobile, defaults.mobileLayout),
   };
 }
 
@@ -143,12 +117,13 @@ export async function loadHomeWidgetPreferences(
 ): Promise<HomeWidgetPreferences> {
   const { data, error } = await client
     .from("user_home_widget_preferences")
-    .select("user_id,desktop_layout,mobile_layout,updated_at")
+    .select("desktop_layout,mobile_layout")
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (error) throw new Error("ホームのウィジェット設定を取得できませんでした。");
-  return data ? parseCloudPreferences(data) : defaultHomeWidgetPreferences();
+  if (error) throw error;
+  if (!data) return createDefaultHomeWidgetPreferences();
+  return parseHomeWidgetPreferences(data);
 }
 
 export async function saveHomeWidgetPreferences(
@@ -156,22 +131,18 @@ export async function saveHomeWidgetPreferences(
   userId: string,
   preferences: HomeWidgetPreferences,
 ): Promise<HomeWidgetPreferences> {
-  const desktop = normalizeHomeWidgetLayout(preferences.desktop, "desktop");
-  const mobile = normalizeHomeWidgetLayout(preferences.mobile, "mobile");
+  const normalized = parseHomeWidgetPreferences(preferences);
   const { data, error } = await client
     .from("user_home_widget_preferences")
     .upsert({
       user_id: userId,
-      desktop_layout: desktop,
-      mobile_layout: mobile,
+      desktop_layout: normalized.desktopLayout,
+      mobile_layout: normalized.mobileLayout,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" })
-    .select("user_id,desktop_layout,mobile_layout,updated_at")
+    .select("desktop_layout,mobile_layout")
     .single();
 
-  if (error || !data) throw new Error("ホームのウィジェット設定を保存できませんでした。");
-  const saved = parseCloudPreferences(data);
-  writeLocalHomeWidgetLayout(userId, "desktop", saved.desktop);
-  writeLocalHomeWidgetLayout(userId, "mobile", saved.mobile);
-  return saved;
+  if (error) throw error;
+  return parseHomeWidgetPreferences(data);
 }

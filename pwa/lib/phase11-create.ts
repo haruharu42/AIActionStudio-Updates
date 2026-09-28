@@ -26,6 +26,13 @@ export type PublicationTarget = "note" | "tips" | "brain" | "blog";
 export type ArticleType = "free" | "paid";
 export type GenerationMode = "prompt_export" | "manual";
 export type SaveStatus = "draft" | "writing" | "ready";
+export type ArticleCreationSource = "note-membership" | null;
+export type NoteMembershipArticleKind = "member" | "announcement" | "qa" | null;
+
+export type ArticleCreationContext = {
+  source: ArticleCreationSource;
+  noteMembershipArticleKind: NoteMembershipArticleKind;
+};
 
 export type ArticleCreationDraft = {
   generationMode: GenerationMode;
@@ -96,8 +103,45 @@ export function publicationEditorLink(target: PublicationTarget): string | null 
   return null;
 }
 
-export function publicationBodyForCopy(body: string, title: string): string {
-  return stripLeadingArticleTitle(body, title)
+export type PublicationBodyOptions = {
+  articleType?: ArticleType;
+  inlineEnabled?: boolean;
+  inlineCount?: number;
+};
+
+export function normalizePublicationMarkers(
+  body: string,
+  options: PublicationBodyOptions,
+): string {
+  let normalized = body.replace(/\r\n?/g, "\n");
+
+  if (options.articleType === "free") {
+    normalized = normalized.replace(/^\s*<!--\s*PAID_AREA\s*-->\s*$/gim, "");
+  }
+
+  if (options.inlineEnabled === false) {
+    normalized = normalized.replace(/^\s*<!--\s*IMAGE:\d+\s*-->\s*$/gim, "");
+  } else if (options.inlineEnabled === true && Number.isSafeInteger(options.inlineCount)) {
+    const maxInline = Math.max(0, Math.trunc(options.inlineCount ?? 0));
+    normalized = normalized.replace(
+      /^\s*<!--\s*IMAGE:(\d+)\s*-->\s*$/gim,
+      (match, order: string) => {
+        const numericOrder = Number(order);
+        return numericOrder >= 1 && numericOrder <= maxInline ? match.trim() : "";
+      },
+    );
+  }
+
+  return normalized.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+export function publicationBodyForCopy(
+  body: string,
+  title: string,
+  options?: PublicationBodyOptions,
+): string {
+  const source = options ? normalizePublicationMarkers(body, options) : body;
+  return stripLeadingArticleTitle(source, title)
     .replace(/^\s*<!--\s*IMAGE:(\d+)\s*-->\s*$/gim, (_match, order: string) => `**【挿絵${Number(order)}をここに挿入】**`)
     .replace(/^\s*<!--\s*PAID_AREA\s*-->\s*$/gim, "---\n**【ここから有料エリア】**\n---")
     .replace(/\n{3,}/g, "\n\n")
@@ -235,6 +279,9 @@ export function validateCreationDraft(
   if (!draft.title || draft.title.length > 500) {
     throw new Error("タイトルを1〜500文字で入力してください。");
   }
+  if (draft.saveStatus === "ready" && !draft.body) {
+    throw new Error("完成状態で保存するには本文を入力してください。");
+  }
   if (!draft.genre || draft.genre === "その他") {
     throw new Error("「その他」を選んだ場合はジャンル名を入力してください。");
   }
@@ -266,9 +313,43 @@ export function validateCreationDraft(
   ) {
     throw new Error("有料記事は1以上の整数価格を設定してください。");
   }
-  if (draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
+  const paidMarkers = draft.body.match(/<!--\s*PAID_AREA\s*-->/gi) ?? [];
+  if (draft.articleType === "paid" && draft.body.trim() && paidMarkers.length === 0) {
     throw new Error("有料記事の本文に有料エリア開始位置がありません。本文工程で「ここから有料エリア」を設定してください。");
   }
+  if (draft.articleType === "paid" && paidMarkers.length > 1) {
+    throw new Error("有料エリア開始位置は本文に1か所だけ設定してください。");
+  }
+  if (draft.articleType === "free" && paidMarkers.length > 0) {
+    throw new Error("無料記事には有料エリア開始位置を入れないでください。");
+  }
+
+  const markerOrders = [...draft.body.matchAll(/<!--\s*IMAGE:0*(\d+)\s*-->/gi)]
+    .map((match) => Number(match[1]))
+    .filter((order) => Number.isSafeInteger(order));
+  if (!draft.inlineEnabled && markerOrders.length > 0) {
+    throw new Error("挿絵をOFFにしているため、本文の挿絵マーカーを削除してください。");
+  }
+  if (draft.inlineEnabled && draft.body.trim()) {
+    for (let order = 1; order <= draft.inlineCount; order += 1) {
+      const occurrences = markerOrders.filter((value) => value === order).length;
+      if (occurrences === 0) {
+        throw new Error(`挿絵${order}の差し込み位置が本文にありません。`);
+      }
+      if (occurrences > 1) {
+        throw new Error(`挿絵${order}の差し込み位置が重複しています。`);
+      }
+    }
+    const unexpected = markerOrders.find((order) => order < 1 || order > draft.inlineCount);
+    if (unexpected !== undefined) {
+      throw new Error(`設定枚数に含まれない挿絵${unexpected}のマーカーがあります。`);
+    }
+    const expectedOrder = Array.from({ length: draft.inlineCount }, (_unused, index) => index + 1);
+    if (markerOrders.length !== expectedOrder.length || markerOrders.some((order, index) => order !== expectedOrder[index])) {
+      throw new Error("挿絵マーカーは本文内で挿絵1→挿絵2→…の順に1回ずつ配置してください。");
+    }
+  }
+
   if (draft.articleType === "free") draft.price = null;
   if (!draft.inlineEnabled) draft.inlineCount = 0;
   return draft;
@@ -280,6 +361,7 @@ export async function createArticleFromWizard(
   input: ArticleCreationDraft,
   magazinePlan?: MagazinePlanDraft,
   presetId?: string | null,
+  creationContext?: ArticleCreationContext,
 ): Promise<CreatedArticle> {
   const draft = validateCreationDraft(input);
   if (draft.magazineEnabled) {
@@ -353,6 +435,11 @@ export async function createArticleFromWizard(
     generation_method: draft.generationMode,
     local_status: draft.saveStatus === "ready" ? "完成" : draft.saveStatus,
     local_updated_at: null,
+    creation_source: creationContext?.source ?? null,
+    note_membership_article_kind:
+      creationContext?.source === "note-membership"
+        ? creationContext.noteMembershipArticleKind
+        : null,
   };
 
   if (draft.magazineEnabled && magazinePlan?.name) {
@@ -436,7 +523,11 @@ export async function createArticleFromWizard(
       prompt_plan: imagePrompts,
     },
     source_body: draft.body || null,
-    publish_body: draft.body || null,
+    publish_body: normalizePublicationMarkers(draft.body, {
+      articleType: draft.articleType,
+      inlineEnabled: draft.inlineEnabled,
+      inlineCount: draft.inlineCount,
+    }) || null,
   };
 
   const { data, error } = await client.rpc("create_article_with_workspace", {

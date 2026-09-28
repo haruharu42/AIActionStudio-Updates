@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readNotePromptSource = async () => (await Promise.all(["lib/note-operations.ts", "lib/note-operation-prompts.ts"].map((relative) => read(relative)))).join("\n");
 const readRepo = (relative) => readFile(path.join(root, "..", relative), "utf8");
 
 test("platform account presets are owner scoped, forced-RLS, and allow one default per platform", async () => {
@@ -40,7 +41,10 @@ test("account-specific note Tips Brain presets support names, genres, defaults, 
     assert.match(lib, new RegExp(field));
   }
   assert.match(lib, /createAasPlatformAccountPresetDraft/);
-  assert.match(lib, /AI Article Studio（AAS）/);
+  assert.match(lib, /AI Action Studio（AAS）/);
+  assert.match(lib, /AI副業/);
+  assert.match(lib, /Knowledge/);
+  assert.doesNotMatch(lib, /AI Article Studio（AAS）/);
   assert.match(lib, /buildPlatformAccountPresetPromptContext/);
   assert.match(lib, /今回の画面でユーザーが明示した条件と衝突する場合は、今回の明示条件を優先する/);
 
@@ -68,7 +72,7 @@ test("default account preset context reaches article, image, SNS, note, starter,
     read("lib/platform-account-design.ts"),
     read("lib/phase13-image-prompts.ts"),
     read("lib/phase14-sns.ts"),
-    read("lib/note-operations.ts"),
+    readNotePromptSource(),
     read("lib/platform-account-starter.ts"),
     read("lib/content-lifecycle.ts"),
   ]);

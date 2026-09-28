@@ -1,6 +1,6 @@
 import type { SharedAccessState } from "@/components/access-state-provider";
 import { readEffectiveRelease, releaseVersionAtLeast } from "@/lib/app-release";
-import { todayJstDateKey, type NoteScheduleItem } from "@/features/note";
+import { todayJstDateKey, type NoteOperationProfile, type NoteScheduleItem } from "@/features/note";
 
 export type NoteOperationsGate =
   | { kind: "loading" }
@@ -92,11 +92,16 @@ export function typeClass(item: NoteScheduleItem): string {
   return "setup";
 }
 
-export function createHref(item: NoteScheduleItem): string {
+export function createHref(item: NoteScheduleItem, profile: NoteOperationProfile): string {
+  const paid = item.itemType === "paid_note";
   const params = new URLSearchParams({
     publicationTarget: "note",
-    articleType: item.itemType === "paid_note" ? "paid" : "free",
-    theme: item.theme || "",
+    articleType: paid ? "paid" : "free",
+    title: item.title || "",
+    theme: item.theme || item.title || "",
+    genre: profile.articleGenre || "AI副業",
+    subgenre: profile.articleSubgenre || "AIおまかせ",
+    targetLength: String(paid ? profile.paidTargetLength : profile.freeTargetLength),
     from: "note-operations",
   });
   return "/create?" + params.toString();

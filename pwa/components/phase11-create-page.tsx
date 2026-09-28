@@ -19,6 +19,7 @@ import {
 import { DEFAULT_MAGAZINE_PLAN, type MagazinePlanDraft } from "@/lib/magazine-planner";
 import {
   ARTICLE_CREATE_STEPS,
+  initialArticleCreationContextFromLocation,
   initialDraftFromLocation,
   initialMessageFromLocation,
   validateArticleCreateStep,
@@ -68,6 +69,7 @@ export function Phase11CreatePage() {
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
+  const [creationContext] = useState(() => initialArticleCreationContextFromLocation());
   const [tagsText, setTagsText] = useState("");
   const [titleCandidatesText, setTitleCandidatesText] = useState("");
   const [magazinePlan, setMagazinePlan] = useState<MagazinePlanDraft>(() => ({ ...DEFAULT_MAGAZINE_PLAN, articleTitles: [] }));
@@ -78,7 +80,7 @@ export function Phase11CreatePage() {
   const [createdId, setCreatedId] = useState("");
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [wizardRestored, setWizardRestored] = useState<boolean | null>(null);
-  const [accountDesigns, setAccountDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
+  const [, setAccountDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
   const progressOwnerIdRef = useRef("");
   const articleQuotaInFlightRef = useRef(false);
@@ -171,7 +173,6 @@ export function Phase11CreatePage() {
     return () => {
       active = false;
       setRuntimePlatformAccountDesigns(null);
-      setRuntimeWritingProfile(null);
     };
   }, [accessOwnerId, accessState.kind, client]);
 
@@ -231,41 +232,30 @@ export function Phase11CreatePage() {
 
   const displayStep = step;
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
-  const activeAccountDesign = draft.publicationTarget === "blog"
-    ? null
-    : accountDesigns?.[draft.publicationTarget] ?? null;
-  const accountDesignPromptKey = activeAccountDesign?.ready
-    ? `${activeAccountDesign.platform}:${activeAccountDesign.updatedAt ?? "unsaved"}`
-    : "none";
-  const accountPresetPromptKey = activeAccountPreset
-    ? `${activeAccountPreset.id}:${activeAccountPreset.updatedAt}`
-    : "none";
-  const titlePrompt = useMemo(
-    () => buildTitlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
-    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey, accountPresetPromptKey],
+  const titlePrompt = buildTitlePrompt(
+    articleDraft,
+    draft.magazineEnabled ? magazinePlan : undefined,
   );
-  const articlePrompt = useMemo(
-    () => buildArticlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
-    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey, accountPresetPromptKey],
+  const articlePrompt = buildArticlePrompt(
+    articleDraft,
+    draft.magazineEnabled ? magazinePlan : undefined,
   );
-  const imagePrompts = useMemo(
-    () => buildImagePromptPlan({
-      title: draft.title,
-      theme: draft.theme || draft.title,
-      publicationTarget: draft.publicationTarget,
-      genre: draft.genre,
-      subgenre: draft.subgenre,
-      ageGroup: draft.ageGroup,
-      gender: draft.gender,
-      body: draft.body,
-      coverEnabled: draft.coverEnabled,
-      inlineEnabled: draft.inlineEnabled,
-      inlineCount: draft.inlineCount,
-      imageStyle: draft.imageStyle,
-    }),
-    [draft, accountDesignPromptKey, accountPresetPromptKey],
-  );
-  const combinedImagePrompt = useMemo(() => buildCombinedImagePrompt(imagePrompts), [imagePrompts]);
+  const imagePromptInput = {
+    title: draft.title,
+    theme: draft.theme || draft.title,
+    publicationTarget: draft.publicationTarget,
+    genre: draft.genre,
+    subgenre: draft.subgenre,
+    ageGroup: draft.ageGroup,
+    gender: draft.gender,
+    body: draft.body,
+    coverEnabled: draft.coverEnabled,
+    inlineEnabled: draft.inlineEnabled,
+    inlineCount: draft.inlineCount,
+    imageStyle: draft.imageStyle,
+  };
+  const imagePrompts = buildImagePromptPlan(imagePromptInput);
+  const combinedImagePrompt = buildCombinedImagePrompt(imagePrompts, imagePromptInput);
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
@@ -384,6 +374,7 @@ export function Phase11CreatePage() {
         articleDraft,
         draft.magazineEnabled ? magazinePlan : undefined,
         activePresetId,
+        creationContext,
       );
       clearArticleWizardProgress(gate.ownerId);
       setCreatedId(result.id);

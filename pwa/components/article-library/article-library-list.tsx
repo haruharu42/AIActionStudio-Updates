@@ -51,7 +51,7 @@ export function ArticleLibraryListView({
   onOpen: (articleId: string) => void;
   onLoadMore: () => void;
 }) {
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   return (
     <>

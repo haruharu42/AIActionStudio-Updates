@@ -212,12 +212,12 @@ export const WORKSPACE_PRESETS: Readonly<Record<WorkspacePresetKey, WorkspacePre
   },
   aas_official: {
     key: "aas_official",
-    label: "AI Article Studio（AAS）公式運営",
+    label: "AI Action Studio（AAS）公式運営",
     description: "AASの使い方・開発進捗・実運用テスト・公開予告を発信する管理者専用プリセットです。",
     badge: "ADMIN",
     adminOnly: true,
     promptLines: [
-      "AI Article Studio（AAS）自体の公式発信として、使い方・開発進捗・実運用テスト・アップデートを分かりやすく伝える",
+      "AI Action Studio（AAS）自体の公式発信として、使い方・副業専用プロンプト・Knowledge・開発進捗・実運用テスト・アップデートを分かりやすく伝える",
       "販売前・テスト中は購入可能と誤認させず、未確定の価格・公開日・販売URLを作らない",
       "実際に確認していないPV・売上・ユーザー反応・レビュー・改善効果を作らない",
       "読者はAI記事制作やnote・Tips・Brain運営を始めたい初心者〜個人クリエイターを中心に想定する",
@@ -232,7 +232,7 @@ export const WORKSPACE_PRESETS: Readonly<Record<WorkspacePresetKey, WorkspacePre
       inlineEnabled: true,
       inlineCount: 2,
       tags: [
-        "AI Article Studio",
+        "AI Action Studio",
         "AAS",
         "AI記事作成",
         "note運営",
@@ -251,14 +251,14 @@ export const WORKSPACE_PRESETS: Readonly<Record<WorkspacePresetKey, WorkspacePre
       targetCharacters: { x: 280, instagram: 600, threads: 500, tiktok: 300, youtube: 600 },
     },
     note: {
-      genre: "AI Article Studio（AAS）・AI記事制作・コンテンツ運営",
-      style: "AASの使い方・開発進捗・実運用テスト・記事制作ノウハウを分かりやすく整理する",
+      genre: "AI Action Studio（AAS）・AI副業・コンテンツ制作・運営支援",
+      style: "AASの使い方・副業専用プロンプト・Knowledge・開発進捗・実運用テストを分かりやすく整理する",
       audience: "note・Tips・BrainなどでAIを使って記事制作・コンテンツ運営を始めたい初心者〜個人クリエイター",
       tone: "落ち着いた・信頼感重視",
       monetization: "販売前は無料発信で使い方・開発進捗・実運用テストを共有し、公開後は製品案内や必要に応じた有料コンテンツへ自然につなぐ",
       goal: "読者を増やしたい",
       topics: [
-        "AI Article Studio",
+        "AI Action Studio",
         "AASアップデート",
         "AI記事作成",
         "note運営",

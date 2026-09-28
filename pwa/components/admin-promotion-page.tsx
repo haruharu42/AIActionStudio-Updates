@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AdminPromotionChannelBuilder } from "@/components/admin-promotion/admin-promotion-channel-builder";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { WORKSPACE_PRESETS } from "@/features/presets/workspace-presets";
@@ -12,8 +13,28 @@ import {
   SelectField,
   SelectWithCustomField,
   SocialLengthSettings,
+  SocialWritingStyleSettings,
   TextField,
 } from "@/components/admin-promotion/admin-promotion-fields";
+import {
+  AUDIENCE_OPTIONS,
+  CAMPAIGN_GOAL_OPTIONS,
+  CHANNEL_PRESET_OPTIONS,
+  CTA_OPTIONS,
+  DEFAULT_SOCIAL_PRESET_IDS,
+  EDITION_OPTIONS,
+  LIMITATION_OPTIONS,
+  MODES,
+  OFFER_OPTIONS,
+  PREVIEW_UPDATE_OPTIONS,
+  PROMOTION_PHASE_OPTIONS,
+  PURPOSE_OPTIONS,
+  RELEASE_STAGE_OPTIONS,
+  SUPPORT_OPTIONS,
+  TESTED_PLATFORM_OPTIONS,
+  TESTING_STATUS_OPTIONS,
+  type Mode,
+} from "@/components/admin-promotion/admin-promotion-options";
 import {
   ADMIN_PRODUCT_FACTS_STORAGE_KEY,
   DEFAULT_ADMIN_PRODUCT_FACTS,
@@ -24,244 +45,15 @@ import {
   buildAdminSocialPromotionPrompt,
   sanitizeSocialTargetChars,
   socialLengthPresetsFor,
+  type AdminArticlePromotionInput,
   type AdminProductFacts,
   type AdminSocialLengthPlan,
   type AdminSocialPlatform,
 } from "@/lib/admin-promotion";
-type Mode = "product" | "preview" | "article" | "social" | "campaign";
-
-const MODES: Array<{ key: Mode; label: string; description: string }> = [
-  { key: "product", label: "製品情報", description: "宣伝で使う確認済み情報" },
-  { key: "preview", label: "テスト・公開予告", description: "実運用テスト・開発進捗・公開予定" },
-  { key: "article", label: "紹介・販売記事", description: "販売前〜販売後の長文発信" },
-  { key: "social", label: "SNS販促", description: "X・Instagram・動画SNS向け" },
-  { key: "campaign", label: "キャンペーン", description: "記事とSNSをまとめて設計" },
-];
-
-const PURPOSE_OPTIONS = [
-  "実運用テスト状況の共有",
-  "note実運用テスト報告",
-  "開発進捗の共有",
-  "改善内容の共有",
-  "公開前の予告",
-  "公開予定の案内",
-  "ベータ開始予告",
-  "新規紹介・販売",
-  "販売開始告知",
-  "認知拡大",
-  "機能紹介",
-  "初心者向け解説",
-  "利用開始を促す",
-  "既存ユーザーへ再訴求",
-  "アップデート告知",
-  "ベータ参加募集",
-  "招待ユーザー募集",
-  "比較検討を支援",
-  "FAQ・不安解消",
-  "無料コンテンツから販売へ誘導",
-  "記事・販売ページへの送客",
-  "SNSフォロー促進",
-  "休眠ユーザーの再活性化",
-];
-
-const AUDIENCE_OPTIONS = [
-  "AI初心者",
-  "副業初心者",
-  "note初心者",
-  "Tips・Brain初心者",
-  "SNS運用初心者",
-  "コンテンツ販売初心者",
-  "AIをすでに使っている人",
-  "記事作成を効率化したい人",
-  "SNS投稿を効率化したい人",
-  "個人事業主・フリーランス",
-  "小規模事業者",
-  "ブログ運営者",
-  "クリエイター",
-  "会社員",
-  "主婦・主夫",
-  "学生",
-  "20代",
-  "30代",
-  "40代",
-  "50代",
-  "60代以上",
-  "時間が少ない人",
-  "PC操作が苦手な人",
-  "スマホ中心で作業する人",
-];
-
-const CTA_OPTIONS = [
-  "フォローして続報を待ってもらう",
-  "公開予定を知らせる",
-  "テスト記事を読んでもらう",
-  "開発状況を見てもらう",
-  "先行案内を確認してもらう",
-  "販売前なのでCTAなし",
-  "販売URLへ誘導",
-  "公式ページへ誘導",
-  "詳細記事へ誘導",
-  "無料記事へ誘導",
-  "プロフィールへ誘導",
-  "利用開始を促す",
-  "ベータ参加を促す",
-  "招待申請を促す",
-  "問い合わせを促す",
-  "DMを促す",
-  "フォローを促す",
-  "保存を促す",
-  "コメントを促す",
-  "次の記事へ誘導",
-  "CTAなし",
-];
-
-const EDITION_OPTIONS = [
-  "PWA版 / Windows版",
-  "PWA版のみ",
-  "Windows版のみ",
-  "PWA版 / Windows版（別購入）",
-  "PWA版 / Windows版（共通利用）",
-  "招待制PWA版",
-  "ベータ版",
-];
-
-const RELEASE_STAGE_OPTIONS = [
-  "未定",
-  "開発中",
-  "内部テスト",
-  "クローズドベータ",
-  "オープンベータ",
-  "有料ベータ",
-  "先行販売",
-  "正式販売",
-  "販売一時停止",
-  "提供終了",
-];
-
-const SUPPORT_OPTIONS = [
-  "未定",
-  "アプリ内案内",
-  "FAQ・ヘルプ",
-  "メールサポート",
-  "問い合わせフォーム",
-  "X・SNS経由の問い合わせ",
-  "販売ページ経由の問い合わせ",
-  "ベータ期間限定サポート",
-  "複数チャネルでサポート",
-];
-
-const LIMITATION_OPTIONS = [
-  "特になし",
-  "未確定事項あり",
-  "ベータ版のため仕様変更の可能性あり",
-  "一部機能は開発中",
-  "Windows版とPWA版は別利用権",
-  "招待制",
-  "利用上限あり",
-  "対応環境に制限あり",
-  "外部AIサービスの仕様・利用条件に依存",
-];
-
-const CAMPAIGN_GOAL_OPTIONS = [
-  "実運用テストの共有",
-  "開発進捗の認知拡大",
-  "公開前の期待形成",
-  "公開予定の周知",
-  "ベータ開始予告",
-  "販売開始・認知拡大",
-  "新規ユーザー獲得",
-  "ベータ参加者募集",
-  "招待ユーザー募集",
-  "販売ページへの送客",
-  "記事への送客",
-  "SNSフォロワー獲得",
-  "製品理解の促進",
-  "特定機能の認知拡大",
-  "アップデート周知",
-  "既存ユーザーの再活性化",
-  "FAQ・不安解消",
-];
-
-const CHANNEL_PRESET_OPTIONS = [
-  "note, X, Instagram, Threads, TikTok, YouTube Shorts",
-  "note, X",
-  "note, X, Instagram",
-  "note, X, Threads",
-  "note, X, Instagram, Threads",
-  "X, Instagram, Threads",
-  "Instagram, TikTok, YouTube Shorts",
-  "X, TikTok, YouTube Shorts",
-  "note, Brain, Tips, X",
-  "note, Brain, Tips, X, Instagram, Threads",
-  "noteのみ",
-  "Xのみ",
-  "Instagramのみ",
-  "Threadsのみ",
-  "TikTokのみ",
-  "YouTube Shortsのみ",
-];
-
-const OFFER_OPTIONS = [
-  "販売前・テスト運用中",
-  "公開予定のみ・販売未開始",
-  "価格未定・販売前",
-  "未定・要確認",
-  "通常販売",
-  "新規販売開始",
-  "ベータ参加募集",
-  "招待制募集",
-  "無料体験・試用案内",
-  "早期利用者向け案内",
-  "期間限定キャンペーン",
-  "アップデート記念",
-  "特典付き販売",
-  "割引なし・製品価値を中心に訴求",
-];
-
-const PROMOTION_PHASE_OPTIONS = [
-  "実運用テスト中（販売前）",
-  "開発中・進捗共有",
-  "公開前予告",
-  "ベータ公開予定",
-  "公開日決定・カウントダウン",
-  "販売開始前",
-  "販売開始後",
-  "アップデート告知",
-];
-
-const TESTING_STATUS_OPTIONS = [
-  "未実施",
-  "運営者自身で実運用テスト中",
-  "noteで実運用テスト中",
-  "Tipsで実運用テスト中",
-  "Brainで実運用テスト中",
-  "複数媒体で実運用テスト中",
-  "テスト完了・改善中",
-  "公開準備中",
-];
-
-const PREVIEW_UPDATE_OPTIONS = [
-  "note実運用テスト報告",
-  "Tips実運用テスト報告",
-  "Brain実運用テスト報告",
-  "開発進捗の共有",
-  "改善内容の共有",
-  "公開前の予告",
-  "公開予定の案内",
-  "ベータ開始予告",
-  "正式公開予告",
-  "公開日決定のお知らせ",
-];
-
-const TESTED_PLATFORM_OPTIONS = ["note", "Tips", "Brain", "PWA版", "Windows版", "複数媒体"];
-
-const DEFAULT_SOCIAL_PRESET_IDS: Record<AdminSocialPlatform, string> = {
-  x: "x-standard",
-  instagram: "instagram-standard",
-  threads: "threads-standard",
-  tiktok: "tiktok-standard",
-  youtube: "youtube-standard",
-};
+import {
+  DEFAULT_ADMIN_SOCIAL_WRITING_STYLE,
+  type AdminSocialWritingStyle,
+} from "@/lib/social-writing-style";
 
 export function AdminPromotionPage() {
   const { state } = useSharedAccessState();
@@ -271,8 +63,9 @@ export function AdminPromotionPage() {
   const [facts, setFacts] = useState<AdminProductFacts>(DEFAULT_ADMIN_PRODUCT_FACTS);
   const [socialLengths, setSocialLengths] = useState<AdminSocialLengthPlan>({ ...DEFAULT_SOCIAL_LENGTH_PLAN });
   const [socialPresetIds, setSocialPresetIds] = useState<Record<AdminSocialPlatform, string>>({ ...DEFAULT_SOCIAL_PRESET_IDS });
-  const [article, setArticle] = useState({
-    platform: "note" as const,
+  const [advancedSocialStyle, setAdvancedSocialStyle] = useState<AdminSocialWritingStyle>({ ...DEFAULT_ADMIN_SOCIAL_WRITING_STYLE });
+  const [article, setArticle] = useState<AdminArticlePromotionInput>({
+    platform: "note",
     phase: "実運用テスト中（販売前）",
     purpose: "実運用テスト状況の共有",
     audience: "AI初心者",
@@ -312,7 +105,11 @@ export function AdminPromotionPage() {
     queueMicrotask(() => {
       try {
         const saved = window.localStorage.getItem(ADMIN_PRODUCT_FACTS_STORAGE_KEY);
-        if (saved) setFacts({ ...DEFAULT_ADMIN_PRODUCT_FACTS, ...JSON.parse(saved) });
+        if (saved) {
+          const merged = { ...DEFAULT_ADMIN_PRODUCT_FACTS, ...JSON.parse(saved) } as AdminProductFacts;
+          if (merged.productName === "AI Article Studio") merged.productName = "AI Action Studio";
+          setFacts(merged);
+        }
         const requested = new URLSearchParams(window.location.search).get("mode");
         if (requested && MODES.some((item) => item.key === requested)) setMode(requested as Mode);
       } catch {
@@ -349,24 +146,36 @@ export function AdminPromotionPage() {
     return Array.from(new Set(["製品全体", ...confirmed]));
   }, [facts.features]);
 
-  const articlePrompt = useMemo(() => buildAdminArticlePromotionPrompt(facts, article), [facts, article, workspacePreference]);
+  const articlePrompt = useMemo(() => {
+    void workspacePreference; // Prompt context reads the runtime workspace preset.
+    return buildAdminArticlePromotionPrompt(facts, article);
+  }, [facts, article, workspacePreference]);
   const socialPrompt = useMemo(
-    () => buildAdminSocialPromotionPrompt(facts, {
-      ...social,
-      lengthPresetId: socialPresetIds[social.platform],
-      targetChars: socialLengths[social.platform],
-    }),
-    [facts, social, socialLengths, socialPresetIds, workspacePreference],
+    () => {
+      void workspacePreference; // Prompt context reads the runtime workspace preset.
+      return buildAdminSocialPromotionPrompt(facts, {
+        ...social,
+        lengthPresetId: socialPresetIds[social.platform],
+        targetChars: socialLengths[social.platform],
+        socialStyle: advancedSocialStyle,
+      });
+    },
+    [facts, social, socialLengths, socialPresetIds, advancedSocialStyle, workspacePreference],
   );
   const campaignPrompt = useMemo(
-    () => buildAdminCampaignPrompt(facts, { ...campaign, socialLengths }),
-    [facts, campaign, socialLengths, workspacePreference],
+    () => {
+      void workspacePreference; // Prompt context reads the runtime workspace preset.
+      return buildAdminCampaignPrompt(facts, { ...campaign, socialLengths, socialStyle: advancedSocialStyle });
+    },
+    [facts, campaign, socialLengths, advancedSocialStyle, workspacePreference],
   );
   const previewPrompt = useMemo(
-    () => buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths }),
-    [facts, preview, socialLengths, workspacePreference],
+    () => {
+      void workspacePreference; // Prompt context reads the runtime workspace preset.
+      return buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths, socialStyle: advancedSocialStyle });
+    },
+    [facts, preview, socialLengths, advancedSocialStyle, workspacePreference],
   );
-
   const updateSocialLength = (platform: AdminSocialPlatform, presetId: string, targetChars: number) => {
     setSocialPresetIds((current) => ({ ...current, [platform]: presetId }));
     setSocialLengths((current) => ({ ...current, [platform]: sanitizeSocialTargetChars(targetChars) }));
@@ -404,18 +213,24 @@ export function AdminPromotionPage() {
   return (
     <main className="admin-promo-page">
       <header className="admin-promo-head">
-        <div><p className="eyebrow">ADMIN MARKETING</p><h1>販売・プロモーションセンター</h1><p>販売前の実運用テスト・開発進捗・公開予告から、販売開始後の記事・SNS・キャンペーンまで管理者専用で作成します。</p></div>
-        <div><Link href="/admin">管理ダッシュボード</Link><Link href="/">ホーム</Link></div>
+        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売・プロモーションセンター</h1><p>AI Action Studio（AAS）の投稿先を1つ選ぶだけで、その媒体専用のプロモーションプロンプトへ切り替わります。note・Brain・Tips・X・Threads・Instagramに対応しています。</p></div>
+        <div><Link href="/admin/sales">販売設定</Link><Link href="/admin">管理ダッシュボード</Link><Link href="/">ホーム</Link></div>
       </header>
 
       <ActiveWorkspacePresetBadge feature="sns" />
       <div className="admin-promo-safety"><strong>確認済み情報を基準に作成</strong><span>販売前は「テスト中・準備中・公開予定」として扱い、未入力の価格・実績・レビュー・公開日をAIに作らせません。製品情報は現在この端末だけに保存されます。</span></div>
+
       {message && <div className="route-notice">{message}</div>}
 
-      <nav className="admin-promo-tabs" aria-label="管理者プロモーション機能">
-        {MODES.map((item) => <button key={item.key} className={mode === item.key ? "active" : ""} type="button" onClick={() => setMode(item.key)}><strong>{item.label}</strong><small>{item.description}</small></button>)}
-      </nav>
+      <AdminPromotionChannelBuilder
+        facts={facts}
+        featureOptions={featureOptions}
+        onCopy={(prompt) => void copyPrompt(prompt)}
+      />
 
+      <details className="admin-promo-advanced">
+        <summary>詳細設定・キャンペーン・製品情報</summary>
+        <div className="admin-promo-advanced-body">
       {mode === "product" && (
         <section className="admin-promo-panel">
           <div className="admin-promo-section-title"><div><p className="eyebrow">PRODUCT FACTS</p><h2>製品情報管理</h2></div><button type="button" onClick={saveFacts}>この端末に保存</button></div>
@@ -456,6 +271,7 @@ export function AdminPromotionPage() {
             <span>価格・販売URL・公開日が未確定なら断定しません。実際に確認していないPV、売上、反応、レビュー、感想も作成しません。</span>
           </div>
           <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
+          <SocialWritingStyleSettings value={advancedSocialStyle} onChange={setAdvancedSocialStyle} />
           <PromptOutput prompt={previewPrompt} onCopy={() => void copyPrompt(previewPrompt)} />
         </section>
       )}
@@ -490,6 +306,7 @@ export function AdminPromotionPage() {
             <SelectField label="作成数" value={String(social.variants)} onChange={(value) => setSocial((current) => ({ ...current, variants: Number(value) || 1 }))} options={["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]} />
           </div>
           <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
+          <SocialWritingStyleSettings value={advancedSocialStyle} onChange={setAdvancedSocialStyle} />
           <PromptOutput prompt={socialPrompt} onCopy={() => void copyPrompt(socialPrompt)} />
         </section>
       )}
@@ -508,9 +325,12 @@ export function AdminPromotionPage() {
             <SelectWithCustomField label="CTA・誘導先" value={campaign.cta} onChange={(value) => setCampaign((current) => ({ ...current, cta: value }))} options={CTA_OPTIONS} customPlaceholder="CTA・誘導先を入力" />
           </div>
           <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
+          <SocialWritingStyleSettings value={advancedSocialStyle} onChange={setAdvancedSocialStyle} />
           <PromptOutput prompt={campaignPrompt} onCopy={() => void copyPrompt(campaignPrompt)} />
         </section>
       )}
+        </div>
+      </details>
     </main>
   );
 }

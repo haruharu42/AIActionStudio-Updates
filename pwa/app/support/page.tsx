@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SupportRequestPage } from "@/components/support-request-page";
 
 export const metadata: Metadata = {
-  title: "お問い合わせ・開示請求 | AI記事スタジオ",
+  title: "お問い合わせ・開示請求 | AI Action Studio",
   robots: { index: false, follow: false },
 };
 

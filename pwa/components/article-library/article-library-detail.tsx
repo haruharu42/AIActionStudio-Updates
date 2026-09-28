@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import { NotePostAssistant } from "@/components/article-library/note-post-assistant";
 import { noteMagazineFromWorkspace } from "@/lib/article-library-v2";
 import { articleExportBody } from "@/lib/article-export";
-import { copyNoteRichText } from "@/lib/note-rich-text";
-import { publicationBodyForCopy } from "@/lib/phase11-create";
 import type { ArticleDetail } from "@/lib/phase7-articles";
 import {
   ARTICLE_STATUS_LABELS,
@@ -42,30 +40,6 @@ export function ArticleLibraryDetailView({
   aiTools: ReactNode;
 }) {
   const magazine = noteMagazineFromWorkspace(detail.workspace.workspaceJson);
-  const [copyMessage, setCopyMessage] = useState("");
-  const publicationBody = publicationBodyForCopy(articleExportBody(detail), detail.title);
-
-  const copyTitle = async () => {
-    if (!detail.title.trim()) return;
-    try {
-      if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
-      await navigator.clipboard.writeText(detail.title);
-      setCopyMessage("タイトルをコピーしました。");
-    } catch {
-      setCopyMessage("タイトルを自動コピーできませんでした。タイトルを長押ししてコピーしてください。");
-    }
-  };
-
-  const copyRichBody = async () => {
-    if (!publicationBody) return;
-    try {
-      await copyNoteRichText(publicationBody);
-      setCopyMessage("装飾付き本文をコピーしました。掲載先の本文欄へ貼り付けてください。");
-    } catch (error) {
-      setCopyMessage(error instanceof Error ? error.message : "装飾付き本文をコピーできませんでした。");
-    }
-  };
-
   return (
     <>
       <div className="library-toolbar detail-toolbar">
@@ -96,26 +70,6 @@ export function ArticleLibraryDetailView({
           <h2>{detail.title || "無題の記事"}</h2>
           <p>更新 {formatArticleLibraryDate(detail.updatedAt)} · revision {detail.revision}</p>
         </header>
-
-        <section className="creator-publish-copy library-publish-copy" aria-label="掲載用コピー">
-          <h3>掲載用コピー</h3>
-          <p className="panel-muted">選択した記事のタイトルと本文を、そのまま掲載先へ貼り付けられます。本文は保存済みの掲載用本文を優先し、なければ完成本文を使用します。</p>
-          <div className="openai-prompt-actions">
-            <button className="secondary-action" type="button" disabled={busy || !detail.title.trim()} onClick={() => void copyTitle()}>
-              タイトルをコピー
-            </button>
-            <button className="primary-action" type="button" disabled={busy || !publicationBody} onClick={() => void copyRichBody()}>
-              完成本文を装飾付きコピー
-            </button>
-          </div>
-          {detail.articleType === "paid" && publicationBody.includes("【ここから有料エリア】") && (
-            <p className="beginner-help">有料エリアの位置は「【ここから有料エリア】」の目印として残ります。掲載先で有料ラインを設定後、目印だけ削除してください。</p>
-          )}
-          {publicationBody.includes("【挿絵") && (
-            <p className="beginner-help">挿絵位置は「【挿絵1をここに挿入】」のような目印として残ります。画像を配置後、目印だけ削除してください。</p>
-          )}
-          {copyMessage && <div className="route-notice" role="status" aria-live="polite">{copyMessage}</div>}
-        </section>
 
         {detail.publicationTarget === "note" && (
           <NotePostAssistant detail={detail} body={articleExportBody(detail)} />

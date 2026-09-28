@@ -7,6 +7,12 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = path.resolve(root, "..");
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readArticleStepSource = async () => (await Promise.all([
+  "components/article-create/article-create-steps.tsx",
+  "components/article-create/article-create-generation-steps.tsx",
+  "components/article-create/article-create-finish-steps.tsx",
+  "components/article-create/article-create-step-shared.tsx",
+].map((relative) => read(relative)))).join("\n");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
 const migrationPath = "supabase/migrations/20260910112000_phase9_pwa_invites_admin.sql";
@@ -46,39 +52,45 @@ test("Phase 9 invite route redeems entitlement without requiring existing PWA ac
   assert.match(route, /Phase9InvitePage/);
 });
 
-test("Phase 10 admin surface uses existing account and entitlement RPCs plus invite RPCs", async () => {
-  const api = await read("lib/phase10-admin.ts");
-  const page = await read("components/phase10-admin-page.tsx");
-  const helpers = await read("components/phase10-admin/phase10-admin-page-helpers.ts");
+test("Phase 10 admin route uses the current PWA-only account entitlement and access-code modules", async () => {
+  const api = await read("lib/pwa-admin-users.ts");
+  const page = await read("components/pwa-admin-users-page.tsx");
+  const userPanels = await read("components/admin-users/admin-user-panels.tsx");
+  const accessCodes = await read("components/admin-users/admin-access-code-panel.tsx");
   const route = await read("app/admin/users/page.tsx");
   const adminLayout = await read("app/admin/layout.tsx");
-  for (const rpc of ["admin_list_users", "admin_set_user_status", "admin_list_user_entitlements", "admin_grant_entitlement", "admin_revoke_entitlement", "admin_create_pwa_invite", "admin_list_pwa_invites", "admin_revoke_pwa_invite"]) {
+
+  for (const rpc of [
+    "admin_list_users",
+    "admin_set_user_status",
+    "admin_list_user_entitlements",
+    "admin_grant_entitlement",
+    "admin_revoke_entitlement",
+    "admin_create_pwa_invite",
+    "admin_list_pwa_invites",
+    "admin_revoke_pwa_invite",
+    "admin_list_pwa_invite_redemptions",
+  ]) {
     assert.match(api, new RegExp(`\\"${rpc}\\"`));
   }
-  assert.match(api, /AAS-WIN-BETA/);
-  assert.match(api, /AAS-PWA-BETA/);
-  assert.match(page, /accessState\.profile\.role !== "admin" \|\| accessState\.profile\.status !== "active"/);
-  assert.match(page, /useSharedAccessState\(\)/);
-  assert.match(page, /phase10-admin\/phase10-admin-page-helpers/);
-  assert.doesNotMatch(page, /async function loadEntitlementOverview|function statusLabel|function fmt\(/);
-  assert.match(helpers, /export async function loadEntitlementOverview/);
-  assert.match(helpers, /export function statusLabel/);
-  assert.match(helpers, /export function isCurrentEntitlement/);
-  assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)/);
-  assert.match(page, /Windowsを付与/);
-  assert.match(page, /PWAを付与/);
-  assert.match(page, /Windowsを取消/);
-  assert.match(page, /PWAを取消/);
-  assert.match(page, /招待コードを作成/);
-  assert.match(route, /Phase10AdminPage/);
+
+  assert.match(api, /export const PWA_PRODUCT = "AAS-PWA-BETA" as const/);
+  assert.doesNotMatch(api, /AAS-WIN-BETA/);
+  assert.match(page, /PWAユーザー利用管理/);
+  assert.match(page, /AdminUserSelectionPanel/);
+  assert.match(page, /AdminSelectedUserPanel/);
+  assert.match(page, /AdminAccessCodePanel/);
+  assert.match(userPanels, /PWA利用権/);
+  assert.match(accessCodes, /販売用PWA利用コード/);
+  assert.match(route, /PwaAdminUsersPage as Phase10AdminPage/);
   assert.match(adminLayout, /AdminRouteGuard/);
-  assert.doesNotMatch(`${api}\n${page}`, /sb_secret_|service[_-]?role/i);
+  assert.doesNotMatch(`${api}\n${page}\n${userPanels}\n${accessCodes}`, /sb_secret_|service[_-]?role/i);
 });
 
 test("Phase 11 article creator separates access, controller, draft logic and step UI", async () => {
   const api = await read("lib/phase11-create.ts");
   const page = await read("components/phase11-create-page.tsx");
-  const stepUi = await read("components/article-create/article-create-steps.tsx");
+  const stepUi = await readArticleStepSource();
   const draftHelpers = await read("lib/article-create-draft.ts");
   const accessControl = await read("lib/access-control.ts");
   const progress = await read("lib/phase11-wizard-progress.ts");
@@ -179,7 +191,7 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(options, /value: 4980/);
   assert.match(options, /value: 49800/);
   assert.match(stepUi, /自由入力/);
-  assert.match(stepUi, /note公式では通常会員100〜50,000円/);
+  assert.match(stepUi, /AASの入力用プリセット/);
   assert.match(page, /price: value === "free" \? null : current\.price !== null && current\.price > 0 \? current\.price : 980/);
   assert.doesNotMatch(stepUi, />タイトル候補を生成<|>タイトル候補を作り直す</);
   assert.doesNotMatch(page, /generateTitleCandidates|titleQuotaInFlightRef|titlePromptAuthorized|suggestLocalTitles/);
@@ -219,16 +231,20 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(page, /buildCombinedImagePrompt/);
   assert.match(page, /combinedImagePrompt/);
   assert.match(stepUi, /onBeforeExternalLaunch/);
-  assert.match(stepUi, /アイキャッチ・挿絵をまとめて作成/);
+  assert.match(stepUi, /画像生成プロンプト（一括・個別）/);
   assert.match(stepUi, /画像プロンプトをコピー/);
   assert.match(stepUi, /生成した本文だけをここへ貼り付け/);
   assert.match(stepUi, /stripLeadingArticleTitle/);
-  assert.match(stepUi, /アイキャッチ・挿絵をまとめて作成/);
+  assert.match(stepUi, /個別に画像を作成/);
   assert.match(stepUi, /まとめて画像プロンプトをコピー/);
+  assert.match(stepUi, /画像生成では一時チャットは使用不可/);
   assert.match(stepUi, /完成本文を装飾付きコピー/);
   assert.match(stepUi, /装飾付きでコピーしました ✓/);
-  assert.match(stepUi, /有料noteの仕上げ/);
+  assert.match(stepUi, /有料記事を仕上げる/);
   assert.match(stepUi, /【ここから有料エリア】/);
+  assert.match(stepUi, /Tipsの有料エリア境界/);
+  assert.match(stepUi, /Brain側の現在の販売・公開設定/);
+  assert.match(stepUi, /実際に設定できる価格帯・手数料・販売条件/);
   assert.match(stepUi, /【挿絵1をここに挿入】/);
   assert.match(stepUi, /copyNoteRichText/);
   assert.match(stepUi, /投稿先を開く/);

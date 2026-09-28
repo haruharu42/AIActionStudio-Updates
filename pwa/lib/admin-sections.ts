@@ -8,6 +8,8 @@ export type AdminSectionId =
   | "prompts"
   | "knowledge"
   | "releases"
+  | "features"
+  | "notifications"
   | "security"
   | "infrastructure"
   | "operations"
@@ -129,6 +131,24 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     description: "管理者テスト版、ユーザー向け更新通知、必須更新、ロールバックを管理。",
   },
   {
+    id: "features",
+    group: "system",
+    href: "/admin/features",
+    eyebrow: "FEATURE CONTROL",
+    title: "全機能管理センター",
+    shortTitle: "機能管理",
+    description: "全機能の公開段階、一般ユーザーテスト、メンテナンス停止・再開を一元管理。",
+  },
+  {
+    id: "notifications",
+    group: "system",
+    href: "/admin/notifications",
+    eyebrow: "NOTIFICATION CONTROL",
+    title: "通知管理",
+    shortTitle: "通知管理",
+    description: "アップデート・メンテナンス・Knowledge更新・管理者からのお知らせを配信。",
+  },
+  {
     id: "security",
     group: "system",
     href: "/admin/security",
@@ -166,6 +186,8 @@ export const ADMIN_HOME_SHORTCUT_IDS: readonly AdminSectionId[] = [
   "development-prompts",
   "prompts",
   "releases",
+  "features",
+  "notifications",
   "security",
   "infrastructure",
   "operations",

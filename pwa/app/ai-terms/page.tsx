@@ -4,17 +4,17 @@ import type { Metadata } from "next";
 import { LegalDocument } from "@/components/legal-document";
 
 export const metadata: Metadata = {
-  title: "AI利用条件 | AI記事スタジオ",
+  title: "AI利用条件 | AI Action Studio",
   robots: { index: false, follow: false },
 };
 
 export default function AiTermsPage() {
   return (
     <LegalDocument
-      title="AI記事スタジオ PWA AI利用条件"
+      title="AI Action Studio PWA AI利用条件"
       description="AI支援、プロンプト、生成物を安全に利用するための条件を定めます。"
     >
-      <p>最終更新日: 2026年9月16日</p>
+      <p>最終更新日: 2026年9月25日</p>
 
       <h2>1. AI支援の位置づけ</h2>
       <p>

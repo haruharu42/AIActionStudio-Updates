@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { NoteMembershipCockpit } from "@/components/note-operations/note-membership-cockpit";
+import { NoteCalendarTab, NoteStartGuideTab } from "@/components/note-operations/note-operations-static-tabs";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
@@ -48,14 +50,16 @@ import {
   type NoteScheduleItem,
 } from "@/features/note";
 import {
-  createHref,
+  GENRE_OPTIONS,
+  genreSelectionValue,
+  subgenreOptionsFor,
+  subgenreSelectionValue,
+} from "@/lib/phase18-content-options";
+import {
   downloadText,
-  monthCells,
-  moveMonth,
   noteOperationsGateFor,
   notePerformanceLoopAvailable,
   noteScheduleResponseStorageKey,
-  typeClass,
 } from "@/components/note-operations/note-operations-page-helpers";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
@@ -66,12 +70,8 @@ import {
   type UserWritingProfile,
 } from "@/lib/user-personalization";
 
-type Tab = "start" | "profile" | "plan" | "calendar";
+type Tab = "start" | "profile" | "plan" | "calendar" | "membership";
 
-const NOTE_HOME_URL = "https://note.com/";
-const NOTE_PROFILE_OFFICIAL = "https://note.com/info/n/n27cb842c7737";
-const NOTE_PAID_OFFICIAL = "https://note.com/info/n/na5f43ec69740";
-const NOTE_RESERVATION_OFFICIAL = "https://note.com/info/n/nc84e9a40b092";
 export function NoteOperationsPage() {
   const { state: accessState, client } = useSharedAccessState();
   const { preference: workspacePreference } = useWorkspacePreset();
@@ -92,6 +92,7 @@ export function NoteOperationsPage() {
   const [schedulePreview, setSchedulePreview] = useState<NoteAiSchedulePlan | null>(null);
   const [performanceLoopEnabled, setPerformanceLoopEnabled] = useState(false);
   const [articleOutput, setArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
+  const [previousArticleOutput, setPreviousArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
 
   const gate = useMemo(() => noteOperationsGateFor(accessState, initError), [accessState, initError]);
 
@@ -139,6 +140,11 @@ export function NoteOperationsPage() {
     () => summarizeNoteSchedulePerformance(schedule, referenceMonth),
     [schedule, referenceMonth],
   );
+  const previousMonth = useMemo(() => previousJstMonth(targetMonth), [targetMonth]);
+  const previousPerformance = useMemo(
+    () => referenceMonth === previousMonth ? undefined : summarizeNoteSchedulePerformance(schedule, previousMonth),
+    [schedule, referenceMonth, previousMonth],
+  );
 
   useEffect(() => {
     const syncReleaseGate = () => setPerformanceLoopEnabled(notePerformanceLoopAvailable());
@@ -164,12 +170,19 @@ export function NoteOperationsPage() {
   useEffect(() => {
     if (gate.kind !== "ready" || !performanceLoopEnabled) return;
     let active = true;
-    void loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth).then(
-      (snapshot) => { if (active) setArticleOutput(snapshot); },
-      () => { if (active) setArticleOutput(null); },
-    );
+    const client = getSupabaseClient();
+    void Promise.all([
+      loadNoteArticleOutputSnapshot(client, gate.userId, referenceMonth).catch(() => null),
+      referenceMonth === previousMonth
+        ? Promise.resolve(null)
+        : loadNoteArticleOutputSnapshot(client, gate.userId, previousMonth).catch(() => null),
+    ]).then(([currentSnapshot, previousSnapshot]) => {
+      if (!active) return;
+      setArticleOutput(currentSnapshot);
+      setPreviousArticleOutput(previousSnapshot);
+    });
     return () => { active = false; };
-  }, [gate, performanceLoopEnabled, referenceMonth]);
+  }, [gate, performanceLoopEnabled, previousMonth, referenceMonth]);
 
   const articleSchedule = useMemo(
     () => schedule.filter((item) => isNoteArticleScheduleItem(item)),
@@ -252,10 +265,18 @@ export function NoteOperationsPage() {
         const saved = await saveWritingProfile(getSupabaseClient(), { ...writingProfile, preferredAi: selectedAi });
         setWritingProfile(saved);
       }
-      const freshArticleOutput = performanceLoopEnabled
-        ? await loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth)
-        : undefined;
-      if (performanceLoopEnabled) setArticleOutput(freshArticleOutput ?? null);
+      const [freshArticleOutput, freshPreviousArticleOutput] = performanceLoopEnabled
+        ? await Promise.all([
+            loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth).catch(() => null),
+            referenceMonth === previousMonth
+              ? Promise.resolve(null)
+              : loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, previousMonth).catch(() => null),
+          ])
+        : [undefined, undefined];
+      if (performanceLoopEnabled) {
+        setArticleOutput(freshArticleOutput ?? null);
+        setPreviousArticleOutput(freshPreviousArticleOutput ?? null);
+      }
       const prompt = buildNoteScheduleResearchPrompt(
         profile,
         selectedAi,
@@ -263,6 +284,8 @@ export function NoteOperationsPage() {
         todayJstDateKey(),
         performanceLoopEnabled ? referencePerformance : undefined,
         freshArticleOutput,
+        performanceLoopEnabled ? previousPerformance : undefined,
+        freshPreviousArticleOutput,
       );
       setSchedulePrompt(prompt);
       setSchedulePreview(null);
@@ -451,6 +474,10 @@ export function NoteOperationsPage() {
     );
   }
 
+  const detailedGenreSelection = genreSelectionValue(profile.articleGenre);
+  const detailedSubgenreOptions = subgenreOptionsFor(profile.articleGenre);
+  const detailedSubgenreSelection = subgenreSelectionValue(profile.articleGenre, profile.articleSubgenre);
+
   return (
     <div className="note-ops-shell">
       <AasReferenceHeader />
@@ -459,7 +486,7 @@ export function NoteOperationsPage() {
           <div>
             <p className="eyebrow">NOTE OPERATIONS</p>
             <h1>note運営アシスタント</h1>
-            <p>アカウント準備からプロフィール、無料・有料noteの運用予定、毎日のToDoまでAASで管理します。</p>
+            <p>アカウント準備からプロフィール、無料・有料noteの運用予定、メンバーシップ相談、毎日のToDoまでAASで管理します。</p>
           </div>
           <Link href="/">ホームへ</Link>
         </header>
@@ -474,32 +501,19 @@ export function NoteOperationsPage() {
           <button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}>2. プロフィール</button>
           <button className={tab === "plan" ? "active" : ""} onClick={() => setTab("plan")}>3. 運用プラン</button>
           <button className={tab === "calendar" ? "active" : ""} onClick={() => setTab("calendar")}>4. カレンダー</button>
+          <button className={tab === "membership" ? "active" : ""} onClick={() => setTab("membership")}>5. メンバーシップ相談</button>
         </nav>
 
         {message && <div className="route-notice note-ops-message">{message}</div>}
 
         {tab === "start" && (
-          <section className="note-ops-panel">
-            <div className="note-ops-section-head">
-              <div><span>START GUIDE</span><h2>noteを始める順番</h2></div>
-              <a href={NOTE_HOME_URL} target="_blank" rel="noreferrer">note公式を開く ↗</a>
-            </div>
-            <div className="note-start-steps">
-              <article><b>1</b><div><strong>noteアカウントを作る</strong><p>note公式を開き、画面の案内に沿ってアカウントを作成します。AASへnoteのパスワードを入力する必要はありません。</p></div></article>
-              <article><b>2</b><div><strong>表示名・アイコン・発信テーマを決める</strong><p>誰に何を届けるアカウントかを先に決めると、プロフィールと記事テーマをそろえやすくなります。</p></div></article>
-              <article><b>3</b><div><strong>プロフィール文と自己紹介記事を準備</strong><p>noteでは投稿した記事をプロフィールとして表示できる仕組みがあります。AASでは入力した事実だけから下書きを作ります。</p><a href={NOTE_PROFILE_OFFICIAL} target="_blank" rel="noreferrer">note公式のプロフィール案内 ↗</a></div></article>
-              <article><b>4</b><div><strong>無料noteで読者の入口を作る</strong><p>AASおすすめとして、最初は無料記事を軸に投稿習慣とテーマの反応を確認します。これは成果を保証するものではありません。</p></div></article>
-              <article><b>5</b><div><strong>必要に応じて有料noteを組み合わせる</strong><p>有料記事は価格と無料で読める範囲をnote側で設定します。</p><a href={NOTE_PAID_OFFICIAL} target="_blank" rel="noreferrer">note公式の有料記事案内 ↗</a></div></article>
-              <article><b>6</b><div><strong>AASカレンダーで継続する</strong><p>AIが決めた「無料note作成」「有料note作成」の日付と時間だけをAASカレンダーへ保存します。AASカレンダー自体はプランを問わず使えます。note側の予約投稿はnoteプレミアム / note pro向け機能として案内されています。</p><a href={NOTE_RESERVATION_OFFICIAL} target="_blank" rel="noreferrer">note公式の予約投稿案内 ↗</a></div></article>
-            </div>
-            <div className="note-ready-checks">
-              <label><input type="checkbox" checked={profile.accountReady} onChange={(event) => setProfile({ ...profile, accountReady: event.target.checked })} /> noteアカウントの作成が完了した</label>
-              <label><input type="checkbox" checked={profile.profileReady} onChange={(event) => setProfile({ ...profile, profileReady: event.target.checked })} /> プロフィールの準備が完了した</label>
-            </div>
-            <button className="primary-action" disabled={busy} onClick={() => void saveProfile()}>進捗を保存</button>
-          </section>
+          <NoteStartGuideTab
+            profile={profile}
+            busy={busy}
+            onProfileChange={setProfile}
+            onSave={saveProfile}
+          />
         )}
-
         {tab === "profile" && (
           <section className="note-ops-panel">
             <div className="note-ops-section-head">
@@ -566,12 +580,14 @@ export function NoteOperationsPage() {
             )}
 
             <div className="note-profile-choice-grid">
-              <label><span>① どのジャンルで運営したい？</span><select value={profile.accountGenre} onChange={(event) => setProfile({ ...profile, accountGenre: event.target.value as NoteOperationProfile["accountGenre"] })}>{NOTE_ACCOUNT_GENRES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountGenre === "other" && <input value={profile.customGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, customGenre: event.target.value })} placeholder="運営したいジャンルを入力" />}</label>
-              <label><span>② どんなアカウントにしたい？</span><select value={profile.accountStyle} onChange={(event) => setProfile({ ...profile, accountStyle: event.target.value as NoteOperationProfile["accountStyle"] })}>{NOTE_ACCOUNT_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountStyle === "other" && <input value={profile.customAccountStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customAccountStyle: event.target.value })} placeholder="例：失敗談も含めて一緒に学ぶアカウント" />}</label>
-              <label><span>③ 主に誰に届けたい？</span><select value={profile.audiencePreset} onChange={(event) => setProfile({ ...profile, audiencePreset: event.target.value as NoteOperationProfile["audiencePreset"] })}>{NOTE_AUDIENCE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.audiencePreset === "other" && <input value={profile.customAudience} maxLength={300} onChange={(event) => setProfile({ ...profile, customAudience: event.target.value })} placeholder="届けたい読者を入力" />}</label>
-              <label><span>④ 文章の雰囲気は？</span><select value={profile.tonePreset} onChange={(event) => setProfile({ ...profile, tonePreset: event.target.value as NoteOperationProfile["tonePreset"] })}>{NOTE_TONE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.tonePreset === "other" && <input value={profile.customTone} maxLength={120} onChange={(event) => setProfile({ ...profile, customTone: event.target.value })} placeholder="希望する雰囲気を入力" />}</label>
-              <label><span>⑤ 収益化はどうしたい？</span><select value={profile.monetizationStyle} onChange={(event) => setProfile({ ...profile, monetizationStyle: event.target.value as NoteOperationProfile["monetizationStyle"] })}>{NOTE_MONETIZATION_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.monetizationStyle === "other" && <input value={profile.customMonetizationStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customMonetizationStyle: event.target.value })} placeholder="希望する収益化方針を入力" />}</label>
-              <label><span>⑥ 運営の目的は？</span><select value={profile.operationGoal} onChange={(event) => setProfile({ ...profile, operationGoal: event.target.value as NoteOperationProfile["operationGoal"] })}>{NOTE_OPERATION_GOALS.map((goal) => <option key={goal.value} value={goal.value}>{goal.label}</option>)}</select></label>
+              <label><span>① noteアカウントの大きなジャンル</span><select value={profile.accountGenre} onChange={(event) => setProfile({ ...profile, accountGenre: event.target.value as NoteOperationProfile["accountGenre"] })}>{NOTE_ACCOUNT_GENRES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountGenre === "other" && <input value={profile.customGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, customGenre: event.target.value })} placeholder="運営したいジャンルを入力" />}</label>
+              <label><span>② 記事作成で使う詳細ジャンル</span><select value={detailedGenreSelection} onChange={(event) => { const value = event.target.value; setProfile({ ...profile, articleGenre: value, articleSubgenre: subgenreOptionsFor(value)[0] ?? "AIおまかせ" }); }}>{GENRE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</select>{detailedGenreSelection === "その他" && <input value={profile.articleGenre === "その他" ? "" : profile.articleGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, articleGenre: event.target.value || "その他", articleSubgenre: "AIおまかせ" })} placeholder="詳細ジャンルを自由入力" />}</label>
+              <label><span>③ 記事作成で使うサブジャンル</span><select value={detailedSubgenreSelection} onChange={(event) => setProfile({ ...profile, articleSubgenre: event.target.value })}>{detailedSubgenreOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select>{detailedSubgenreSelection === "その他" && <input value={profile.articleSubgenre === "その他" ? "" : profile.articleSubgenre} maxLength={120} onChange={(event) => setProfile({ ...profile, articleSubgenre: event.target.value || "その他" })} placeholder="サブジャンルを自由入力" />}</label>
+              <label><span>④ どんなアカウントにしたい？</span><select value={profile.accountStyle} onChange={(event) => setProfile({ ...profile, accountStyle: event.target.value as NoteOperationProfile["accountStyle"] })}>{NOTE_ACCOUNT_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountStyle === "other" && <input value={profile.customAccountStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customAccountStyle: event.target.value })} placeholder="例：失敗談も含めて一緒に学ぶアカウント" />}</label>
+              <label><span>⑤ 主に誰に届けたい？</span><select value={profile.audiencePreset} onChange={(event) => setProfile({ ...profile, audiencePreset: event.target.value as NoteOperationProfile["audiencePreset"] })}>{NOTE_AUDIENCE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.audiencePreset === "other" && <input value={profile.customAudience} maxLength={300} onChange={(event) => setProfile({ ...profile, customAudience: event.target.value })} placeholder="届けたい読者を入力" />}</label>
+              <label><span>⑥ 文体・文章の雰囲気</span><select value={profile.tonePreset} onChange={(event) => setProfile({ ...profile, tonePreset: event.target.value as NoteOperationProfile["tonePreset"] })}>{NOTE_TONE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.tonePreset === "other" && <input value={profile.customTone} maxLength={120} onChange={(event) => setProfile({ ...profile, customTone: event.target.value })} placeholder="希望する文体・雰囲気を入力" />}</label>
+              <label><span>⑦ 収益化はどうしたい？</span><select value={profile.monetizationStyle} onChange={(event) => setProfile({ ...profile, monetizationStyle: event.target.value as NoteOperationProfile["monetizationStyle"] })}>{NOTE_MONETIZATION_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.monetizationStyle === "other" && <input value={profile.customMonetizationStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customMonetizationStyle: event.target.value })} placeholder="希望する収益化方針を入力" />}</label>
+              <label><span>⑧ 運営の目的は？</span><select value={profile.operationGoal} onChange={(event) => setProfile({ ...profile, operationGoal: event.target.value as NoteOperationProfile["operationGoal"] })}>{NOTE_OPERATION_GOALS.map((goal) => <option key={goal.value} value={goal.value}>{goal.label}</option>)}</select></label>
             </div>
 
             <details className="note-profile-advanced">
@@ -626,7 +642,7 @@ export function NoteOperationsPage() {
             <div className="note-ai-month-controls">
               <label>
                 <span>① 計画したい月</span>
-                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setSchedulePreview(null); setArticleOutput(null); }} />
+                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setSchedulePreview(null); setArticleOutput(null); setPreviousArticleOutput(null); }} />
               </label>
               <div>
                 <span>② リサーチに使うAI</span>
@@ -641,11 +657,26 @@ export function NoteOperationsPage() {
               </div>
             </div>
 
+            <section className="note-monthly-target-card">
+              <div>
+                <strong>月の記事作成数の目安</strong>
+                <span>ノルマではありません。AIは前月までの予定・完了状況とAASで実際に作成した記事数、今月の残り日数を見て多少前後させます。途中で何度でも組み直せます。</span>
+              </div>
+              <div className="note-monthly-target-grid">
+                <label><span>無料note / 月の目安</span><input type="number" min={0} max={60} value={profile.freePostsPerMonth} onChange={(event) => { const freePostsPerMonth = Math.max(0, Math.min(60, Number(event.target.value) || 0)); setProfile({ ...profile, freePostsPerMonth, weeklyPostCount: Math.max(1, Math.min(14, Math.round((freePostsPerMonth + profile.paidPostsPerMonth) / 4))) }); }} /></label>
+                <label><span>有料note / 月の目安</span><input type="number" min={0} max={60} value={profile.paidPostsPerMonth} onChange={(event) => { const paidPostsPerMonth = Math.max(0, Math.min(60, Number(event.target.value) || 0)); setProfile({ ...profile, paidPostsPerMonth, weeklyPostCount: Math.max(1, Math.min(14, Math.round((profile.freePostsPerMonth + paidPostsPerMonth) / 4))) }); }} /></label>
+                <label><span>無料noteの文字数目安</span><input type="number" min={500} max={50000} step={500} value={profile.freeTargetLength} onChange={(event) => setProfile({ ...profile, freeTargetLength: Math.max(500, Math.min(50000, Number(event.target.value) || 4000)) })} /></label>
+                <label><span>有料noteの文字数目安</span><input type="number" min={500} max={50000} step={500} value={profile.paidTargetLength} onChange={(event) => setProfile({ ...profile, paidTargetLength: Math.max(500, Math.min(50000, Number(event.target.value) || 7000)) })} /></label>
+              </div>
+              <small>月間本数は「目安」です。通常は近い本数を基準にしつつ、継続できた本数・前月実績・当月作成数によってAIが増減します。文字数はカレンダーから記事作成へ進む際の初期値として自動反映されます。</small>
+              <button type="button" disabled={busy} onClick={() => void saveProfile()}>この目安をAASに保存</button>
+            </section>
+
             <div className="note-ai-decision-list">
               <strong>AIに決めてもらう内容</strong>
               <div>
-                <span>週に何回投稿するか</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの比率</span>
-                <span>有料noteを週何回にするか</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
+                <span>月間目安から実際の無料/有料本数を調整</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの配分</span>
+                <span>前月・今月の実績に合わせた増減</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
                 <span>トレンド記事と長期記事の配分</span><span>無料note / 有料noteの作成日・時間</span>
                 {performanceLoopEnabled && <span>実際の作成本数に合わせた途中再計画</span>}
               </div>
@@ -666,7 +697,9 @@ export function NoteOperationsPage() {
                   {articleOutput
                     ? ` AASではnote記事を${articleOutput.createdPosts}本作成済み（無料${articleOutput.freeCreated} / 有料${articleOutput.paidCreated}）です。`
                     : " AAS内のnote記事作成実績はまだありません。"}
-                  本文・PV・売上・購入率はAIへ渡しません。予定より多くても少なくても問題なく、再計画時は実績を参考に今日以降だけを組み直します。
+                  {previousPerformance && ` 前月${previousMonth.replace("-", "年")}月は予定${previousPerformance.scheduledPosts}件・完了${previousPerformance.donePosts}件（無料完了${previousPerformance.freeDone} / 有料完了${previousPerformance.paidDone}）でした。`}
+                  {previousArticleOutput && ` 前月にAASで実際に作成したnoteは${previousArticleOutput.createdPosts}本（無料${previousArticleOutput.freeCreated} / 有料${previousArticleOutput.paidCreated}）です。`}
+                  本文・PV・売上・購入率はAIへ渡しません。予定より多くても少なくても問題なく、再計画時は前月までの実績も参考に今日以降だけを組み直します。
                 </span>
               </div>
             )}
@@ -761,45 +794,28 @@ export function NoteOperationsPage() {
           </section>
         )}
 
-        {tab === "calendar" && (
-          <section className="note-ops-panel">
-            <div className="note-calendar-head">
-              <button onClick={() => setCalendarMonth((value) => moveMonth(value, -1))}>←</button>
-              <div><span>CALENDAR</span><h2>{calendarMonth.replace("-", "年")}月</h2></div>
-              <button onClick={() => setCalendarMonth((value) => moveMonth(value, 1))}>→</button>
-            </div>
-            <div className="note-calendar-weekdays">{["日","月","火","水","木","金","土"].map((day) => <span key={day}>{day}</span>)}</div>
-            <div className="note-calendar-grid">
-              {monthCells(calendarMonth).map((cell) => {
-                const items = groupedByDate.get(cell.date) ?? [];
-                return (
-                  <article key={cell.date} className={(cell.current ? "" : "outside ") + (cell.date === todayJstDateKey() ? "today" : "")}>
-                    <strong>{Number(cell.date.slice(-2))}</strong>
-                    <div>{items.map((item, index) => <span key={item.id ?? item.scheduledDate + item.scheduledTime + index} className={typeClass(item)} title={item.title}>{item.scheduledTime} {NOTE_SCHEDULE_TYPE_LABELS[item.itemType]}</span>)}</div>
-                  </article>
-                );
-              })}
-            </div>
-
-            <div className="note-schedule-list">
-              <h3>予定一覧</h3>
-              {articleSchedule.length === 0 ? <p>無料note・有料noteの作成予定はまだありません。「運用プラン」からAIに作成してもらってください。</p> : articleSchedule.slice(0, 120).map((item, index) => (
-                <article key={item.id ?? item.scheduledDate + item.scheduledTime + index} className={item.status === "done" ? "done" : ""}>
-                  <div className={"note-schedule-type " + typeClass(item)}>{NOTE_SCHEDULE_TYPE_LABELS[item.itemType]}</div>
-                  <div>
-                    <small>{item.scheduledDate} {item.scheduledTime}</small>
-                    <strong>{item.title}</strong>
-                    {item.theme && <span>テーマ：{item.theme}</span>}
-                  </div>
-                  <div className="note-schedule-actions">
-                    {(item.itemType === "free_note" || item.itemType === "paid_note") && <Link href={createHref(item)}>この記事を作る</Link>}
-                    {item.id && <button disabled={busy} onClick={() => void changeStatus(item, item.status !== "done")}>{item.status === "done" ? "未完了に戻す" : "完了"}</button>}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+        {tab === "membership" && (
+          <NoteMembershipCockpit
+            userId={gate.userId}
+            profile={profile}
+            selectedAi={selectedAi}
+            onMessage={setMessage}
+            onOpenCalendar={() => setTab("calendar")}
+          />
         )}
+
+        {tab === "calendar" && (
+          <NoteCalendarTab
+            profile={profile}
+            calendarMonth={calendarMonth}
+            groupedByDate={groupedByDate}
+            articleSchedule={articleSchedule}
+            busy={busy}
+            onCalendarMonthChange={setCalendarMonth}
+            onChangeStatus={changeStatus}
+          />
+        )}
+
       </main>
     </div>
   );

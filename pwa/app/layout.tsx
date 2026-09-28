@@ -4,6 +4,7 @@ import { AccessStateProvider } from "@/components/access-state-provider";
 import { AdminHomeTopbar } from "@/components/admin-home-topbar";
 import { AppErrorReporter } from "@/components/app-error-reporter";
 import { FreeTrialBanner } from "@/components/free-trial-banner";
+import { FeatureAccessGate } from "@/components/feature-access-gate";
 import { WorkspacePresetProvider } from "@/features/presets/workspace-preset-provider";
 import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootstrap";
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
@@ -51,14 +52,15 @@ import "./phase50-admin-action-prompts.css";
 import "./phase51-side-hustle-wizard.css";
 import "./phase52-infrastructure-usage.css";
 import "./phase53-crystal-ui.css";
-import "./phase54-home-widgets.css";
+import "./phase54-feature-control.css";
+import "./phase55-notifications.css";
 
 export const metadata: Metadata = {
   title: "AI Action Studio PWA",
   description:
     "AI Action Studio（AAS）— AIで副業を、もっと簡単に。記事・SNS・画像・副業支援を、スマホとPCから手軽に進められるAIアクション支援PWAです。",
   applicationName: "AI Action Studio",
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.webmanifest?v=20260928-axia-v2",
   robots: { index: false, follow: false },
   other: {
     "aas-phase": "17",
@@ -66,9 +68,9 @@ export const metadata: Metadata = {
     "aas-build-sha": process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev",
   },
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/icon-192.png",
+    icon: "/aas-axia-icon-192.png?v=20260928-axia-v2",
+    shortcut: "/aas-axia-icon-192.png?v=20260928-axia-v2",
+    apple: "/aas-axia-icon-180.png?v=20260928-axia-v2",
   },
 };
 
@@ -85,6 +87,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="aas-crystal-theme">
         <ReleaseAudienceGate>
           <AccessStateProvider>
+            <FeatureAccessGate>
             <WorkspacePresetProvider>
               <AppErrorReporter />
               <Suspense fallback={null}><RouteScrollToTop /></Suspense>
@@ -95,6 +98,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               {children}
               <PersistentMobileNav />
             </WorkspacePresetProvider>
+            </FeatureAccessGate>
           </AccessStateProvider>
         </ReleaseAudienceGate>
       </body>

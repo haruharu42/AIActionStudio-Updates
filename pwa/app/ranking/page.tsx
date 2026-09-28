@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { DirectRuntimeImage } from "@/components/direct-runtime-image";
 import {
   getCreatorRanking,
   getMyCreatorDashboard,
@@ -119,7 +120,7 @@ export default function CreatorRankingPage() {
         {dashboard && (
           <section className="reference-status-card">
             <span className="reference-avatar" aria-hidden="true">
-              {dashboard.avatarUrl ? <img src={dashboard.avatarUrl} alt="" /> : avatarLetter(dashboard.publicName || "Creator")}
+              {dashboard.avatarUrl ? <DirectRuntimeImage src={dashboard.avatarUrl} alt="" /> : avatarLetter(dashboard.publicName || "Creator")}
             </span>
             <div className="reference-creator-main">
               <div className="reference-name-row">
@@ -179,7 +180,7 @@ export default function CreatorRankingPage() {
                     {row.rankPosition}
                   </span>
                   <span className={styles.rankAvatar} aria-hidden="true">
-                    {row.avatarUrl ? <img src={row.avatarUrl} alt="" /> : avatarLetter(row.publicName)}
+                    {row.avatarUrl ? <DirectRuntimeImage src={row.avatarUrl} alt="" /> : avatarLetter(row.publicName)}
                   </span>
                   <div className={styles.rankName}>
                     <strong>{row.publicName}{row.isMe ? "（あなた）" : ""}</strong>

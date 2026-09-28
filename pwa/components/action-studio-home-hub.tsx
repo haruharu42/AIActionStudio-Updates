@@ -64,7 +64,7 @@ const quickActions: readonly ActionCard[] = [
   },
   {
     title: "note運営",
-    description: "note向けの運用・導線・公開作業を専用フローで進める。",
+    description: "note向けの運用・投稿計画・メンバーシップ相談を専用フローで進める。",
     icon: "✦",
     href: "/note-operations",
     tone: "pink",

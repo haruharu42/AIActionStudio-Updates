@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { SalesReadinessPanel } from "@/components/admin-sales/sales-readiness-panel";
+import { SalesReleasePreflightPanel } from "@/components/admin-sales/sales-release-preflight-panel";
+import { SalesSelectSetting } from "@/components/admin-sales/sales-select-setting";
+import { SellerSettingsPanel } from "@/components/admin-sales/seller-settings-panel";
 
 import {
   loadAdminSalesSettings,
@@ -11,6 +15,12 @@ import {
   type SalesSettings,
 } from "@/lib/sales-settings";
 import { getSupabaseClient } from "@/lib/supabase";
+import {
+  SALES_PRESETS,
+  applySalesPresetToSettings,
+  inferSalesPreset,
+  type SalesPresetKey,
+} from "@/lib/sales-presets";
 
 type Gate =
   | { kind: "loading" }
@@ -28,30 +38,12 @@ const EMPTY: SalesSettings = {
   pwaMonthlyEnabled: false,
 };
 
-function Toggle({
-  checked,
-  onChange,
-  title,
-  description,
-}: {
-  checked: boolean;
-  onChange(value: boolean): void;
-  title: string;
-  description: string;
-}) {
-  return (
-    <label className="sales-setting-row">
-      <span><strong>{title}</strong><small>{description}</small></span>
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
-    </label>
-  );
-}
-
 export function SalesSettingsAdminPage() {
   const { state: accessState, client } = useSharedAccessState();
   const [initError, setInitError] = useState("");
   const [settings, setSettings] = useState<SalesSettings>(EMPTY);
   const [saved, setSaved] = useState<SalesSettings>(EMPTY);
+  const [salesPreset, setSalesPreset] = useState<SalesPresetKey>("custom");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -86,6 +78,7 @@ export function SalesSettingsAdminPage() {
         if (!active) return;
         setSettings(next);
         setSaved(next);
+        setSalesPreset(inferSalesPreset(next));
       } catch (error) {
         if (active) setInitError(error instanceof Error ? error.message : "販売設定を初期化できませんでした。");
       }
@@ -99,13 +92,21 @@ export function SalesSettingsAdminPage() {
     setSettings((current) => ({ ...current, [key]: value }));
   };
 
+  const applySalesPreset = (preset: SalesPresetKey) => {
+    setSalesPreset(preset);
+    if (preset === "custom") return;
+    const next = applySalesPresetToSettings(settings, preset);
+    setSettings(next);
+    setMessage("販売モードプリセットを反映しました。保存するまで本番設定は変わりません。");
+  };
+
   const save = async () => {
     if (busy || !changed) return;
     setBusy(true); setMessage("");
     try {
       await updateAdminSalesSettings(getSupabaseClient(), settings);
       const next = await loadAdminSalesSettings(getSupabaseClient());
-      setSettings(next); setSaved(next);
+      setSettings(next); setSaved(next); setSalesPreset(inferSalesPreset(next));
       setMessage("販売・決済設定を保存しました。既存の契約・利用権は変更していません。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "販売・決済設定を保存できませんでした。");
@@ -127,17 +128,28 @@ export function SalesSettingsAdminPage() {
   return (
     <main className="admin-page sales-settings-page">
       <header className="admin-head admin-dashboard-head">
-        <div><p className="eyebrow">SALES & BILLING</p><h1>販売・決済設定</h1><p>{gate.aasId} / PWA版の新規販売受付を管理します。</p></div>
-        <div className="admin-head-actions"><Link className="route-back" href="/admin">← 管理ダッシュボード</Link></div>
+        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売センター</h1><p>{gate.aasId} / AI Action Studio（AAS）のPWA新規販売受付を、プルダウン中心で管理します。</p></div>
+        <div className="admin-head-actions"><Link className="route-back" href="/admin/promotion">プロモーション作成</Link><Link className="route-back" href="/admin">← 管理ダッシュボード</Link></div>
       </header>
 
       <div className="route-notice">OFFにしても、既存の契約・利用期間・利用権は停止・取消しされません。新規受付だけを止めます。</div>
       {message && <div className="route-notice">{message}</div>}
 
+      <section className="admin-panel sales-quick-settings">
+        <div className="admin-panel-heading"><div><p className="eyebrow">QUICK SALES MODE</p><h2>販売モードを選ぶ</h2><p>まず運用方法を1つ選ぶだけで、下の受付設定をまとめて切り替えられます。</p></div></div>
+        <label className="sales-preset-field">
+          <span>販売モードプリセット</span>
+          <select value={salesPreset} onChange={(event) => applySalesPreset(event.target.value as SalesPresetKey)}>
+            {SALES_PRESETS.map((preset) => <option key={preset.key} value={preset.key}>{preset.label} — {preset.note}</option>)}
+          </select>
+          <small>プリセット選択だけでは保存されません。内容を確認してから最下部の「変更を保存」を押してください。</small>
+        </label>
+      </section>
+
       <section className="admin-panel sales-settings-section">
         <div className="admin-panel-heading"><div><p className="eyebrow">EXTERNAL SALES</p><h2>外部販売・利用コード</h2></div></div>
-        <Toggle checked={settings.externalSalesEnabled} onChange={(value) => set("externalSalesEnabled", value)} title="note / Brain / Tips等の外部販売" description="外部サービスで販売する運用を受付中として表示します。" />
-        <Toggle checked={settings.accessCodeEnabled} onChange={(value) => set("accessCodeEnabled", value)} title="利用コード受付" description="購入者へ渡した利用コード（既存の招待コード基盤）の新規登録を許可します。" />
+        <SalesSelectSetting checked={settings.externalSalesEnabled} onChange={(value) => set("externalSalesEnabled", value)} title="note / Brain / Tips等の外部販売" description="外部サービスで販売する運用を受付中として表示します。" />
+        <SalesSelectSetting checked={settings.accessCodeEnabled} onChange={(value) => set("accessCodeEnabled", value)} title="利用コード受付" description="購入者へ渡した利用コード（既存の招待コード基盤）の新規登録を許可します。" />
         <label className="sales-url-field">
           <span><strong>購入ページURL（note等）</strong><small>無料利用回数を使い切ったユーザーへ表示する購入先です。空欄なら購入ボタンは表示しません。HTTPSのみ設定できます。</small></span>
           <input
@@ -154,15 +166,20 @@ export function SalesSettingsAdminPage() {
         </label>
       </section>
 
+      <SellerSettingsPanel />
+
       <section className="admin-panel sales-settings-section">
         <div className="admin-panel-heading"><div><p className="eyebrow">STRIPE</p><h2>PWA Stripe新規決済</h2></div></div>
-        <Toggle checked={settings.stripeCheckoutEnabled} onChange={(value) => set("stripeCheckoutEnabled", value)} title="Stripe新規購入受付" description="PWA向けStripeプラン共通のマスタースイッチです。OFFならCheckoutをサーバー側でも拒否します。" />
+        <SalesSelectSetting checked={settings.stripeCheckoutEnabled} onChange={(value) => set("stripeCheckoutEnabled", value)} title="Stripe新規購入受付" description="PWA向けStripeプラン共通のマスタースイッチです。OFFならCheckoutをサーバー側でも拒否します。" />
         <div className="sales-plan-grid">
-          <Toggle checked={settings.pwa7DayEnabled} onChange={(value) => set("pwa7DayEnabled", value)} title="PWA 7日利用パス" description="自動更新なしの7日券を表示・受付します。" />
-          <Toggle checked={settings.pwaMonthlyEnabled} onChange={(value) => set("pwaMonthlyEnabled", value)} title="PWA 月額プラン" description="PWA版の月額新規契約を表示・受付します。" />
+          <SalesSelectSetting checked={settings.pwa7DayEnabled} onChange={(value) => set("pwa7DayEnabled", value)} title="PWA 7日利用パス" description="自動更新なしの7日券を表示・受付します。" />
+          <SalesSelectSetting checked={settings.pwaMonthlyEnabled} onChange={(value) => set("pwaMonthlyEnabled", value)} title="PWA 月額プラン" description="PWA版の月額新規契約を表示・受付します。" />
         </div>
         {!settings.stripeCheckoutEnabled && <p className="sales-master-off">StripeマスタースイッチがOFFのため、個別プランをONにしても現在は購入できません。後日の販売準備として設定を保存できます。</p>}
       </section>
+
+      <SalesReadinessPanel settings={settings} hasUnsavedChanges={changed} />
+      <SalesReleasePreflightPanel settings={settings} hasUnsavedChanges={changed} />
 
       <section className="admin-panel sales-current-mode">
         <h2>現在の販売モード</h2>
@@ -173,7 +190,7 @@ export function SalesSettingsAdminPage() {
 
       <div className="sales-save-bar">
         <button type="button" className="primary-action" disabled={busy || !changed} onClick={() => void save()}>{busy ? "保存中…" : changed ? "変更を保存" : "保存済み"}</button>
-        {changed && <button type="button" className="secondary-action" disabled={busy} onClick={() => setSettings(saved)}>変更を元に戻す</button>}
+        {changed && <button type="button" className="secondary-action" disabled={busy} onClick={() => { setSettings(saved); setSalesPreset(inferSalesPreset(saved)); }}>変更を元に戻す</button>}
       </div>
     </main>
   );

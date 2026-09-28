@@ -33,6 +33,8 @@ export type MobileNavItemKey =
   | "adminFree"
   | "adminSales"
   | "adminReleases"
+  | "adminFeatures"
+  | "adminNotifications"
   | "adminMfa"
   | "adminOperations"
   | "adminInquiries"
@@ -77,6 +79,8 @@ export const ADMIN_MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   { key: "adminFree", label: "無料設定", icon: "◉", href: "/admin/free-trial" },
   { key: "adminSales", label: "販売", icon: "¥", href: "/admin/sales" },
   { key: "adminReleases", label: "更新管理", icon: "↻", href: "/admin/releases" },
+  { key: "adminFeatures", label: "機能管理", icon: "◫", href: "/admin/features" },
+  { key: "adminNotifications", label: "通知管理", icon: "🔔", href: "/admin/notifications" },
   { key: "adminMfa", label: "MFA", icon: "◇", href: "/admin/security" },
   { key: "adminOperations", label: "運用", icon: "⚑", href: "/admin/operations" },
 ] as const;
