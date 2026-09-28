@@ -1,4 +1,4 @@
-import { publicationBodyForCopy } from "@/lib/phase11-create";
+import { publicationBodyForCopy, type PublicationBodyOptions } from "@/lib/phase11-create";
 
 export type NotePostSequenceItem =
   | { kind: "body"; id: string; markdown: string }
@@ -6,8 +6,48 @@ export type NotePostSequenceItem =
 
 const INLINE_MARKER = /^\s*(?:\*\*)?【挿絵(\d+)をここに挿入】(?:\*\*)?\s*$/gim;
 
-export function buildNotePostSequence(body: string, title: string): NotePostSequenceItem[] {
-  const publicationBody = publicationBodyForCopy(body, title);
+export type NotePostImagePlanMetadata = {
+  inlineEnabled?: boolean;
+  inlineCount?: number;
+  suggestedFilenames: Record<string, string>;
+};
+
+function metadataRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+export function readNotePostImagePlanMetadata(value: Record<string, unknown>): NotePostImagePlanMetadata {
+  const inline = metadataRecord(value.inline);
+  const inlineEnabled = typeof inline?.enabled === "boolean" ? inline.enabled : undefined;
+  const inlineCount = typeof inline?.count === "number" && Number.isSafeInteger(inline.count)
+    ? Math.max(0, Math.trunc(inline.count))
+    : undefined;
+  const suggestedFilenames: Record<string, string> = {};
+
+  const promptPlan = Array.isArray(value.prompt_plan) ? value.prompt_plan : [];
+  for (const entry of promptPlan) {
+    const item = metadataRecord(entry);
+    if (!item) continue;
+    const kind = item.kind;
+    const order = item.order;
+    const suggestedFilename = item.suggestedFilename;
+    if ((kind !== "cover" && kind !== "inline")
+      || typeof order !== "number"
+      || !Number.isSafeInteger(order)
+      || typeof suggestedFilename !== "string"
+      || !suggestedFilename.trim()) {
+      continue;
+    }
+    suggestedFilenames[`${kind}-${order}`] = suggestedFilename.trim();
+  }
+
+  return { inlineEnabled, inlineCount, suggestedFilenames };
+}
+
+export function buildNotePostSequence(body: string, title: string, options?: PublicationBodyOptions): NotePostSequenceItem[] {
+  const publicationBody = publicationBodyForCopy(body, title, options);
   if (!publicationBody) return [];
 
   const sequence: NotePostSequenceItem[] = [];
