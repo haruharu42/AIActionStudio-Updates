@@ -108,10 +108,12 @@ test('note article detail exposes local image posting assistant without Supabase
   assert.match(deviceLayoutCss, /@media \(max-width: 700px\)/);
   assert.match(deviceLayoutCss, /\.note-post-batch-copy-desktop\s*\{[\s\S]*?display:\s*none\s*!important/);
   assert.match(notePostAssistantUi, /copyNotePostSequenceWithImages/);
+  const imageSlotsIndex = notePostAssistantUi.indexOf('className="note-post-image-slots"');
+  const postingStepsIndex = notePostAssistantUi.indexOf('aria-label="noteへ貼り付ける順番"');
+  const completedPreviewIndex = notePostAssistantUi.indexOf('aria-label="画像入り完成プレビュー"');
   assert.ok(
-    notePostAssistantUi.indexOf('aria-label="noteへ貼り付ける順番"')
-      < notePostAssistantUi.indexOf('aria-label="画像入り完成プレビュー"'),
-    'note posting steps should render above the image preview',
+    imageSlotsIndex < postingStepsIndex && postingStepsIndex < completedPreviewIndex,
+    'image selection should render before copy steps, and copy steps before the completed preview',
   );
   assert.match(localArticleImagesSource, /indexedDB\.open/);
   assert.match(localArticleImagesSource, /createObjectStore/);
