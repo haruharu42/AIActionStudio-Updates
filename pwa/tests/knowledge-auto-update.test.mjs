@@ -7,11 +7,28 @@ import { fileURLToPath } from "node:url";
 const pwaRoot = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = path.resolve(pwaRoot, "..");
 const readPwa = (relative) => readFile(path.join(pwaRoot, relative), "utf8");
+const readKnowledgeRefreshSource = async () => (await Promise.all([
+  "components/knowledge-refresh-panel.tsx",
+  "components/knowledge-refresh/knowledge-refresh-static-sections.tsx",
+].map(readPwa))).join("\n");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
+
+test("knowledge refresh guide and history stay presentation-only", async () => {
+  const [panel, staticSections] = await Promise.all([
+    readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("components/knowledge-refresh/knowledge-refresh-static-sections.tsx"),
+  ]);
+
+  assert.match(panel, /KnowledgeChannelGuide/);
+  assert.match(panel, /KnowledgeRefreshHistory/);
+  assert.match(staticSections, /export function KnowledgeChannelGuide/);
+  assert.match(staticSections, /export function KnowledgeRefreshHistory/);
+  assert.doesNotMatch(staticSections, /getSupabaseClient|adminPublishKnowledgeRefreshBundle|adminReviewKnowledgeAutomationCandidate|adminSetKnowledgeAutomationAiConfig|\.rpc\(/);
+});
 
 test("knowledge refresh scheduler releases processing requests that are stuck for more than 24 hours", async () => {
   const migration = await readRepo("supabase/migrations/20260923234555_knowledge_refresh_stale_recovery.sql");
-  const panel = await readPwa("components/knowledge-refresh-panel.tsx");
+  const panel = await readKnowledgeRefreshSource();
   const display = await readPwa("components/knowledge-refresh/knowledge-refresh-display.ts");
 
   assert.match(migration, /status = 'failed'/);
@@ -82,7 +99,7 @@ test("all major exported prompt builders can consume the cloud optimization laye
 });
 
 test("admin refresh UI requires sourced JSON review before publication", async () => {
-  const panel = await readPwa("components/knowledge-refresh-panel.tsx");
+  const panel = await readKnowledgeRefreshSource();
   const client = await readPwa("lib/knowledge-auto-update.ts");
   const admin = await readPwa("components/admin-knowledge-page.tsx");
 
@@ -121,7 +138,7 @@ test("knowledge update diff migration records material changes before publish", 
 });
 
 test("Fresh and Stable are explained clearly and publication requires diff review", async () => {
-  const panel = await readPwa("components/knowledge-refresh-panel.tsx");
+  const panel = await readKnowledgeRefreshSource();
   const client = await readPwa("lib/knowledge-auto-update.ts");
   const css = await readPwa("app/phase26-knowledge.css");
 
@@ -174,7 +191,7 @@ test("official-source automation detects changes but never auto-publishes Knowle
     readRepo("supabase/migrations/20260924195615_knowledge_web_automation_discovery_tuning_v1.sql"),
     readRepo("supabase/migrations/20260924200421_knowledge_web_automation_provider_hubs_v1.sql"),
     readRepo("supabase/functions/knowledge-research-worker/index.ts"),
-    readPwa("components/knowledge-refresh-panel.tsx"),
+    readKnowledgeRefreshSource(),
     readPwa("lib/knowledge-auto-update.ts"),
   ]);
 
@@ -239,7 +256,7 @@ test("official-source automation detects changes but never auto-publishes Knowle
 test("automation approval is candidate review only and remains separate from publication", async () => {
   const [foundation, panel, client] = await Promise.all([
     readRepo("supabase/migrations/20260924194519_knowledge_web_automation_foundation_v1.sql"),
-    readPwa("components/knowledge-refresh-panel.tsx"),
+    readKnowledgeRefreshSource(),
     readPwa("lib/knowledge-auto-update.ts"),
   ]);
 
@@ -257,7 +274,7 @@ test("AI enrichment drafts Knowledge candidates but keeps final publication admi
   const [migration, worker, panel, client, docs] = await Promise.all([
     readRepo("supabase/migrations/20260924201026_knowledge_ai_enrichment_v1.sql"),
     readRepo("supabase/functions/knowledge-research-worker/index.ts"),
-    readPwa("components/knowledge-refresh-panel.tsx"),
+    readKnowledgeRefreshSource(),
     readPwa("lib/knowledge-auto-update.ts"),
     readRepo("docs/knowledge-web-automation.md"),
   ]);
@@ -321,7 +338,7 @@ test("AI enrichment can fail or be disabled without stopping official-source mon
 
 test("AI proposal handoff only pre-fills a Fresh review request and does not bypass diff confirmation", async () => {
   const [panel, client] = await Promise.all([
-    readPwa("components/knowledge-refresh-panel.tsx"),
+    readKnowledgeRefreshSource(),
     readPwa("lib/knowledge-auto-update.ts"),
   ]);
 
@@ -341,7 +358,7 @@ test("AI proposal handoff only pre-fills a Fresh review request and does not byp
 test("knowledge monitor dashboard exposes admin-only source health and side-hustle coverage", async () => {
   const [migration, panel, sourceHealth, display, client, css] = await Promise.all([
     readRepo("supabase/migrations/20260925070649_knowledge_automation_source_health_dashboard_v1.sql"),
-    readPwa("components/knowledge-refresh-panel.tsx"),
+    readKnowledgeRefreshSource(),
     readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
     readPwa("components/knowledge-refresh/knowledge-refresh-display.ts"),
     readPwa("lib/knowledge-auto-update.ts"),
@@ -375,7 +392,7 @@ test("knowledge monitor dashboard exposes admin-only source health and side-hust
 
 test("admin Knowledge quality analyzer reuses existing RPCs without auto-publish", async () => {
   const [panel, quality, client, css] = await Promise.all([
-    readPwa("components/knowledge-refresh-panel.tsx"),
+    readKnowledgeRefreshSource(),
     readPwa("components/knowledge-refresh/knowledge-quality-analyzer.tsx"),
     readPwa("lib/knowledge-auto-update.ts"),
     readPwa("app/phase26-knowledge.css"),
@@ -412,7 +429,7 @@ test("admin Knowledge quality analyzer reuses existing RPCs without auto-publish
 
 test("knowledge refresh UI keeps pure display and diff rendering in feature modules", async () => {
   const [panel, display, diff] = await Promise.all([
-    readPwa("components/knowledge-refresh-panel.tsx"),
+    readKnowledgeRefreshSource(),
     readPwa("components/knowledge-refresh/knowledge-refresh-display.ts"),
     readPwa("components/knowledge-refresh/knowledge-diff-summary.tsx"),
   ]);
@@ -431,7 +448,7 @@ test("knowledge refresh UI keeps pure display and diff rendering in feature modu
 
 test("knowledge source health and quality analysis are isolated from refresh orchestration", async () => {
   const [panel, sourceHealth, quality] = await Promise.all([
-    readPwa("components/knowledge-refresh-panel.tsx"),
+    readKnowledgeRefreshSource(),
     readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
     readPwa("components/knowledge-refresh/knowledge-quality-analyzer.tsx"),
   ]);
