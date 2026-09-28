@@ -1,10 +1,11 @@
 import { publicationBodyForCopy, type PublicationBodyOptions } from "@/lib/phase11-create";
 
 export type NotePostSequenceItem =
-  | { kind: "body"; id: string; markdown: string }
-  | { kind: "inline-image"; id: string; order: number };
+  | { kind: "body"; id: string; markdown: string; paid: boolean }
+  | { kind: "inline-image"; id: string; order: number; paid: boolean }
+  | { kind: "paid-boundary"; id: string };
 
-const INLINE_MARKER = /^\s*(?:\*\*)?【挿絵(\d+)をここに挿入】(?:\*\*)?\s*$/gim;
+const POSTING_MARKER = /^(?:[ \t]*(?:\*\*)?【挿絵(\d+)をここに挿入】(?:\*\*)?[ \t]*|(?:[ \t]*---[ \t]*\n)?[ \t]*(?:\*\*)?【ここから有料エリア】(?:\*\*)?[ \t]*(?:\n[ \t]*---[ \t]*)?)$/gim;
 
 export type NotePostImagePlanMetadata = {
   inlineEnabled?: boolean;
@@ -53,29 +54,38 @@ export function buildNotePostSequence(body: string, title: string, options?: Pub
   const sequence: NotePostSequenceItem[] = [];
   let cursor = 0;
   let bodyIndex = 1;
+  let paid = false;
 
-  for (const match of publicationBody.matchAll(INLINE_MARKER)) {
+  for (const match of publicationBody.matchAll(POSTING_MARKER)) {
     const index = match.index ?? 0;
     const before = publicationBody.slice(cursor, index).trim();
     if (before) {
-      sequence.push({ kind: "body", id: `body-${bodyIndex}`, markdown: before });
+      sequence.push({ kind: "body", id: `body-${bodyIndex}`, markdown: before, paid });
       bodyIndex += 1;
     }
-    sequence.push({
-      kind: "inline-image",
-      id: `inline-${Number(match[1])}`,
-      order: Number(match[1]),
-    });
+
+    if (match[1]) {
+      const order = Number(match[1]);
+      sequence.push({
+        kind: "inline-image",
+        id: `inline-${order}`,
+        order,
+        paid,
+      });
+    } else {
+      sequence.push({ kind: "paid-boundary", id: "paid-boundary" });
+      paid = true;
+    }
     cursor = index + match[0].length;
   }
 
   const rest = publicationBody.slice(cursor).trim();
   if (rest) {
-    sequence.push({ kind: "body", id: `body-${bodyIndex}`, markdown: rest });
+    sequence.push({ kind: "body", id: `body-${bodyIndex}`, markdown: rest, paid });
   }
 
   if (sequence.length === 0) {
-    sequence.push({ kind: "body", id: "body-1", markdown: publicationBody });
+    sequence.push({ kind: "body", id: "body-1", markdown: publicationBody, paid: false });
   }
 
   return sequence;
