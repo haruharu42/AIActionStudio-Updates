@@ -1510,6 +1510,39 @@ body.aas-crystal-theme .status-card::after {
   pointer-events: none;
 }
 
+@media (min-width: 901px) and (max-width: 1440px) {
+  body.aas-crystal-theme .auth-page.auth-crystal-page {
+    grid-template-columns: minmax(0, 1.02fr) minmax(390px, .98fr);
+  }
+
+  body.aas-crystal-theme .auth-character-copy {
+    width: min(45%, 470px);
+    max-width: 470px;
+    padding-bottom: 70px;
+  }
+
+  body.aas-crystal-theme .auth-character-copy h1 {
+    max-width: 420px;
+    font-size: clamp(34px, 4.1vw, 52px);
+    line-height: 1.06;
+  }
+
+  body.aas-crystal-theme .auth-character-copy .lead {
+    max-width: 430px;
+    font-size: 12px;
+    line-height: 1.78;
+  }
+
+  body.aas-crystal-theme .auth-character-visual {
+    width: min(65%, 610px);
+    right: -4%;
+  }
+
+  body.aas-crystal-theme .auth-character-label {
+    right: 2%;
+  }
+}
+
 @media (max-width: 900px) {
   body.aas-crystal-theme .auth-page.auth-crystal-page {
     grid-template-columns: 1fr;
