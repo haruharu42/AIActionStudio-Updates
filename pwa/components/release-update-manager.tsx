@@ -10,7 +10,7 @@ import {
   type AppReleaseState,
 } from "@/lib/app-release";
 
-const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support"];
+const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support", "/plans"];
 
 function hiddenRoute(pathname: string): boolean {
   return HIDDEN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
