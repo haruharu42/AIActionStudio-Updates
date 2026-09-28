@@ -48,3 +48,11 @@ This document records validation results only and does not change runtime behavi
 - The static Start Guide and Calendar presentation were extracted from `note-operations-page.tsx` into `note-operations/note-operations-static-tabs.tsx`.
 - Supabase/RPC, AI launch, persistence, atomic schedule replacement, import parsing, and status mutations remain in the controller page.
 - Regression tests read the controller and extracted static-tab module together while a dedicated boundary test keeps database/runtime logic out of the static tabs.
+
+
+## Phase 7 note operations prompt boundary checkpoint
+
+- Pure note profile/account/monthly schedule prompt builders were moved to `lib/note-operation-prompts.ts`.
+- `lib/note-operations.ts` re-exports the same public builder names, preserving existing imports.
+- Supabase queries, atomic schedule replacement, persistence, parsing, and status mutations remain outside the prompt module.
+- Regression coverage reads the compatibility module and prompt module together and explicitly prevents database/runtime dependencies from entering the prompt boundary.
