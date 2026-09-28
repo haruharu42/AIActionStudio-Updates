@@ -36,42 +36,38 @@ export function AdminSecurityPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [code, setCode] = useState("");
+  const [currentAal, setCurrentAal] = useState<"aal1" | "aal2" | null>(null);
+  const [sessionFactorId, setSessionFactorId] = useState("");
+  const [sessionCode, setSessionCode] = useState("");
 
   const loadFactors = useCallback(async () => {
     try {
       const client = getSupabaseClient();
-      const { data, error } = await client.auth.mfa.listFactors();
-      if (error) throw error;
+      const [factorsResult, aalResult] = await Promise.all([
+        client.auth.mfa.listFactors(),
+        client.auth.mfa.getAuthenticatorAssuranceLevel(),
+      ]);
+      if (factorsResult.error) throw factorsResult.error;
+      if (aalResult.error) throw aalResult.error;
+      const nextFactors = mapTotpFactors(factorsResult.data.totp);
       setErrorMessage("");
-      setFactors(mapTotpFactors(data.totp));
+      setFactors(nextFactors);
+      setCurrentAal(aalResult.data.currentLevel === "aal2" ? "aal2" : "aal1");
+      setSessionFactorId((current) => {
+        const currentIsVerified = nextFactors.some((factor) => factor.id === current && factor.status === "verified");
+        return currentIsVerified ? current : nextFactors.find((factor) => factor.status === "verified")?.id ?? "";
+      });
     } catch {
-      setErrorMessage("MFA認証器の一覧を取得できませんでした。");
+      setErrorMessage("MFA認証器または現在の認証レベルを取得できませんでした。");
+      setCurrentAal(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    let active = true;
-    const client = getSupabaseClient();
-    void client.auth.mfa.listFactors().then(({ data, error }) => {
-      if (!active) return;
-      if (error) {
-        setErrorMessage("MFA認証器の一覧を取得できませんでした。");
-      } else {
-        setErrorMessage("");
-        setFactors(mapTotpFactors(data.totp));
-      }
-      setLoading(false);
-    }).catch(() => {
-      if (!active) return;
-      setErrorMessage("MFA認証器の一覧を取得できませんでした。");
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+    void loadFactors();
+  }, [loadFactors]);
 
   const verifiedFactors = useMemo(() => factors.filter((factor) => factor.status === "verified"), [factors]);
 
@@ -142,6 +138,41 @@ export function AdminSecurityPage() {
       await loadFactors();
     } catch {
       setErrorMessage("MFAコードを確認できませんでした。新しいコードで再試行してください。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verifyCurrentSession = async () => {
+    if (!sessionFactorId) {
+      setErrorMessage("確認済みMFA認証器を選択してください。");
+      return;
+    }
+    const normalized = sessionCode.replace(/\s+/g, "");
+    if (!/^\d{6}$/.test(normalized)) {
+      setErrorMessage("認証アプリに表示された6桁コードを入力してください。");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    setErrorMessage("");
+    try {
+      const client = getSupabaseClient();
+      const { data: challenge, error: challengeError } = await client.auth.mfa.challenge({ factorId: sessionFactorId });
+      if (challengeError) throw challengeError;
+      const { error: verifyError } = await client.auth.mfa.verify({
+        factorId: sessionFactorId,
+        challengeId: challenge.id,
+        code: normalized,
+      });
+      if (verifyError) throw verifyError;
+      const { data: aal, error: aalError } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalError || aal.currentLevel !== "aal2") throw aalError ?? new Error("aal2_not_reached");
+      setCurrentAal("aal2");
+      setSessionCode("");
+      setMessage("現在の管理者セッションをMFA認証しました。公開販売の最終承認など、AAL2必須操作を実行できます。");
+    } catch {
+      setErrorMessage("MFAコードを確認できませんでした。新しい6桁コードで再試行してください。");
     } finally {
       setBusy(false);
     }
@@ -224,6 +255,51 @@ export function AdminSecurityPage() {
           ))}
         </div>
       </section>
+
+      {!loading && verifiedFactors.length > 0 && (
+        <section className="admin-panel">
+          <div className="admin-panel-heading">
+            <div>
+              <p className="eyebrow">CURRENT SESSION MFA</p>
+              <h2>現在の管理者セッションをMFA認証</h2>
+              <p>公開販売の最終承認など、AAL2が必要な操作を行う前に現在のセッションを認証します。</p>
+            </div>
+            <strong className={currentAal === "aal2" ? "ready" : "action"}>
+              {currentAal === "aal2" ? "AAL2 認証済み" : "AAL2 未認証"}
+            </strong>
+          </div>
+
+          {currentAal === "aal2" ? (
+            <p className="route-notice">このセッションはMFA認証済みです。公開販売の最終承認を実行できます。</p>
+          ) : (
+            <div style={{ display: "grid", gap: 12, maxWidth: 520 }}>
+              {verifiedFactors.length > 1 && (
+                <label className="editor-field">
+                  <span>使用するMFA認証器</span>
+                  <select value={sessionFactorId} onChange={(event) => setSessionFactorId(event.target.value)}>
+                    {verifiedFactors.map((factor) => (
+                      <option key={factor.id} value={factor.id}>{factor.friendlyName}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="editor-field">
+                <span>認証アプリの6桁コード</span>
+                <input
+                  value={sessionCode}
+                  onChange={(event) => setSessionCode(event.target.value)}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                />
+              </label>
+              <button className="primary-action" type="button" disabled={busy || !sessionFactorId} onClick={() => void verifyCurrentSession()}>
+                {busy ? "MFA認証中…" : "このセッションをMFA認証する"}
+              </button>
+            </div>
+          )}
+        </section>
+      )}
 
       {enrollment && (
         <section className="admin-panel">
