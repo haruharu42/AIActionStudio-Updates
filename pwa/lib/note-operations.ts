@@ -222,7 +222,7 @@ export function applyRuntimeWorkspacePresetToNoteProfile(profile: NoteOperationP
     customMonetizationStyle: note.monetization ?? profile.customMonetizationStyle,
     operationGoal: note.goal?.includes("読者") ? "growth" : profile.operationGoal,
     articleGenre: preset.article.genre || profile.articleGenre,
-    articleSubgenre: preset.article.subgenre || profile.articleSubgenre,
+    articleSubgenre: profile.articleSubgenre,
   };
 }
 
