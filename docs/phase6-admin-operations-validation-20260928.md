@@ -29,3 +29,9 @@
 - Leaked-password protection is not available on the current Supabase Free organization plan; enabling it requires a supported paid plan.
 
 This document records validation results only and does not change runtime behavior.
+
+
+## Article-create split regression follow-up
+
+- Regression tests now inspect the article step aggregator plus generation, finish, and shared step modules after the component split.
+- No article workflow behavior was rolled back to satisfy the tests.
