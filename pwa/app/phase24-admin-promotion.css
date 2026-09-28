@@ -910,6 +910,38 @@
   line-height: 1.65;
 }
 
+.admin-promo-channel-optional {
+  display: grid;
+  gap: 10px;
+  border: 1px dashed #bfd8f1;
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: 12px;
+}
+
+.admin-promo-channel-substep {
+  align-items: flex-start;
+}
+
+.admin-promo-channel-substep > div > span {
+  width: auto;
+  min-width: 38px;
+  border-radius: 999px;
+  background: #e8f3ff;
+  color: #2472c8;
+  padding: 0 8px;
+}
+
+.admin-promo-cta-safety {
+  display: block;
+  margin-top: 6px;
+  border-left: 3px solid #e6a23c;
+  color: #785b2d;
+  padding: 6px 8px;
+  font-size: 8px;
+  line-height: 1.6;
+}
+
 .admin-promo-channel-length {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -983,6 +1015,14 @@
   .admin-promo-channel-builder {
     border-radius: 16px;
     padding: 14px;
+  }
+
+  .admin-promo-channel-optional {
+    padding: 10px;
+  }
+
+  .admin-promo-channel-step {
+    align-items: flex-start;
   }
 
   .admin-promo-channel-select select {
