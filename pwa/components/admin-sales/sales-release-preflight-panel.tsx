@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { fetchCommerceConfig } from "@/lib/commerce";
+import {
+  loadSalesLaunchReadiness,
+  type SalesLaunchReadinessSnapshot,
+} from "@/lib/sales-launch-readiness";
 import type { SalesSettings } from "@/lib/sales-settings";
 import { getSupabaseClient } from "@/lib/supabase";
 
@@ -34,91 +37,29 @@ export function SalesReleasePreflightPanel({
   hasUnsavedChanges?: boolean;
 }) {
   const purchaseUrl = externalPurchaseUrl(settings.externalSalesUrl);
-  const [verifiedMfaCount, setVerifiedMfaCount] = useState<number | null>(null);
-  const [mfaCheckFailed, setMfaCheckFailed] = useState(false);
-  const [legalReady, setLegalReady] = useState<boolean | null>(null);
-  const [legalCheckFailed, setLegalCheckFailed] = useState(false);
-  const [usableInviteCount, setUsableInviteCount] = useState<number | null>(null);
-  const [inviteCheckFailed, setInviteCheckFailed] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    void fetchCommerceConfig().then(
-      (config) => {
-        if (!active) return;
-        setLegalReady(config.legalReady);
-        setLegalCheckFailed(false);
-      },
-      () => {
-        if (!active) return;
-        setLegalReady(null);
-        setLegalCheckFailed(true);
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
+  const [snapshot, setSnapshot] = useState<SalesLaunchReadinessSnapshot | null>(null);
+  const [snapshotFailed, setSnapshotFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
     try {
-      const client = getSupabaseClient();
-      void client.rpc("admin_list_pwa_invites", { p_status: "active" }).then(
-        ({ data, error }) => {
+      void loadSalesLaunchReadiness(getSupabaseClient()).then(
+        (value) => {
           if (!active) return;
-          if (error) {
-            setInviteCheckFailed(true);
-            setUsableInviteCount(null);
-            return;
-          }
-          const now = Date.now();
-          const usable = (Array.isArray(data) ? data : []).filter((value) => {
-            if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-            const invite = value as Record<string, unknown>;
-            const maxUses = typeof invite.max_uses === "number" ? invite.max_uses : null;
-            const useCount = typeof invite.use_count === "number" ? invite.use_count : 0;
-            const expiresAt = typeof invite.expires_at === "string" ? Date.parse(invite.expires_at) : Number.NaN;
-            const entitlementExpiresAt = typeof invite.entitlement_expires_at === "string"
-              ? Date.parse(invite.entitlement_expires_at)
-              : Number.NaN;
-            return (
-              (maxUses === null || useCount < maxUses) &&
-              (!Number.isFinite(expiresAt) || expiresAt > now) &&
-              (!Number.isFinite(entitlementExpiresAt) || entitlementExpiresAt > now)
-            );
-          }).length;
-          setInviteCheckFailed(false);
-          setUsableInviteCount(usable);
+          setSnapshot(value);
+          setSnapshotFailed(false);
         },
         () => {
           if (!active) return;
-          setInviteCheckFailed(true);
-          setUsableInviteCount(null);
-        },
-      );
-      void client.auth.mfa.listFactors().then(
-        ({ data, error }) => {
-          if (!active) return;
-          if (error) {
-            setMfaCheckFailed(true);
-            setVerifiedMfaCount(null);
-            return;
-          }
-          setMfaCheckFailed(false);
-          setVerifiedMfaCount(data.totp.filter((factor) => factor.status === "verified").length);
-        },
-        () => {
-          if (!active) return;
-          setMfaCheckFailed(true);
-          setVerifiedMfaCount(null);
+          setSnapshot(null);
+          setSnapshotFailed(true);
         },
       );
     } catch {
       queueMicrotask(() => {
         if (!active) return;
-        setMfaCheckFailed(true);
-        setVerifiedMfaCount(null);
+        setSnapshot(null);
+        setSnapshotFailed(true);
       });
     }
     return () => {
@@ -126,8 +67,11 @@ export function SalesReleasePreflightPanel({
     };
   }, []);
 
+  const verifiedMfaCount = snapshot?.verifiedMfaCount ?? null;
+  const usableInviteCount = snapshot?.usableInviteCount ?? null;
+  const legalReady = snapshot?.sellerReady ?? null;
   const mfaReady = verifiedMfaCount !== null && verifiedMfaCount > 0;
-  const mfaStatus = mfaCheckFailed
+  const mfaStatus = snapshotFailed
     ? "確認失敗"
     : verifiedMfaCount === null
       ? "確認中"
@@ -139,27 +83,15 @@ export function SalesReleasePreflightPanel({
     !settings.externalSalesEnabled ? "外部販売受付がOFFです。" : "",
     !settings.accessCodeEnabled ? "利用コード受付がOFFです。" : "",
     !purchaseUrl ? "購入ページURLが未設定、または安全なHTTPS URLではありません。" : "",
-    mfaCheckFailed
-      ? "管理者MFAの状態を確認できません。"
-      : verifiedMfaCount === null
-        ? "管理者MFAを確認中です。"
-        : !mfaReady
-          ? "active管理者に確認済みMFAがありません。"
-          : "",
-    legalCheckFailed
-      ? "販売者情報の設定状態を確認できません。"
-      : legalReady === null
-        ? "販売者情報の設定状態を確認中です。"
-        : !legalReady
-          ? "販売者情報（氏名・所在地・電話・メール・サポートURL）が未完了です。"
-          : "",
-    inviteCheckFailed
-      ? "販売用の利用コード在庫を確認できません。"
-      : usableInviteCount === null
-        ? "販売用の利用コード在庫を確認中です。"
-        : usableInviteCount < 1
-          ? "購入者へ渡せる有効な利用コードがありません。"
-          : "",
+    snapshotFailed ? "販売前のセキュリティ状態を確認できません。" : "",
+    !snapshotFailed && snapshot === null ? "販売前のセキュリティ状態を確認中です。" : "",
+    snapshot && !mfaReady ? "active管理者に確認済みMFAがありません。" : "",
+    snapshot && !snapshot.sellerReady
+      ? "販売者情報（氏名・所在地・電話・メール・サポートURL）が未完了です。"
+      : "",
+    snapshot && snapshot.usableInviteCount < 1
+      ? "購入者へ渡せる有効な利用コードがありません。"
+      : "",
   ].filter(Boolean);
   const automatedReady = automatedBlockers.length === 0;
 
@@ -184,7 +116,7 @@ export function SalesReleasePreflightPanel({
           <strong>{automatedReady ? "自動確認は通過" : "販売開始保留"}</strong>
           <span>
             {automatedReady
-              ? "設定・管理者MFAの自動確認は通過しています。漏洩パスワード保護、法務、販売者情報、価格、返金条件、サポート方針は人が最終確認してください。"
+              ? "設定・管理者MFAの自動確認は通過しています。漏洩パスワード保護、法務、価格、返金条件、サポート方針は人が最終確認してください。"
               : `自動確認で${automatedBlockers.length}件の未完了項目があります。解消するまで販売開始扱いにしないでください。`}
           </span>
         </div>
@@ -213,27 +145,27 @@ export function SalesReleasePreflightPanel({
         <article>
           <div>
             <strong>販売用の利用コード</strong>
-            <span className={usableInviteCount !== null && usableInviteCount > 0 ? "ready" : inviteCheckFailed ? "review" : "action"}>
-              {inviteCheckFailed ? "確認失敗" : usableInviteCount === null ? "確認中" : usableInviteCount > 0 ? `${usableInviteCount}件利用可` : "0件"}
+            <span className={usableInviteCount !== null && usableInviteCount > 0 ? "ready" : snapshotFailed ? "review" : "action"}>
+              {snapshotFailed ? "確認失敗" : usableInviteCount === null ? "確認中" : usableInviteCount > 0 ? `${usableInviteCount}件利用可` : "0件"}
             </span>
           </div>
-          <small>外部販売で購入者へ渡せる、未期限切れ・未上限到達のactive利用コードが1件以上必要です。</small>
+          <small>外部販売で購入者へ渡せる、未期限切れ・未上限到達のactive利用コードが1件以上必要です。コード本体はこのチェックでは取得しません。</small>
           <Link href="/admin/users">利用コードを発行・確認 →</Link>
         </article>
         <article>
           <div>
             <strong>販売者情報</strong>
-            <span className={legalReady ? "ready" : legalCheckFailed ? "review" : "action"}>
-              {legalCheckFailed ? "確認失敗" : legalReady === null ? "確認中" : legalReady ? "設定済み" : "未完了"}
+            <span className={legalReady ? "ready" : snapshotFailed ? "review" : "action"}>
+              {snapshotFailed ? "確認失敗" : legalReady === null ? "確認中" : legalReady ? "設定済み" : "未完了"}
             </span>
           </div>
-          <small>特商法・開示請求に必要な販売者情報をWorker側の非公開設定で保持し、公開方式に応じて表示します。</small>
+          <small>特商法・開示請求に必要な販売者情報を非公開設定で保持し、公開方式に応じて表示します。</small>
           <Link href="/commercial-transactions">特商法表示を確認 →</Link>
         </article>
         <article>
           <div>
             <strong>管理者MFA</strong>
-            <span className={mfaReady ? "ready" : mfaCheckFailed ? "review" : "action"}>{mfaStatus}</span>
+            <span className={mfaReady ? "ready" : snapshotFailed ? "review" : "action"}>{mfaStatus}</span>
           </div>
           <small>販売開始前に、現在の管理者アカウントへ確認済みTOTPを最低1個登録します。AAL2強制はMFA登録後に別工程で有効化します。</small>
           <Link href="/admin/security">管理者MFAを確認 →</Link>
