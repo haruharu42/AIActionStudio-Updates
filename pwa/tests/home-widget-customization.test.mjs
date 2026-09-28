@@ -71,6 +71,9 @@ test("home widgets restore cloud-saved desktop and mobile customization", async 
   assert.match(css, /\.home-widget-grid/);
   assert.match(css, /\.home-widget-slot\.half/);
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.home-widget-slot\.half/);
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.action-studio-hero h2[\s\S]*?white-space:\s*nowrap/);
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.action-studio-hero-chips[\s\S]*?flex-wrap:\s*nowrap/);
+  assert.match(css, /\.action-studio-hero-chips span[\s\S]*?white-space:\s*nowrap/);
   assert.match(settingsCss, /\.home-widget-customizer/);
   assert.match(settingsCss, /\.home-widget-row/);
 
