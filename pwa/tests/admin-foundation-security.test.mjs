@@ -49,6 +49,17 @@ test("database admin boundary temporarily allows active admins without AAL2", ()
   assert.match(migration, /Re-enable the AAL2 condition before public production launch/);
 });
 
+test("admin dashboard content is deferred until active-admin state is known", () => {
+  const home = read("app/admin/page.tsx");
+
+  assert.match(home, /"use client"/);
+  assert.match(home, /useSharedAccessState/);
+  assert.match(home, /state\.kind === "ready"/);
+  assert.match(home, /state\.profile\.role === "admin"/);
+  assert.match(home, /state\.profile\.status === "active"/);
+  assert.match(home, /if \(!activeAdmin\) return null/);
+});
+
 test("admin home is navigation-only and sections are centralized", () => {
   const home = read("app/admin/page.tsx");
   const users = read("app/admin/users/page.tsx");
