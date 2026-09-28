@@ -282,7 +282,7 @@ test("preview release identity is subtle and rendered only by the home screen", 
 
 test("public release publish requires current admin AAL2 while rollback remains an emergency admin operation", async () => {
   const [migration, client, page] = await Promise.all([
-    readRepo("supabase/migrations/20260928042300_pwa_release_publish_aal2_v1.sql"),
+    readRepo("supabase/migrations/20260928042314_pwa_release_publish_aal2_v1.sql"),
     read("lib/app-release.ts"),
     read("components/admin-release-page.tsx"),
   ]);
