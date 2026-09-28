@@ -48,6 +48,8 @@ export function SalesReleasePreflightPanel({
   const [approvalBusy, setApprovalBusy] = useState(false);
   const [manualReviewConfirmed, setManualReviewConfirmed] = useState(false);
   const [approvalMessage, setApprovalMessage] = useState("");
+  const [currentSessionAal, setCurrentSessionAal] = useState<"aal1" | "aal2" | null>(null);
+  const [aalCheckFailed, setAalCheckFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -72,6 +74,23 @@ export function SalesReleasePreflightPanel({
             setApproval(null);
             setSnapshotFailed(true);
             setApprovalFailed(true);
+          },
+        );
+        void client.auth.mfa.getAuthenticatorAssuranceLevel().then(
+          ({ data, error }) => {
+            if (!active) return;
+            if (error) {
+              setCurrentSessionAal(null);
+              setAalCheckFailed(true);
+              return;
+            }
+            setCurrentSessionAal(data.currentLevel === "aal2" ? "aal2" : "aal1");
+            setAalCheckFailed(false);
+          },
+          () => {
+            if (!active) return;
+            setCurrentSessionAal(null);
+            setAalCheckFailed(true);
           },
         );
       } catch {
@@ -126,6 +145,8 @@ export function SalesReleasePreflightPanel({
     persistedAutomatedReady &&
     !hasUnsavedChanges &&
     manualReviewConfirmed &&
+    currentSessionAal === "aal2" &&
+    !aalCheckFailed &&
     !approvalBusy &&
     !approvalFailed;
 
@@ -233,6 +254,14 @@ export function SalesReleasePreflightPanel({
             {!persistedAutomatedReady && (
               <p className="sales-approval-hint">保存済み設定の自動確認が未完了です。上の未完了項目を解消してから承認できます。</p>
             )}
+            {mfaReady && currentSessionAal !== "aal2" && (
+              <p className="sales-approval-hint">
+                {aalCheckFailed
+                  ? "現在の管理者セッションのMFA認証レベルを確認できません。"
+                  : "現在の管理者セッションはAAL2未認証です。"}
+                {" "}<Link href="/admin/security">管理者MFAで再認証 →</Link>
+              </p>
+            )}
             {hasUnsavedChanges && (
               <p className="sales-approval-hint">未保存の販売設定があります。先に変更を保存してください。</p>
             )}
@@ -280,7 +309,7 @@ export function SalesReleasePreflightPanel({
             <strong>管理者MFA</strong>
             <span className={mfaReady ? "ready" : snapshotFailed ? "review" : "action"}>{mfaStatus}</span>
           </div>
-          <small>販売開始前に、現在の管理者アカウントへ確認済みTOTPを最低1個登録します。AAL2強制はMFA登録後に別工程で有効化します。</small>
+          <small>販売開始前に確認済みTOTPを最低1個登録します。公開販売の最終承認時は、現在の管理者セッションがAAL2認証済みであることをDB側でも必須にしています。</small>
           <Link href="/admin/security">管理者MFAを確認 →</Link>
         </article>
         <article>
