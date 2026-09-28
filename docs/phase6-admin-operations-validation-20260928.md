@@ -90,3 +90,12 @@ This document records validation results only and does not change runtime behavi
 - Actionable client/runtime diagnostics remain error/error.
 - The previously open opaque browser event was resolved during the migration; current open ops events are zero at verification time.
 - Supabase Security and Performance Advisors were rerun after the migration and showed only the previously documented known items.
+
+
+## Phase 8 real-browser login hero checkpoint
+
+- Real desktop Preview verification found visible horizontal/vertical seams because `aas-login-hero-hq.svg` referenced four external tile SVGs as an exact 2x2 grid.
+- The login hero is now self-contained: the four embedded WebP sources are composed inside one local SVG with their native 355x385 dimensions, 20px overlaps, and feather masks across the internal horizontal/vertical seams.
+- The public hero no longer references `aas-login-tile-*.svg`; CSS cache identity was advanced to `20260928-natural-v4`.
+- Regression coverage now requires the self-contained data images and seam masks and rejects external tile references.
+- Baseline signed-out route smoke testing covered /create, /images, /prompts, /sns, /note-operations, /workflow, /membership, /settings, /admin, and /admin/operations: all returned the expected access gate with no protected-content exposure or 404/500.
