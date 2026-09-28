@@ -770,7 +770,7 @@ export function SaveStep({
       <p className="panel-muted">タグは記事内容が完成してから決めます。ジャンル・サブジャンルに合わせて投稿前の最終設定として入力してください。</p>
       <section className="creator-publish-copy" aria-label="掲載用コピー">
         <h3>完成記事を掲載先へコピー</h3>
-        <p className="panel-muted">タイトルと本文を分けてコピーします。本文は見出し・太字・引用・リスト等をHTMLのリッチテキストとしてコピーし、挿絵位置と有料エリア位置はnoteへ貼り付けても見える目印として残します。</p>
+        <p className="panel-muted">タイトルと本文を分けてコピーします。本文は見出し・太字・引用・リスト等を装飾付きでコピーし、挿絵位置と有料エリア位置には貼り付け後も作業しやすい空きスペースと目印を残します。</p>
         <div className="openai-prompt-actions">
           <CopyButton value={draft.title} label="タイトルをコピー" setMessage={setMessage} />
           <button className="primary-action" type="button" disabled={!publicationBody} onClick={() => void copyPublicationBody()}>{publicationCopied ? "装飾付きでコピーしました ✓" : "完成本文を装飾付きコピー"}</button>
@@ -778,13 +778,13 @@ export function SaveStep({
         {draft.publicationTarget === "note" && draft.articleType === "paid" && (
           <div className="note-paid-area-guide">
             <strong>有料noteの仕上げ</strong>
-            <small>本文をnoteへ貼り付けると「【ここから有料エリア】」が残ります。noteの「有料エリア設定」でその位置に有料ラインを設定し、設定後に目印の文字だけ削除してください。</small>
+            <small>本文をnoteへ貼り付けると「【ここから有料エリア】」の前後に空きスペースが残ります。その位置でnoteの「有料エリア設定」を行い、設定後に目印の文字だけ削除してください。</small>
           </div>
         )}
         {draft.inlineEnabled && (
           <div className="note-image-marker-guide">
             <strong>挿絵の差し込み</strong>
-            <small>「【挿絵1をここに挿入】」などの目印位置へ画像を挿入し、画像配置後に目印の文字だけ削除してください。</small>
+            <small>「【挿絵1をここに挿入】」などの目印の前後に空きスペースが残ります。そのスペースへ画像を挿入し、画像配置後に目印の文字だけ削除してください。</small>
           </div>
         )}
         {editorLink
