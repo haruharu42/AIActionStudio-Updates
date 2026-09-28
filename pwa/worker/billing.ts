@@ -150,7 +150,7 @@ function publicSellerConfig(seller: SellerConfig) {
     name: discloseDirectly ? seller.name : "",
     address: discloseDirectly ? seller.address : "",
     phone: discloseDirectly ? seller.phone : "",
-    email: seller.email,
+    email: discloseDirectly ? seller.email : "",
     supportUrl: safeHttpsUrl(seller.supportUrl),
   };
 }
