@@ -56,7 +56,8 @@ test("channel-first promotion runtime covers exactly the six intended beginner c
   ]);
   assert.match(builderSource, /① どこでプロモーションしますか？/);
   assert.match(builderSource, /②.*内容を選ぶ/);
-  assert.match(builderSource, /紹介したいスクショを追加（任意）/);
+  assert.match(builderSource, /3ステップでプロモーション素材を作る/);
+  assert.match(builderSource, /②の追加設定です/);
   assert.match(builderSource, /プロンプトをコピーしてAIへ渡す/);
 });
 
@@ -180,4 +181,23 @@ test("prelaunch sales CTA is corrected while live sales keeps the requested CTA"
   assert.match(prompt, /CTA補正:/);
   assert.doesNotMatch(prompt, /CTA: 販売URLへ誘導\n/);
   assert.match(prompt, /最終回答には公開・投稿に使う完成素材だけを出し/);
+});
+
+
+test("promotion knowledge is wired into the shared knowledge compiler for all six channels", async () => {
+  const knowledgeSource = await readFile(
+    new URL("../lib/promotion-knowledge.ts", import.meta.url),
+    "utf8",
+  );
+  const engineSource = await readFile(
+    new URL("../lib/knowledge-engine.ts", import.meta.url),
+    "utf8",
+  );
+
+  for (const label of ["note", "Brain", "Tips", "X", "Threads", "Instagram"]) {
+    assert.match(knowledgeSource, new RegExp(`label: "${label}"`));
+  }
+  assert.match(engineSource, /PROMOTION_COMMON_KNOWLEDGE/);
+  assert.match(engineSource, /PROMOTION_PUBLICATION_KNOWLEDGE/);
+  assert.match(engineSource, /input\.task === "promotion"/);
 });
