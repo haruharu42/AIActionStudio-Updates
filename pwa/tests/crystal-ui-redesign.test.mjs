@@ -110,14 +110,14 @@ test("signed-out auth and access surfaces use the Axia and Rumo crystal design",
   assert.match(css, /auth-character-visual \{[\s\S]*width: min\(48%, 580px\)[\s\S]*right: 0;/);
   assert.match(css, /url\("\/aas-login-hero-hq\.svg\?v=20260928-natural-v3"\)/);
   assert.doesNotMatch(css, /url\("\/aas-login-tile-4\.svg\?v=/);
-  assert.match(css, /background-size: 51.5% 51.4%/);
+  assert.match(css, /background-size: contain/);
   assert.match(css, /mask-image: radial-gradient\(ellipse 68% 73% at 52% 51%/);
   assert.match(css, /auth-character-visual::before/);
   assert.match(css, /auth-character-visual::after/);
   assert.match(css, /status-card::after/);
   assert.match(css, /@media \(min-width: 901px\) and \(max-width: 1440px\)[\s\S]*auth-character-copy \{[\s\S]*width: min\(43%, 430px\)[\s\S]*auth-character-copy h1 \{[\s\S]*max-width: 320px[\s\S]*auth-character-visual \{[\s\S]*width: min\(48%, 500px\)[\s\S]*right: 0;/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-stage/);
-  assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-visual \{[\s\S]*position: relative;[\s\S]*width: min\(94vw, 560px\);[\s\S]*background-size: 51.5% 51.4%;/);
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-visual \{[\s\S]*position: relative;[\s\S]*width: min\(94vw, 560px\);[\s\S]*background-size: contain;/);
   assert.match(layout, /"aas-build-sha"/);
   assert.match(config, /NEXT_PUBLIC_AAS_BUILD_SHA/);
   assert.match(sw, /runtime-v11-axia-generated/);
