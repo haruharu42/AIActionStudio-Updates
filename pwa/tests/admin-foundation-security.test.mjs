@@ -126,6 +126,8 @@ test("admin tools use shared choice-first controls with free-input fallback", ()
   assert.match(operations, /AdminSelectWithCustom/);
   assert.match(operations, /PLAN_OPTIONS/);
   assert.match(operations, /WARNING_PERCENT_OPTIONS/);
+  assert.match(operations, /const monitoringReady = snapshot !== null && worker !== null/);
+  assert.match(operations, /const overall = !monitoringReady/);
 
   assert.match(releases, /AdminSelectWithCustom/);
   assert.match(releases, /RELEASE_TITLE_OPTIONS/);
