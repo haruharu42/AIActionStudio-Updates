@@ -12,6 +12,7 @@ after(() => vite.close());
 const library = await vite.ssrLoadModule('/lib/article-library-v2.ts');
 const libraryView = await vite.ssrLoadModule('/lib/article-library-view.ts');
 const exporter = await vite.ssrLoadModule('/lib/article-export.ts');
+const notePostAssistant = await vite.ssrLoadModule('/lib/note-post-assistant.ts');
 
 const migration = await fs.readFile(`${repoRoot}/supabase/migrations/20260917061400_article_library_v2.sql`, 'utf8');
 const libraryController = await fs.readFile(`${root}/components/phase7-library.tsx`, 'utf8');
@@ -101,6 +102,10 @@ test('note article detail exposes local image posting assistant without Supabase
   assert.match(notePostAssistantUi, /copyImageBlobToClipboard/);
   assert.match(notePostAssistantUi, /https:\/\/note\.com\/new/);
   assert.match(notePostAssistantUi, /Supabase Storageへは送信しません/);
+  assert.match(notePostAssistantUi, /有料エリア/);
+  assert.match(notePostAssistantUi, /有料本文/);
+  assert.match(notePostAssistantUi, /位置をコピー/);
+  assert.match(notePostAssistantUi, /有料エリアの目印/);
   assert.match(localArticleImagesSource, /indexedDB\.open/);
   assert.match(localArticleImagesSource, /createObjectStore/);
   assert.match(localArticleImagesSource, /saveLocalArticleImage/);
@@ -109,6 +114,46 @@ test('note article detail exposes local image posting assistant without Supabase
   assert.match(imagePromptUi, /saveLocalArticleImage/);
   assert.match(imagePromptUi, /listLocalArticleImages/);
   assert.match(imagePromptUi, /記事ライブラリのnote投稿アシスト/);
+});
+
+test('note paid posting sequence separates free and paid content around the paid boundary', () => {
+  const sequence = notePostAssistant.buildNotePostSequence(
+    [
+      '無料導入',
+      '<!-- IMAGE:01 -->',
+      '無料本文の続き',
+      '<!-- PAID_AREA -->',
+      '有料本文の開始',
+      '<!-- IMAGE:02 -->',
+      '有料本文の続き',
+    ].join('\n'),
+    'テストタイトル',
+    { articleType: 'paid', inlineEnabled: true, inlineCount: 2 },
+  );
+
+  assert.deepEqual(sequence.map((item) => item.kind), [
+    'body',
+    'inline-image',
+    'body',
+    'paid-boundary',
+    'body',
+    'inline-image',
+    'body',
+  ]);
+  assert.equal(sequence[0].paid, false);
+  assert.equal(sequence[1].paid, false);
+  assert.equal(sequence[2].paid, false);
+  assert.equal(sequence[4].paid, true);
+  assert.equal(sequence[5].paid, true);
+  assert.equal(sequence[6].paid, true);
+
+  const freeSequence = notePostAssistant.buildNotePostSequence(
+    ['無料導入', '<!-- PAID_AREA -->', '無料本文'].join('\n'),
+    'テストタイトル',
+    { articleType: 'free', inlineEnabled: false, inlineCount: 0 },
+  );
+  assert.doesNotMatch(freeSequence.map((item) => item.kind).join(','), /paid-boundary/);
+  assert.ok(freeSequence.every((item) => item.kind !== 'body' || item.paid === false));
 });
 
 test('article library edit validation matches the positive-price database contract', () => {
