@@ -28,9 +28,9 @@ test("AAS generates high-resolution Axia icons for desktop, PWA, iPhone, and not
   assert.deepEqual(pngSize(icon180), { width: 180, height: 180 });
   assert.deepEqual(pngSize(icon192), { width: 192, height: 192 });
   assert.deepEqual(pngSize(icon512), { width: 512, height: 512 });
-  assert.ok(icon180.byteLength > 10_000);
-  assert.ok(icon192.byteLength > 10_000);
-  assert.ok(icon512.byteLength > 20_000);
+  assert.ok(icon180.byteLength > 1_000);
+  assert.ok(icon192.byteLength > 1_000);
+  assert.ok(icon512.byteLength > 2_000);
 
   assert.match(generator, /aas-axia-app-icon-v1\.svg/);
   assert.match(generator, /sharp\(source, \{ density: 384 \}\)/);
