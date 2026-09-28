@@ -78,6 +78,20 @@ export function SalesReleasePreflightPanel({
         ? `${verifiedMfaCount}個確認済み`
         : "未登録";
 
+  const automatedBlockers = [
+    !settings.externalSalesEnabled ? "外部販売受付がOFFです。" : "",
+    !settings.accessCodeEnabled ? "利用コード受付がOFFです。" : "",
+    !purchaseUrl ? "購入ページURLが未設定、または安全なHTTPS URLではありません。" : "",
+    mfaCheckFailed
+      ? "管理者MFAの状態を確認できません。"
+      : verifiedMfaCount === null
+        ? "管理者MFAを確認中です。"
+        : !mfaReady
+          ? "active管理者に確認済みMFAがありません。"
+          : "",
+  ].filter(Boolean);
+  const automatedReady = automatedBlockers.length === 0;
+
   return (
     <section className="admin-panel sales-release-preflight" aria-labelledby="sales-release-preflight-title">
       <div className="admin-panel-heading">
@@ -93,6 +107,22 @@ export function SalesReleasePreflightPanel({
           現在は未保存の販売設定を含んでいます。保存前の内容を本番状態として扱わないでください。
         </p>
       )}
+
+      <div className={`sales-release-gate ${automatedReady ? "review" : "blocked"}`} role="status">
+        <div>
+          <strong>{automatedReady ? "自動確認は通過" : "販売開始保留"}</strong>
+          <span>
+            {automatedReady
+              ? "設定・管理者MFAの自動確認は通過しています。漏洩パスワード保護、法務、販売者情報、価格、返金条件、サポート方針は人が最終確認してください。"
+              : `自動確認で${automatedBlockers.length}件の未完了項目があります。解消するまで販売開始扱いにしないでください。`}
+          </span>
+        </div>
+        {!automatedReady && (
+          <ul>
+            {automatedBlockers.map((blocker) => <li key={blocker}>{blocker}</li>)}
+          </ul>
+        )}
+      </div>
 
       <div className="sales-release-preflight-grid">
         <article>
