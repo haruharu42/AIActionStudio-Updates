@@ -240,6 +240,8 @@ test("sales center groups legal support and access-code review without auto-appr
   assert.match(preflight, /販売者情報/);
   assert.match(preflight, /admin_list_pwa_invites/);
   assert.match(preflight, /usableInviteCount/);
+  assert.match(preflight, /entitlement_expires_at/);
+  assert.match(preflight, /entitlementExpiresAt > now/);
   assert.match(preflight, /購入者へ渡せる有効な利用コードがありません/);
   assert.match(preflight, /販売用の利用コード/);
   assert.match(preflight, /automatedBlockers/);
