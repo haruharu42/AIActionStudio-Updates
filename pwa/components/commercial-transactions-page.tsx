@@ -55,7 +55,7 @@ export function CommercialTransactionsPage() {
   }, []);
 
   const seller = config?.seller;
-  const onRequest = seller?.type === "individual" && seller.disclosureMode === "on_request";
+  const onRequest = seller?.disclosureMode === "on_request";
   const sellerName = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.name ?? "");
   const sellerAddress = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.address ?? "");
   const sellerPhone = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.phone ?? "");
@@ -94,7 +94,7 @@ export function CommercialTransactionsPage() {
 
         {onRequest && (
           <section className="legal-commerce-notes seller-disclosure-note">
-            <h2>個人販売者の情報開示について</h2>
+            <h2>販売者情報の開示について</h2>
             <p>販売者の氏名・所在地・電話番号は公開ページへ常時掲載せず、請求があった場合に遅滞なく開示する方式です。開示をご希望の場合は、下記のお問い合わせ・開示請求窓口から手続き方法をご確認ください。正式な販売者情報は公開APIへ返さず、販売側で開示できる状態を保持します。</p>
           </section>
         )}
