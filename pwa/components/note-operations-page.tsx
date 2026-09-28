@@ -663,8 +663,8 @@ export function NoteOperationsPage() {
                 <span>ノルマではありません。AIは前月までの予定・完了状況とAASで実際に作成した記事数、今月の残り日数を見て多少前後させます。途中で何度でも組み直せます。</span>
               </div>
               <div className="note-monthly-target-grid">
-                <label><span>無料note / 月の目安</span><input type="number" min={0} max={60} value={profile.freePostsPerMonth} onChange={(event) => setProfile({ ...profile, freePostsPerMonth: Math.max(0, Math.min(60, Number(event.target.value) || 0)) })} /></label>
-                <label><span>有料note / 月の目安</span><input type="number" min={0} max={60} value={profile.paidPostsPerMonth} onChange={(event) => setProfile({ ...profile, paidPostsPerMonth: Math.max(0, Math.min(60, Number(event.target.value) || 0)) })} /></label>
+                <label><span>無料note / 月の目安</span><input type="number" min={0} max={60} value={profile.freePostsPerMonth} onChange={(event) => { const freePostsPerMonth = Math.max(0, Math.min(60, Number(event.target.value) || 0)); setProfile({ ...profile, freePostsPerMonth, weeklyPostCount: Math.max(1, Math.min(14, Math.round((freePostsPerMonth + profile.paidPostsPerMonth) / 4))) }); }} /></label>
+                <label><span>有料note / 月の目安</span><input type="number" min={0} max={60} value={profile.paidPostsPerMonth} onChange={(event) => { const paidPostsPerMonth = Math.max(0, Math.min(60, Number(event.target.value) || 0)); setProfile({ ...profile, paidPostsPerMonth, weeklyPostCount: Math.max(1, Math.min(14, Math.round((profile.freePostsPerMonth + paidPostsPerMonth) / 4))) }); }} /></label>
                 <label><span>無料noteの文字数目安</span><input type="number" min={500} max={50000} step={500} value={profile.freeTargetLength} onChange={(event) => setProfile({ ...profile, freeTargetLength: Math.max(500, Math.min(50000, Number(event.target.value) || 4000)) })} /></label>
                 <label><span>有料noteの文字数目安</span><input type="number" min={500} max={50000} step={500} value={profile.paidTargetLength} onChange={(event) => setProfile({ ...profile, paidTargetLength: Math.max(500, Math.min(50000, Number(event.target.value) || 7000)) })} /></label>
               </div>
