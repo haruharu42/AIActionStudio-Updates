@@ -58,7 +58,8 @@ test("Stripe Checkout is gated server-side and billing portal remains available"
   assert.match(index, /rejectLegacyCheckout/);
   assert.match(index, /loadEffectiveSalesSettings/);
   assert.match(index, /effectivePlanEnabled/);
-  assert.match(index, /available: plan\.available === true && effectivePlanEnabled\(salesSettings, planCode\)/);
+  assert.match(index, /const available = plan\.available === true && effectivePlanEnabled\(salesSettings, planCode\)/);
+  assert.match(index, /price: available \? plan\.price \?\? null : null/);
   assert.match(index, /filterPublicBillingConfig\(request, url, billingResponse, env\)/);
   assert.match(billing, /\/api\/billing\/portal/);
 });
