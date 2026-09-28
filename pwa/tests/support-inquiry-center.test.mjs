@@ -157,6 +157,9 @@ test("support center is documented, responsive, and keeps the public legal suppo
   assert.match(publicSupport, /販売者情報の開示請求/);
   assert.match(publicSupport, /fetchCommerceConfig/);
   assert.match(publicSupport, /settings\.externalSalesEnabled && commerce\.legalReady/);
+  assert.match(publicSupport, /externalSalesConfigured/);
+  assert.match(publicSupport, /販売前情報が未完了/);
+  assert.match(publicSupport, /購入導線はまだ公開していません/);
   assert.match(publicSupport, /href="\/inquiries"/);
   assert.match(publicSupport, /AAS内の問い合わせセンターを開く/);
   assert.match(publicSupport, /購入前・ログインできない場合/);
