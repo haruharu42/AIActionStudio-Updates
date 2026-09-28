@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { notifySalesLaunchStateChanged } from "@/lib/sales-launch-readiness";
+
 export type SellerType = "individual" | "business";
 export type SellerDisclosureMode = "public" | "on_request";
 
@@ -76,4 +78,5 @@ export async function updateAdminSellerSettings(
     p_seller_support_url: supportUrl || null,
   });
   if (error) throw new Error("販売者情報を保存できませんでした。");
+  notifySalesLaunchStateChanged();
 }
