@@ -103,6 +103,9 @@ test("signed-out auth and access surfaces use the Axia and Rumo crystal design",
   assert.match(app, /アクシア × ルーモ/);
   assert.match(app, /auth-build-stamp/);
   assert.match(css, /auth-character-visual/);
+  assert.match(await read("app/globals.css"), /"Noto Sans JP", "Noto Sans CJK JP"/);
+  assert.match(css, /auth-character-copy \.lead \{[\s\S]*color: #536b89 !important;/);
+  assert.match(css, /auth-card\.auth-crystal-card \.form-caption \{[\s\S]*color: #566f8e !important;/);
   assert.match(css, /auth-character-copy \{[\s\S]*width: min\(42%, 500px\)/);
   assert.match(css, /auth-character-visual \{[\s\S]*width: min\(48%, 580px\)[\s\S]*right: 0;/);
   assert.match(css, /url\("\/aas-login-tile-1\.svg\?v=20260927-hq-v2"\)/);
