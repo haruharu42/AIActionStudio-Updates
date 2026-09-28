@@ -4,6 +4,26 @@ Created: 2026-09-25
 
 This roadmap is execution order, not permission to publish Production. Re-read live GitHub, CI, Preview and Supabase before every phase.
 
+
+## 2026-09-28 live readiness checkpoint
+
+The current live re-check supersedes older inline observation dates where values differ.
+
+- Runtime code validated through Preview run #1098 on `a7d4d8f07fa97dfd6d38975de3f57f7bf53f6d88`: Typecheck, Lint, full Build/regression, dependency audit, PWA/Auth-cache checks, Cloudflare contract, Wrangler dry-run and Preview upload all passed.
+- Current branch then received documentation-only commit `78a76e99fd8e408605bf32b4952d5e24245fc91a`.
+- Public sales approval remains OFF.
+- External-sales switch and access-code redemption are ON, but the real HTTPS purchase URL is not configured.
+- Seller/legal/support data is not complete.
+- Usable active purchase codes: 0.
+- Active admin with verified MFA/TOTP: 0.
+- Stripe Checkout and PWA Stripe plans remain OFF.
+- One active non-admin release tester exists; enabled Push subscriptions for that tester population: 0.
+- Signed-out Preview check confirms no external-purchase CTA and no enabled Stripe purchase button on `/plans`; legal/support routes return HTTP 200.
+- Sales Center now separates automatic launch blockers from manual operator checks (price/refund, authenticated browser E2E, tester-device Push, closed paid beta, final RC/real-device checks and Production approval).
+- Operator sequence: `docs/sales-launch-operator-runbook-20260928.md`.
+- Detailed live gate snapshot: `docs/phase8-sales-release-readiness-20260928.md`.
+
+
 ## Phase 1 — Tester critical-path E2E
 
 Status: in progress.
