@@ -6,6 +6,12 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readArticleStepSource = async () => (await Promise.all([
+  "components/article-create/article-create-steps.tsx",
+  "components/article-create/article-create-generation-steps.tsx",
+  "components/article-create/article-create-finish-steps.tsx",
+  "components/article-create/article-create-step-shared.tsx",
+].map((relative) => read(relative)))).join("\n");
 
 test("OpenAI launch links stay on verified official ChatGPT destinations", async () => {
   const links = await read("lib/openai-links.ts");
@@ -50,7 +56,7 @@ test("AI app launcher keeps Android one-tap and gives iOS an explicit app/Web ch
 test("beginner home and article wizard use the shared AI app launcher", async () => {
   const home = await read("components/phase18-beginner-home.tsx");
   const creator = await read("components/phase11-create-page.tsx");
-  const creatorSteps = await read("components/article-create/article-create-steps.tsx");
+  const creatorSteps = await readArticleStepSource();
   const images = await read("components/phase13-image-page.tsx");
   const tools = await read("components/phase-tools-page.tsx");
 
