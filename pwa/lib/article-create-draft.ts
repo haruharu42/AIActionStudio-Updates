@@ -155,6 +155,9 @@ export function initialMessageFromLocation(): string {
   if (source === "note-membership") {
     return "noteメンバーシップ運営からテーマを引き継ぎました。メンバー限定公開の設定はnote側で行います。AASの有料記事エリアとは別扱いです。";
   }
+  if (source === "note-operations") {
+    return "note運営カレンダーからタイトル・テーマ・無料/有料・詳細ジャンル・サブジャンル・文字数目安を引き継ぎました。内容を確認してそのまま記事作成へ進めます。";
+  }
   return "";
 }
 
