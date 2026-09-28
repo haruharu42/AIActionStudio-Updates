@@ -63,7 +63,8 @@ export function CommercialTransactionsPage() {
   const externalSalesUrl = safeExternalSalesUrl(salesSettings?.externalSalesUrl ?? "");
   const stripeSalesEnabled = salesSettings?.stripeCheckoutEnabled === true;
   const externalSalesEnabled = salesSettings?.externalSalesEnabled === true;
-  const externalSalesReady = externalSalesEnabled && Boolean(externalSalesUrl);
+  const externalSalesBlockedByLegal = externalSalesEnabled && Boolean(externalSalesUrl) && config?.legalReady !== true;
+  const externalSalesReady = externalSalesEnabled && config?.legalReady === true && Boolean(externalSalesUrl);
   const visibleStripePlans = useMemo(
     () => (stripeSalesEnabled ? (config?.plans ?? []).filter((plan) => planSalesEnabled(salesSettings, plan.planCode)) : []),
     [config, salesSettings, stripeSalesEnabled],
@@ -78,9 +79,11 @@ export function CommercialTransactionsPage() {
         <p className="legal-commerce-lead">
           {externalSalesReady && !stripeSalesEnabled
             ? "現在は note・Brain・Tips 等の外部販売と利用コードによる受付を行っています。AAS内のStripe新規購入は停止しています。"
-            : externalSalesEnabled && !stripeSalesEnabled
-              ? "外部販売の受付設定は有効ですが、購入ページURLが未設定のため、現在は購入導線を公開していません。AAS内のStripe新規購入も停止しています。"
-              : "一般販売開始前の表示確認ページです。LIVE販売は、必要な販売者情報と決済設定が揃うまでシステム側で無効になります。"}
+            : externalSalesBlockedByLegal && !stripeSalesEnabled
+              ? "外部販売URLは設定されていますが、販売者情報・公開サポート等の販売前情報が未完了のため、購入導線を公開していません。AAS内のStripe新規購入も停止しています。"
+              : externalSalesEnabled && !stripeSalesEnabled
+                ? "外部販売の受付設定は有効ですが、購入ページURLが未設定のため、現在は購入導線を公開していません。AAS内のStripe新規購入も停止しています。"
+                : "一般販売開始前の表示確認ページです。LIVE販売は、必要な販売者情報と決済設定が揃うまでシステム側で無効になります。"}
         </p>
         {stripeSalesEnabled && config?.mode !== "live" && <p className="legal-commerce-warning">現在は正式なLIVE販売状態ではありません。</p>}
         {!stripeSalesEnabled && <p className="legal-commerce-warning">AAS内のStripe新規受付は現在停止中です。</p>}
