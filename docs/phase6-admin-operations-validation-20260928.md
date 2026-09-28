@@ -72,3 +72,13 @@ This document records validation results only and does not change runtime behavi
 - Fresh/Stable channel guidance and recent refresh history were extracted from `knowledge-refresh-panel.tsx` into `knowledge-refresh/knowledge-refresh-static-sections.tsx`.
 - Publication, diff review, automation candidate review, AI configuration, Supabase/RPC calls, and admin safety guards remain in the controller panel.
 - Regression tests inspect the controller and extracted presentation module together and explicitly keep runtime mutation APIs out of the static module.
+
+
+## Phase 7 security and performance advisor review
+
+- Supabase Security Advisor was re-run after the UI/controller refactors. The `authenticated_security_definer_function_executable` warning covers 143 callable SECURITY DEFINER functions.
+- Classification found 96 functions with an explicit `private.is_active_admin` guard and 131 with direct `auth.uid` checks. The remaining 9 have indirect authorization: eight notification v2 wrappers call `private.assert_notification_feature_access()` (which checks `auth.uid()` and feature access), and `create_article_with_workspace` delegates creation/ownership/quota authorization to `create_article()`.
+- No unguarded authenticated SECURITY DEFINER RPC was found in this review. No blanket EXECUTE revoke was applied because that would break intended authenticated RPC contracts.
+- Leaked-password protection remains an Advisor warning because Supabase documents it as Pro-plan-and-above functionality; AAS operations capacity is currently configured as Free. No unsupported setting change was attempted.
+- `pg_net` is reported as installed in the public schema, but the installed 0.20.4 extension is marked `relocatable=false`. It was not force-moved or reinstalled because current cron/http automation depends on it and a destructive reinstall is outside this maintenance pass.
+- Performance Advisor currently reports unused indexes at INFO level only. No indexes were removed solely from current usage counters; low-traffic/new indexes can legitimately remain unused until more production traffic exists.
