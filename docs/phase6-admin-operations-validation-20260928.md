@@ -56,3 +56,10 @@ This document records validation results only and does not change runtime behavi
 - `lib/note-operations.ts` re-exports the same public builder names, preserving existing imports.
 - Supabase queries, atomic schedule replacement, persistence, parsing, and status mutations remain outside the prompt module.
 - Regression coverage reads the compatibility module and prompt module together and explicitly prevents database/runtime dependencies from entering the prompt boundary.
+
+
+## Phase 7 membership structure checkpoint
+
+- Member status, membership audit history, and future-operation recommendations were extracted from `admin-membership-page.tsx` into `admin-membership/admin-membership-static-sections.tsx`.
+- Pricing updates, feature toggles, member assignment/revoke operations, Supabase/RPC calls, and confirmation guards remain in the controller page.
+- Regression coverage reads both modules together and explicitly keeps mutation/runtime APIs out of the extracted presentation module.
