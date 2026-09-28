@@ -65,3 +65,10 @@ This document records validation results only and does not change runtime behavi
 - Regression coverage reads both modules together and explicitly keeps mutation/runtime APIs out of the extracted presentation module.
 
 - Follow-up: account-preset and shared-workspace-preset regression tests now inspect both the compatibility note operations module and the extracted prompt module after the split.
+
+
+## Phase 7 Knowledge refresh structure checkpoint
+
+- Fresh/Stable channel guidance and recent refresh history were extracted from `knowledge-refresh-panel.tsx` into `knowledge-refresh/knowledge-refresh-static-sections.tsx`.
+- Publication, diff review, automation candidate review, AI configuration, Supabase/RPC calls, and admin safety guards remain in the controller panel.
+- Regression tests inspect the controller and extracted presentation module together and explicitly keep runtime mutation APIs out of the static module.
