@@ -45,6 +45,13 @@ export function ArticleLibraryEditor({
       setValidation(parsed.message);
       return;
     }
+    if (
+      parsed.value.article.status === "published" &&
+      (!detail.publishedAt || !detail.publishedUrl)
+    ) {
+      setValidation("公開済みへの変更は「公開管理」で公開日時と公開URLを登録して行ってください。");
+      return;
+    }
     await onSave(
       parsed.value.article,
       parsed.value.sourceBody,
