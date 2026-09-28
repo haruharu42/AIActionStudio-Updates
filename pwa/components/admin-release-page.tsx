@@ -44,6 +44,11 @@ const RELEASE_TITLE_OPTIONS = [
 
 const PREVIEW_BUILD_SHA = (process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "").trim();
 const IS_PREVIEW_DEPLOYMENT = process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview";
+const PREVIEW_BUILD_SHORT = /^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA) ? PREVIEW_BUILD_SHA.slice(0, 12) : "";
+
+function releaseMatchesPreviewBuild(release: AdminAppRelease | null): boolean {
+  return Boolean(release && PREVIEW_BUILD_SHORT && release.build_key.endsWith("-" + PREVIEW_BUILD_SHORT));
+}
 
 const EMPTY_FORM: FormState = {
   version: "",
@@ -168,6 +173,7 @@ export function AdminReleasePage() {
   const deploymentInProgress = candidateDeployment
     ? ["requested", "dispatched", "running"].includes(candidateDeployment.status)
     : false;
+  const candidateMatchesPreview = releaseMatchesPreviewBuild(candidate);
 
   useEffect(() => {
     if (!candidateDeployment || !["requested", "dispatched", "running"].includes(candidateDeployment.status)) return;
@@ -223,6 +229,10 @@ export function AdminReleasePage() {
       setError("アップデート名を入力してください。");
       return;
     }
+    if (!IS_PREVIEW_DEPLOYMENT || !PREVIEW_BUILD_SHORT) {
+      setError("管理者テスト版の登録は最新Preview PWAから行ってください。Preview Build SHAを確認できません。");
+      return;
+    }
 
     setBusy(true);
     setError("");
@@ -233,7 +243,7 @@ export function AdminReleasePage() {
         title,
         notes: form.notes.trim(),
         updateKind: form.updateKind,
-        buildKey: "pwa-" + version.replace(/[^0-9A-Za-z.-]/g, "-"),
+        buildKey: "pwa-" + version.replace(/[^0-9A-Za-z.-]/g, "-") + "-" + PREVIEW_BUILD_SHORT,
       });
       setSnapshot(next);
       setForm(EMPTY_FORM);
@@ -295,6 +305,10 @@ export function AdminReleasePage() {
     }
     if (!/^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA)) {
       setError("現在のPreview Build SHAを確認できません。Previewを最新化してから再度お試しください。");
+      return;
+    }
+    if (!releaseMatchesPreviewBuild(release)) {
+      setError("候補版と現在のPreview Buildが一致しません。最新Previewで新しい管理者テスト版を登録し直してください。");
       return;
     }
     if (!window.confirm(
@@ -487,7 +501,7 @@ export function AdminReleasePage() {
               <button
                 className="primary-action"
                 type="button"
-                disabled={busy || deploymentInProgress || !publishVerificationReady || currentSessionAal !== "aal2" || !IS_PREVIEW_DEPLOYMENT}
+                disabled={busy || deploymentInProgress || !publishVerificationReady || currentSessionAal !== "aal2" || !IS_PREVIEW_DEPLOYMENT || !candidateMatchesPreview}
                 onClick={() => void publish(candidate)}
               >
                 {deploymentInProgress ? "一般公開PWAへ反映中…" : "第3段階：一般公開PWAへ反映"}
@@ -545,6 +559,11 @@ export function AdminReleasePage() {
               </>
             )}
           </div>
+          {!candidateMatchesPreview && (
+            <p className="route-notice error">
+              候補版のBuildと現在のPreview Buildが一致していません。最新Previewで新しい管理者テスト版を登録し直すと公開ボタンが有効になります。
+            </p>
+          )}
           {deploymentSnapshot && !deploymentSnapshot.configured && (
             <p className="route-notice error">
               管理画面からの一般公開連携は初回設定待ちです。Supabase Edge Function secret「AAS_GITHUB_RELEASE_TOKEN」を設定すると有効になります。
