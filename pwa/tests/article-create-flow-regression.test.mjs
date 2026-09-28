@@ -187,3 +187,117 @@ test("paid article prompt, image prompts and publish copy stay connected", () =>
   assert.match(publishBody, /【挿絵2をここに挿入】/);
   assert.match(publishBody, /【ここから有料エリア】/);
 });
+
+
+test("marker integrity rejects duplicates, unexpected numbers, wrong order, and free paid-area markers", () => {
+  assert.match(
+    draftHelpers.validateArticleCreateStep(5, baseDraft({
+      body: `導入
+
+<!-- IMAGE:01 -->
+
+本文
+
+<!-- IMAGE:01 -->
+
+<!-- IMAGE:02 -->`,
+    })) ?? "",
+    /挿絵1の差し込み位置が重複/,
+  );
+
+  assert.match(
+    draftHelpers.validateArticleCreateStep(5, baseDraft({
+      body: `導入
+
+<!-- IMAGE:01 -->
+
+<!-- IMAGE:02 -->
+
+<!-- IMAGE:03 -->`,
+    })) ?? "",
+    /設定枚数に含まれない挿絵3/,
+  );
+
+  assert.match(
+    draftHelpers.validateArticleCreateStep(5, baseDraft({
+      body: `導入
+
+<!-- IMAGE:02 -->
+
+<!-- IMAGE:01 -->`,
+    })) ?? "",
+    /挿絵1→挿絵2/,
+  );
+
+  assert.match(
+    draftHelpers.validateArticleCreateStep(5, baseDraft({
+      articleType: "free",
+      body: `導入
+
+<!-- IMAGE:01 -->
+
+<!-- PAID_AREA -->
+
+<!-- IMAGE:02 -->`,
+    })) ?? "",
+    /無料記事には有料エリア開始位置を入れない/,
+  );
+
+  assert.match(
+    draftHelpers.validateArticleCreateStep(5, baseDraft({
+      articleType: "paid",
+      price: 980,
+      body: `導入
+
+<!-- IMAGE:01 -->
+
+<!-- PAID_AREA -->
+
+本文
+
+<!-- PAID_AREA -->
+
+<!-- IMAGE:02 -->`,
+    })) ?? "",
+    /有料エリア開始位置は本文に1か所だけ/,
+  );
+});
+
+test("final save validation rechecks marker integrity even if wizard navigation is bypassed", () => {
+  assert.throws(
+    () => create.validateCreationDraft(baseDraft({
+      body: `導入
+
+<!-- IMAGE:01 -->
+
+<!-- IMAGE:01 -->
+
+<!-- IMAGE:02 -->`,
+    })),
+    /挿絵1の差し込み位置が重複/,
+  );
+
+  assert.throws(
+    () => create.validateCreationDraft(baseDraft({
+      inlineEnabled: false,
+      body: `導入
+
+<!-- IMAGE:01 -->`,
+    })),
+    /挿絵をOFFにしているため/,
+  );
+
+  assert.throws(
+    () => create.validateCreationDraft(baseDraft({
+      articleType: "free",
+      body: `導入
+
+<!-- IMAGE:01 -->
+
+<!-- PAID_AREA -->
+
+<!-- IMAGE:02 -->`,
+    })),
+    /無料記事には有料エリア開始位置を入れない/,
+  );
+});
