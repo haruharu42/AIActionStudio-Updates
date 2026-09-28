@@ -55,6 +55,7 @@ export function NoteStartGuideTab({
 }
 
 export function NoteCalendarTab({
+  profile,
   calendarMonth,
   groupedByDate,
   articleSchedule,
@@ -62,6 +63,7 @@ export function NoteCalendarTab({
   onCalendarMonthChange,
   onChangeStatus,
 }: {
+  profile: NoteOperationProfile;
   calendarMonth: string;
   groupedByDate: ReadonlyMap<string, NoteScheduleItem[]>;
   articleSchedule: NoteScheduleItem[];
@@ -100,7 +102,7 @@ export function NoteCalendarTab({
               {item.theme && <span>テーマ：{item.theme}</span>}
             </div>
             <div className="note-schedule-actions">
-              {(item.itemType === "free_note" || item.itemType === "paid_note") && <Link href={createHref(item)}>この記事を作る</Link>}
+              {(item.itemType === "free_note" || item.itemType === "paid_note") && <Link href={createHref(item, profile)}>この記事を作る</Link>}
               {item.id && <button disabled={busy} onClick={() => void onChangeStatus(item, item.status !== "done")}>{item.status === "done" ? "未完了に戻す" : "完了"}</button>}
             </div>
           </article>
