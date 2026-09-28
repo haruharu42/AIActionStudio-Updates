@@ -80,6 +80,7 @@ test("admin UI exposes sales controls while PWA runtime omits legacy plan switch
   const sellerPanel = await readPwa("components/admin-sales/seller-settings-panel.tsx");
   const sellerLib = await readPwa("lib/seller-settings.ts");
   assert.match(sellerPanel, /販売者情報・公開方法/);
+  assert.match(sellerPanel, /AASでは公開または請求時開示を選択できます/);
   assert.match(sellerPanel, /公開サポートURL/);
   assert.match(sellerPanel, /販売者情報を保存/);
   assert.match(sellerLib, /admin_get_commerce_seller_settings/);
