@@ -408,7 +408,7 @@ function researchPrompt(action: string, sourceUrl: string, tasks: string[], titl
 async function candidate(runId: number, source: any, action: string, sourceUrl: string, title: string, excerpt: string, hash: string, status: number|null, tasks: string[], item: any, confidence: number, reason: string) {
   const fingerprint = await sha256([action,item?.item_type ?? "source",item?.key ?? "",sourceUrl,hash,String(status ?? "")].join("|"));
   const payload = item?.payload ?? null;
-  const { error } = await db.from("knowledge_automation_candidates").insert({
+  const { data, error } = await db.from("knowledge_automation_candidates").upsert({
     fingerprint,
     run_id: runId,
     source_id: source.id,
@@ -427,10 +427,12 @@ async function candidate(runId: number, source: any, action: string, sourceUrl: 
     confidence,
     reason: reason.slice(0,2000),
     status: "pending"
-  });
-  if (!error) return 1;
-  if (error.code === "23505") return 0;
-  throw error;
+  }, {
+    onConflict: "fingerprint",
+    ignoreDuplicates: true
+  }).select("id");
+  if (error) throw error;
+  return data?.length ? 1 : 0;
 }
 
 async function loadItems() {
