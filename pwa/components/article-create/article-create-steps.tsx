@@ -654,8 +654,8 @@ export function PreviewStep({
       {imagePrompts.length > 0 && combinedImagePrompt && (
         <section className="creator-image-prompts" aria-label="記事画像生成プロンプト">
           <div className="creator-image-prompts-head">
-            <h3>アイキャッチ・挿絵をまとめて作成</h3>
-            <p className="panel-muted">STEP 3の画像設定と完成本文をもとに、アイキャッチと全挿絵を1つの依頼文へまとめています。1回コピーして画像生成AIへ貼り付けてください。</p>
+            <h3>画像生成プロンプト（一括・個別）</h3>
+            <p className="panel-muted">STEP 3の画像設定と完成本文をもとに、一括作成用と画像ごとの個別作成用プロンプトを用意しています。</p>
           </div>
           <article className="creator-image-prompt-card">
             <div className="creator-image-prompt-title">
@@ -681,7 +681,41 @@ export function PreviewStep({
               ))}
             </div>
           </article>
-          <p className="beginner-help">1枚のコラージュではなく、アイキャッチ→挿絵1→挿絵2…を別画像として順番に作るようプロンプト内で指定しています。挿絵は本文の差し込み位置と周辺内容を参照します。</p>
+          <div className="route-notice">
+            <strong>画像生成では一時チャットは使用不可</strong><br />
+            ChatGPTで画像を作成する場合は通常チャットを使用してください。一括作成・個別作成のどちらでも同じです。
+          </div>
+          <div className="creator-image-prompts-head">
+            <h4>個別に画像を作成</h4>
+            <p className="panel-muted">必要な画像だけ作り直したい場合は、下の各プロンプトを1つずつコピーして画像生成AIへ貼り付けてください。</p>
+          </div>
+          {imagePrompts.map((item) => {
+            const label = item.kind === "cover" ? "アイキャッチ" : "挿絵 " + item.order;
+            return (
+              <article className="creator-image-prompt-card" key={item.kind + "-individual-" + item.order}>
+                <div className="creator-image-prompt-title">
+                  <strong>{label}・個別作成プロンプト</strong>
+                  <span>{item.suggestedFilename}</span>
+                </div>
+                <textarea className="prompt-area large" readOnly value={item.prompt} />
+                <div className="openai-prompt-actions">
+                  <CopyButton value={item.prompt} label={label + "の個別画像プロンプトをコピー"} setMessage={setMessage} />
+                  {AI_LAUNCH_OPTIONS.map((app) => (
+                    <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>
+                      {app.label}を開く ↗
+                    </button>
+                  ))}
+                </div>
+                <div className="creator-image-prompt-meta">
+                  <small>
+                    {item.insertionMarker ? "差し込み位置: <!-- " + item.insertionMarker + " --> / " : ""}
+                    {"保存名: " + item.suggestedFilename + " / alt候補: " + item.altText}
+                  </small>
+                </div>
+              </article>
+            );
+          })}
+          <p className="beginner-help">一括作成は全画像を同じ世界観でまとめて依頼する時、個別作成は特定の画像だけ作成・再作成する時に使います。どちらも一時チャットは使用せず、通常チャットで画像生成してください。</p>
         </section>
       )}
     </div>
