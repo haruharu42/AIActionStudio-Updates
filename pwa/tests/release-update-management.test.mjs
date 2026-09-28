@@ -198,7 +198,12 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(page, /iPhone実機PWAを確認/);
   assert.match(page, /停止・ロールバック経路を確認/);
   assert.match(page, /publishVerificationReady/);
-  assert.match(page, /disabled=\{busy \|\| !publishVerificationReady\}/);
+  assert.match(page, /getAuthenticatorAssuranceLevel/);
+  assert.match(page, /currentSessionAal/);
+  assert.match(page, /currentSessionAal !== "aal2"/);
+  assert.match(page, /disabled=\{busy \|\| !publishVerificationReady \|\| currentSessionAal !== "aal2"\}/);
+  assert.match(page, /管理者MFAで再認証/);
+  assert.match(page, /href="\/admin\/security"/);
   assert.match(page, /publishVerificationStorageKey/);
   assert.match(page, /window\.localStorage\.setItem/);
   assert.match(css, /\.release-publish-checklist/);
@@ -272,4 +277,25 @@ test("preview release identity is subtle and rendered only by the home screen", 
   assert.match(css, /border-radius:\s*999px/);
   assert.match(css, /opacity:\s*\.86/);
   assert.match(css, /box-shadow:\s*none/);
+});
+
+
+test("public release publish requires current admin AAL2 while rollback remains an emergency admin operation", async () => {
+  const [migration, client, page] = await Promise.all([
+    readRepo("supabase/migrations/20260928042300_pwa_release_publish_aal2_v1.sql"),
+    read("lib/app-release.ts"),
+    read("components/admin-release-page.tsx"),
+  ]);
+
+  assert.match(migration, /v_aal text := coalesce\(\(select auth\.jwt\(\)->>'aal'\), 'aal1'\)/);
+  assert.match(migration, /if v_aal <> 'aal2' then[\s\S]*?aal2 required for public release publish/);
+  assert.match(migration, /candidate must pass tester stage before publish/);
+  assert.match(migration, /active release tester required before publish/);
+  assert.doesNotMatch(migration, /admin_rollback_app_release/);
+  assert.match(client, /aal2 required for public release publish/);
+  assert.match(client, /全体公開には現在の管理者セッションでMFA認証（AAL2）が必要/);
+  assert.match(page, /getAuthenticatorAssuranceLevel/);
+  assert.match(page, /currentSessionAal !== "aal2"/);
+  assert.match(page, /管理者MFAで再認証/);
+  assert.match(page, /adminRollbackAppRelease/);
 });
