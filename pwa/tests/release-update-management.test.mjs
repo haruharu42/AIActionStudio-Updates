@@ -191,6 +191,18 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(page, /第2段階：指定テスターへ反映/);
   assert.match(page, /第3段階：全一般ユーザーへ公開承認/);
   assert.match(page, /AAS-000002/);
+  assert.match(page, /PUBLISH_VERIFICATION_ITEMS/);
+  assert.match(page, /全体公開前チェック/);
+  assert.match(page, /最新PreviewとCIを確認/);
+  assert.match(page, /指定テスターで主要導線を確認/);
+  assert.match(page, /iPhone実機PWAを確認/);
+  assert.match(page, /停止・ロールバック経路を確認/);
+  assert.match(page, /publishVerificationReady/);
+  assert.match(page, /disabled=\{busy \|\| !publishVerificationReady\}/);
+  assert.match(page, /publishVerificationStorageKey/);
+  assert.match(page, /window\.localStorage\.setItem/);
+  assert.match(css, /\.release-publish-checklist/);
+  assert.match(css, /\.release-publish-checklist label\.checked/);
 
   assert.match(nextConfig, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE/);
   assert.match(previewWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: preview/);
