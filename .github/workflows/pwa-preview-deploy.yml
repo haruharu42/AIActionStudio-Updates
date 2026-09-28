@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - preview/current
       - feat/note-easy-import-manual-contrast-20260920
   workflow_dispatch:
     inputs:
@@ -77,6 +78,8 @@ jobs:
             fi
 
             if [ "$EVENT_REF" = "refs/heads/main" ]; then
+              :
+            elif [ "$EVENT_REF" = "refs/heads/preview/current" ]; then
               :
             elif [ "$EVENT_REF" = "refs/heads/feat/note-easy-import-manual-contrast-20260920" ]; then
               :
