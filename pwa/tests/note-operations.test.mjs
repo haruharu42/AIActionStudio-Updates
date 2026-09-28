@@ -242,6 +242,7 @@ test("note profile stores detailed article defaults and soft monthly targets", a
   assert.match(lib, /paid_target_length:/);
 
   assert.match(page, /月の記事作成数の目安/);
+  assert.match(page, /この目安をAASに保存/);
   assert.match(page, /無料note \/ 月の目安/);
   assert.match(page, /有料note \/ 月の目安/);
   assert.match(page, /無料noteの文字数目安/);
