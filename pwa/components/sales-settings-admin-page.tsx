@@ -7,6 +7,7 @@ import { useSharedAccessState } from "@/components/access-state-provider";
 import { SalesReadinessPanel } from "@/components/admin-sales/sales-readiness-panel";
 import { SalesReleasePreflightPanel } from "@/components/admin-sales/sales-release-preflight-panel";
 import { SalesSelectSetting } from "@/components/admin-sales/sales-select-setting";
+import { SellerSettingsPanel } from "@/components/admin-sales/seller-settings-panel";
 
 import {
   loadAdminSalesSettings,
@@ -164,6 +165,8 @@ export function SalesSettingsAdminPage() {
           )}
         </label>
       </section>
+
+      <SellerSettingsPanel />
 
       <section className="admin-panel sales-settings-section">
         <div className="admin-panel-heading"><div><p className="eyebrow">STRIPE</p><h2>PWA Stripe新規決済</h2></div></div>
