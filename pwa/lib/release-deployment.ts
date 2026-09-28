@@ -141,7 +141,7 @@ export async function requestPublicPwaDeployment(
 ): Promise<{ requestId: string; status: string }> {
   await accessToken(client);
   const row = await invokeReleaseDeploy(client, {
-    action: "start",
+    action: "dispatch",
     releaseId,
     sourceBranch: AAS_PREVIEW_RELEASE_BRANCH,
     sourceSha,
