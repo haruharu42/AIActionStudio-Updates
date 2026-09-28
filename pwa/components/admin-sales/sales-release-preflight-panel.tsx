@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import {
+  loadPublicSalesApproval,
   loadSalesLaunchReadiness,
+  setPublicSalesApproval,
+  type PublicSalesApproval,
   type SalesLaunchReadinessSnapshot,
 } from "@/lib/sales-launch-readiness";
 import type { SalesSettings } from "@/lib/sales-settings";
@@ -39,27 +42,42 @@ export function SalesReleasePreflightPanel({
   const purchaseUrl = externalPurchaseUrl(settings.externalSalesUrl);
   const [snapshot, setSnapshot] = useState<SalesLaunchReadinessSnapshot | null>(null);
   const [snapshotFailed, setSnapshotFailed] = useState(false);
+  const [approval, setApproval] = useState<PublicSalesApproval | null>(null);
+  const [approvalFailed, setApprovalFailed] = useState(false);
+  const [approvalBusy, setApprovalBusy] = useState(false);
+  const [manualReviewConfirmed, setManualReviewConfirmed] = useState(false);
+  const [approvalMessage, setApprovalMessage] = useState("");
 
   useEffect(() => {
     let active = true;
     try {
-      void loadSalesLaunchReadiness(getSupabaseClient()).then(
-        (value) => {
+      const client = getSupabaseClient();
+      void Promise.all([
+        loadSalesLaunchReadiness(client),
+        loadPublicSalesApproval(client),
+      ]).then(
+        ([readiness, publicApproval]) => {
           if (!active) return;
-          setSnapshot(value);
+          setSnapshot(readiness);
+          setApproval(publicApproval);
           setSnapshotFailed(false);
+          setApprovalFailed(false);
         },
         () => {
           if (!active) return;
           setSnapshot(null);
+          setApproval(null);
           setSnapshotFailed(true);
+          setApprovalFailed(true);
         },
       );
     } catch {
       queueMicrotask(() => {
         if (!active) return;
         setSnapshot(null);
+        setApproval(null);
         setSnapshotFailed(true);
+        setApprovalFailed(true);
       });
     }
     return () => {
@@ -94,6 +112,34 @@ export function SalesReleasePreflightPanel({
       : "",
   ].filter(Boolean);
   const automatedReady = automatedBlockers.length === 0;
+  const persistedAutomatedReady = snapshot?.persistedAutomatedReady === true;
+  const canApprove =
+    automatedReady &&
+    persistedAutomatedReady &&
+    !hasUnsavedChanges &&
+    manualReviewConfirmed &&
+    !approvalBusy &&
+    !approvalFailed;
+
+  const changePublicSalesApproval = async (nextApproved: boolean) => {
+    if (approvalBusy) return;
+    setApprovalBusy(true);
+    setApprovalMessage("");
+    try {
+      const next = await setPublicSalesApproval(getSupabaseClient(), nextApproved);
+      setApproval(next);
+      setManualReviewConfirmed(false);
+      setApprovalMessage(
+        nextApproved
+          ? "公開販売を承認しました。Worker側の販売ロックが解除されます。"
+          : "公開販売を停止しました。保存済み設定は残したまま、新規購入導線だけをロックしています。",
+      );
+    } catch (error) {
+      setApprovalMessage(error instanceof Error ? error.message : "公開販売の状態を変更できませんでした。");
+    } finally {
+      setApprovalBusy(false);
+    }
+  };
 
   return (
     <section className="admin-panel sales-release-preflight" aria-labelledby="sales-release-preflight-title">
@@ -126,6 +172,65 @@ export function SalesReleasePreflightPanel({
           </ul>
         )}
       </div>
+
+      <section className={`sales-public-approval ${approval?.approved ? "approved" : "locked"}`} aria-labelledby="sales-public-approval-title">
+        <div>
+          <p className="eyebrow">PUBLIC SALES LOCK</p>
+          <h3 id="sales-public-approval-title">公開販売の最終承認</h3>
+          <strong>
+            {approvalFailed
+              ? "承認状態を確認できません"
+              : approval?.approved
+                ? "公開販売：承認済み"
+                : "公開販売：ロック中"}
+          </strong>
+          <p>
+            設定を保存しただけでは販売開始しません。公開販売を承認した場合だけ、Workerが購入導線と新規決済を有効化できます。
+            販売設定または販売者情報を変更すると承認は自動解除されます。
+          </p>
+        </div>
+
+        {approvalMessage && <p className="route-notice" role="status">{approvalMessage}</p>}
+
+        {approval?.approved ? (
+          <button
+            type="button"
+            className="secondary-action"
+            disabled={approvalBusy}
+            onClick={() => void changePublicSalesApproval(false)}
+          >
+            {approvalBusy ? "停止中…" : "公開販売を停止する"}
+          </button>
+        ) : (
+          <>
+            <label className="sales-manual-approval-check">
+              <input
+                type="checkbox"
+                checked={manualReviewConfirmed}
+                onChange={(event) => setManualReviewConfirmed(event.target.checked)}
+              />
+              <span>
+                <strong>手動確認項目を確認済み</strong>
+                <small>漏洩パスワード保護、特商法・利用規約・プライバシー・AI利用条件、実際の価格・返金条件、購入前サポート導線を確認しました。</small>
+              </span>
+            </label>
+            <button
+              type="button"
+              className="primary-action"
+              disabled={!canApprove}
+              onClick={() => void changePublicSalesApproval(true)}
+            >
+              {approvalBusy ? "承認中…" : "公開販売を承認する"}
+            </button>
+            {!persistedAutomatedReady && (
+              <p className="sales-approval-hint">保存済み設定の自動確認が未完了です。上の未完了項目を解消してから承認できます。</p>
+            )}
+            {hasUnsavedChanges && (
+              <p className="sales-approval-hint">未保存の販売設定があります。先に変更を保存してください。</p>
+            )}
+          </>
+        )}
+      </section>
 
       <div className="sales-release-preflight-grid">
         <article>
