@@ -141,29 +141,44 @@ function common(input: ImagePromptPlanInput): string {
   return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || input.title || "タイトルから推定"}\n${bodyContext ? `${bodyContext}\n` : ""}画風: ${selectedStyle}。\n禁止・回避: ${avoid}\n\n${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}${accountContext}`;
 }
 
-export function buildCombinedImagePrompt(items: ImagePromptItem[]): string {
+export function buildCombinedImagePrompt(
+  items: ImagePromptItem[],
+  input?: ImagePromptPlanInput,
+): string {
   if (!items.length) return "";
   const coverCount = items.filter((item) => item.kind === "cover").length;
   const inlineCount = items.filter((item) => item.kind === "inline").length;
+
   const sections = items.map((item, index) => {
     const label = item.kind === "cover" ? "アイキャッチ" : `挿絵 ${item.order}`;
     const marker = item.insertionMarker ? `\n差し込み位置: <!-- ${item.insertionMarker} -->` : "";
+    const instruction = input
+      ? item.kind === "cover"
+        ? "役割: 記事全体の入口になる横長アイキャッチ。記事テーマが一目で伝わる主役を1つに絞り、人物を使う場合は親しみやすく、余白を十分に取る。\n文字方針: 原則として画像内文字は入れない。必要な場合でも短い補助語だけにする。"
+        : `この挿絵が対応する本文周辺:\n${inlineBodyContext(input.body, item.order) || "本文全体から最適な場面を選ぶ"}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、他画像と同じ構図を繰り返さない。\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。`
+      : item.prompt;
     return `【画像 ${index + 1} / ${items.length}：${label}】
-${item.prompt}${marker}
+${instruction}${marker}
 保存名: ${item.suggestedFilename}
 alt候補: ${item.altText}`;
   }).join("\n\n---\n\n");
 
+  const sharedContext = input
+    ? `\n\n【全画像共通条件】\n${common(input)}`
+    : "";
+
   return `以下の記事用画像を、1つの依頼としてまとめて作成してください。
 
 【重要】
-- 必要画像数: ${items.length}枚（アイキャッチ ${coverCount}枚 / 挿絵 ${inlineCount}枚）。\n- ${IMAGE_CHAT_USAGE_RULE}
+- 必要画像数: ${items.length}枚（アイキャッチ ${coverCount}枚 / 挿絵 ${inlineCount}枚）。
+- ${IMAGE_CHAT_USAGE_RULE}
 - 各画像は必ず別々の画像として生成してください。1枚のコラージュ、分割画面、複数画像を1枚へ合成したレイアウトにはしないでください。
 - アイキャッチ → 挿絵1 → 挿絵2…の順に、同じ世界観・人物設計・色調を保ちながら個別画像として作成してください。
 - 各画像の指示にある本文内容・差し込み位置・役割を優先し、同じ構図の繰り返しを避けてください。
 - 画像内へ長文を描画しないでください。
-- 可能な環境では、各画像を順番に個別生成してください。1回で全枚数を生成できない場合も、この依頼文の順番と条件を維持して続きを生成してください。
+- 可能な環境では、各画像を順番に個別生成してください。1回で全枚数を生成できない場合も、この依頼文の順番と条件を維持して続きを生成してください。${sharedContext}
 
+【画像ごとの指示】
 ${sections}`;
 }
 
