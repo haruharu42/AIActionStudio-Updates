@@ -66,7 +66,13 @@ export function AdminSecurityPage() {
   }, []);
 
   useEffect(() => {
-    void loadFactors();
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadFactors();
+    });
+    return () => {
+      active = false;
+    };
   }, [loadFactors]);
 
   const verifiedFactors = useMemo(() => factors.filter((factor) => factor.status === "verified"), [factors]);
