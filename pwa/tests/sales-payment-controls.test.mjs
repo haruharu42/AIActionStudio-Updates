@@ -296,9 +296,10 @@ test("sales legal pages match the current AAS PWA-only product model", async () 
 
 
 test("external purchase URL is HTTPS-only and credential-free before rendering a CTA", async () => {
-  const [settings, plans] = await Promise.all([
+  const [settings, plans, workerSales] = await Promise.all([
     readPwa("lib/sales-settings.ts"),
     readPwa("components/commerce-plans-page.tsx"),
+    readPwa("worker/sales-controls.ts"),
   ]);
 
   assert.match(settings, /export function safeExternalSalesUrl/);
@@ -306,4 +307,7 @@ test("external purchase URL is HTTPS-only and credential-free before rendering a
   assert.match(settings, /認証情報を含まない https:\/\//);
   assert.match(plans, /safeExternalSalesUrl\(salesSettings\.externalSalesUrl\)/);
   assert.match(plans, /externalPurchaseUrl && \(/);
+  assert.match(workerSales, /function safeExternalSalesUrl/);
+  assert.match(workerSales, /parsed\.protocol !== "https:" \|\| parsed\.username \|\| parsed\.password/);
+  assert.match(workerSales, /externalSalesUrl: safeExternalSalesUrl\(row\.external_sales_url\)/);
 });
