@@ -6,12 +6,18 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readArticleCreateStepSource = async () => (await Promise.all([
+  read("components/article-create/article-create-steps.tsx"),
+  read("components/article-create/article-create-step-shared.tsx"),
+  read("components/article-create/article-create-generation-steps.tsx"),
+  read("components/article-create/article-create-finish-steps.tsx"),
+])).join("\n");
 
 test("AI launch explains provider-specific regular and temporary/private chat behavior", async () => {
   const [links, css, articleSteps, promotionFields] = await Promise.all([
     read("lib/ai-app-links.ts"),
     read("app/phase20-device-e2e.css"),
-    read("components/article-create/article-create-steps.tsx"),
+    readArticleCreateStepSource(),
     read("components/admin-promotion/admin-promotion-fields.tsx"),
   ]);
 
