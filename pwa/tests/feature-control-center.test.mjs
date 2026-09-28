@@ -131,3 +131,32 @@ test("release management and admin navigation link to the feature control center
   assert.match(nav, /"adminFeatures"/);
   assert.match(nav, /href: "\/admin\/features"/);
 });
+
+
+test("staged rollout guard requires tester validation before public promotion", async () => {
+  const [client, page, migration] = await Promise.all([
+    read("lib/feature-control.ts"),
+    read("components/admin-feature-control-page.tsx"),
+    read("../supabase/migrations/20260928061527_feature_rollout_stage_guard_v1.sql"),
+  ]);
+
+  assert.match(client, /validateFeatureRolloutTransition/);
+  assert.match(client, /currentStage === "admin" && targetStage === "public"/);
+  assert.match(client, /activeTesterCount < 1/);
+  assert.match(client, /管理者のみから全一般ユーザーへ直接公開はできません/);
+
+  assert.match(page, /validateFeatureRolloutTransition/);
+  assert.match(page, /snapshot\?\.testerCount \?\? 0/);
+  assert.match(page, /先にテスト段階へ進めてください/);
+  assert.match(page, /先にactiveなテストユーザーを登録してください/);
+
+  assert.match(migration, /v_feature\.rollout_stage = 'admin' and p_rollout_stage = 'public'/);
+  assert.match(migration, /tester rollout stage required before public release/);
+  assert.match(migration, /active release tester required for staged rollout/);
+  assert.match(migration, /public\.app_release_testers/);
+  assert.match(migration, /p\.role = 'user'/);
+  assert.match(migration, /p\.status = 'active'/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /revoke all on function public\.admin_update_app_feature_control\(text,text,boolean,text\) from public, anon/);
+  assert.match(migration, /grant execute on function public\.admin_update_app_feature_control\(text,text,boolean,text\) to authenticated/);
+});
