@@ -35,6 +35,11 @@ test("admin security route is protected by shared admin layout and supports back
   assert.match(page, /verifiedFactors\.length === 0 \? "MFA認証器を追加" : "予備認証器を追加"/);
   assert.match(page, /AAS PWA Admin MFA 1/);
   assert.match(page, /MFAを有効化/);
+  assert.match(page, /auth\.mfa\.getAuthenticatorAssuranceLevel\(\)/);
+  assert.match(page, /const verifyCurrentSession = async \(\) =>/);
+  assert.match(page, /このセッションをMFA認証する/);
+  assert.match(page, /AAL2 認証済み/);
+  assert.match(page, /公開販売の最終承認/);
   assert.match(guard, /const ADMIN_MFA_REQUIRED = false/);
   assert.match(guard, /auth\.mfa\.getAuthenticatorAssuranceLevel\(\)/);
   assert.match(guard, /aal\.currentLevel !== "aal2"/);
