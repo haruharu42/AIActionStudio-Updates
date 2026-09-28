@@ -1,3 +1,4 @@
+import { markdownToNoteHtml, markdownToPlainText } from "@/lib/note-rich-text";
 import { publicationBodyForCopy, type PublicationBodyOptions } from "@/lib/phase11-create";
 
 export type NotePostSequenceItem =
@@ -97,6 +98,114 @@ export function inlineImageOrders(sequence: readonly NotePostSequenceItem[]): nu
       .filter((item): item is Extract<NotePostSequenceItem, { kind: "inline-image" }> => item.kind === "inline-image")
       .map((item) => item.order),
   )].sort((a, b) => a - b);
+}
+
+export type NotePostClipboardPayload = {
+  html: string;
+  plain: string;
+};
+
+export function buildNotePostClipboardPayload(
+  sequence: readonly NotePostSequenceItem[],
+  inlineImageDataUrls: ReadonlyMap<number, string>,
+): NotePostClipboardPayload {
+  const html: string[] = [];
+  const plain: string[] = [];
+
+  for (const item of sequence) {
+    if (item.kind === "body") {
+      const rich = markdownToNoteHtml(item.markdown);
+      const text = markdownToPlainText(item.markdown);
+      if (rich) html.push(rich);
+      if (text) plain.push(text);
+      continue;
+    }
+
+    if (item.kind === "paid-boundary") {
+      html.push("<p><br></p><p><strong>【ここから有料エリア】</strong></p><p><br></p>");
+      plain.push("【ここから有料エリア】");
+      continue;
+    }
+
+    const dataUrl = inlineImageDataUrls.get(item.order);
+    if (!dataUrl) throw new Error(`挿絵${item.order}がまだ選択されていません。`);
+    html.push(`<p><img src="${dataUrl}" alt="挿絵${item.order}" /></p>`);
+    plain.push(`【挿絵${item.order}】`);
+  }
+
+  return {
+    html: html.join("\n"),
+    plain: plain.join("\n\n").trim(),
+  };
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  if (typeof FileReader === "undefined") {
+    throw new Error("このブラウザーでは画像込み一括コピーを利用できません。");
+  }
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === "string"
+      ? resolve(reader.result)
+      : reject(new Error("画像をコピー用データへ変換できませんでした。"));
+    reader.onerror = () => reject(new Error("画像をコピー用データへ変換できませんでした。"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function fallbackRichClipboardCopy(html: string): boolean {
+  if (typeof document === "undefined" || typeof window === "undefined") return false;
+  const container = document.createElement("div");
+  container.contentEditable = "true";
+  container.setAttribute("aria-hidden", "true");
+  container.style.position = "fixed";
+  container.style.left = "-10000px";
+  container.style.top = "0";
+  container.innerHTML = html;
+  document.body.append(container);
+
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(container);
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  const copied = document.execCommand("copy");
+  selection?.removeAllRanges();
+  container.remove();
+  return copied;
+}
+
+export async function copyNotePostSequenceWithImages(
+  sequence: readonly NotePostSequenceItem[],
+  imageForOrder: (order: number) => Blob | undefined,
+): Promise<"rich" | "fallback"> {
+  const imageDataUrls = new Map<number, string>();
+  for (const item of sequence) {
+    if (item.kind !== "inline-image" || imageDataUrls.has(item.order)) continue;
+    const source = imageForOrder(item.order);
+    if (!source) throw new Error(`挿絵${item.order}がまだ選択されていません。`);
+    const png = await imageToPngBlob(source);
+    imageDataUrls.set(item.order, await blobToDataUrl(png));
+  }
+
+  const payload = buildNotePostClipboardPayload(sequence, imageDataUrls);
+  if (!payload.html) throw new Error("一括コピーする本文がありません。");
+
+  if (typeof navigator !== "undefined" && navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+    try {
+      const item = new ClipboardItem({
+        "text/html": new Blob([payload.html], { type: "text/html" }),
+        "text/plain": new Blob([payload.plain], { type: "text/plain" }),
+      });
+      await navigator.clipboard.write([item]);
+      return "rich";
+    } catch {
+      // Browser/editor differences can reject HTML that contains embedded images.
+    }
+  }
+
+  if (fallbackRichClipboardCopy(payload.html)) return "fallback";
+  throw new Error("画像込み一括コピーに対応していない環境です。上の順番から個別にコピーしてください。");
 }
 
 async function imageToPngBlob(blob: Blob): Promise<Blob> {
