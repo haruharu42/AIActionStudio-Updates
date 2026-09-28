@@ -86,6 +86,8 @@ export function buildNoteAccountResearchPrompt(profile: NoteOperationProfile, ai
 
 【ユーザーが選んだ条件】
 - 主ジャンル: ${selected.genre}
+- 記事作成の詳細ジャンル: ${profile.articleGenre}
+- 記事作成のサブジャンル: ${profile.articleSubgenre}
 - 運営スタイル: ${selected.style}
 - 想定読者: ${selected.audience}
 - 読者の補足: ${readerExtra}
