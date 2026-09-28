@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import {
+  SALES_LAUNCH_STATE_EVENT,
   loadPublicSalesApproval,
   loadSalesLaunchReadiness,
   setPublicSalesApproval,
@@ -50,38 +51,45 @@ export function SalesReleasePreflightPanel({
 
   useEffect(() => {
     let active = true;
-    try {
-      const client = getSupabaseClient();
-      void Promise.all([
-        loadSalesLaunchReadiness(client),
-        loadPublicSalesApproval(client),
-      ]).then(
-        ([readiness, publicApproval]) => {
-          if (!active) return;
-          setSnapshot(readiness);
-          setApproval(publicApproval);
-          setSnapshotFailed(false);
-          setApprovalFailed(false);
-        },
-        () => {
+
+    const refresh = () => {
+      try {
+        const client = getSupabaseClient();
+        void Promise.all([
+          loadSalesLaunchReadiness(client),
+          loadPublicSalesApproval(client),
+        ]).then(
+          ([readiness, publicApproval]) => {
+            if (!active) return;
+            setSnapshot(readiness);
+            setApproval(publicApproval);
+            setSnapshotFailed(false);
+            setApprovalFailed(false);
+          },
+          () => {
+            if (!active) return;
+            setSnapshot(null);
+            setApproval(null);
+            setSnapshotFailed(true);
+            setApprovalFailed(true);
+          },
+        );
+      } catch {
+        queueMicrotask(() => {
           if (!active) return;
           setSnapshot(null);
           setApproval(null);
           setSnapshotFailed(true);
           setApprovalFailed(true);
-        },
-      );
-    } catch {
-      queueMicrotask(() => {
-        if (!active) return;
-        setSnapshot(null);
-        setApproval(null);
-        setSnapshotFailed(true);
-        setApprovalFailed(true);
-      });
-    }
+        });
+      }
+    };
+
+    refresh();
+    window.addEventListener(SALES_LAUNCH_STATE_EVENT, refresh);
     return () => {
       active = false;
+      window.removeEventListener(SALES_LAUNCH_STATE_EVENT, refresh);
     };
   }, []);
 
