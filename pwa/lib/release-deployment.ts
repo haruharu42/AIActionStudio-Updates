@@ -80,40 +80,24 @@ function parseDeployment(value: unknown): PublicDeployment | null {
   };
 }
 
-function functionUrl(): string {
-  const base = (process.env.NEXT_PUBLIC_AAS_SUPABASE_URL ?? "").trim().replace(/\/$/, "");
-  if (!base) throw new Error("Supabase URLを確認できません。");
-  return `${base}/functions/v1/pwa-release-deploy`;
-}
-
-async function accessToken(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getSession();
-  if (error || !data.session?.access_token) throw new Error("管理者ログインを確認できません。");
-  return data.session.access_token;
-}
-
-async function parseResponse(response: Response): Promise<Row> {
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
+async function invokeReleaseDeploy(
+  client: SupabaseClient,
+  body: Record<string, unknown>,
+): Promise<Row> {
+  const { data, error } = await client.functions.invoke("pwa-release-deploy", {
+    method: "POST",
+    body,
+  });
+  if (error) {
+    const context = error && typeof error === "object" && "context" in error
+      ? (error as { context?: Response }).context
+      : undefined;
+    if (context instanceof Response) {
+      return parseResponse(context);
+    }
+    throw new Error(error.message || "一般公開PWAのデプロイ処理に失敗しました。");
   }
-  const row = payload && typeof payload === "object" && !Array.isArray(payload) ? payload as Row : {};
-  if (!response.ok) {
-    const message = text(row.message);
-    if (message.includes("AAS_GITHUB_RELEASE_TOKEN") || text(row.error) === "github_release_token_missing") {
-      throw new Error("GitHub公開連携が未設定です。初回セットアップでAAS_GITHUB_RELEASE_TOKENを設定してください。");
-    }
-    if (message.includes("aal2 required")) {
-      throw new Error("一般公開PWAへの反映には管理者MFA（AAL2）での再認証が必要です。");
-    }
-    if (message.includes("already in progress")) {
-      throw new Error("この候補版はすでに一般公開処理中です。進捗を更新してください。");
-    }
-    throw new Error(message || "一般公開PWAのデプロイ処理に失敗しました。");
-  }
-  return row;
+  return data && typeof data === "object" && !Array.isArray(data) ? data as Row : {};
 }
 
 export async function requestPublicPwaDeployment(
@@ -121,20 +105,13 @@ export async function requestPublicPwaDeployment(
   releaseId: string,
   sourceSha: string,
 ): Promise<{ requestId: string; status: string }> {
-  const token = await accessToken(client);
-  const response = await fetch(functionUrl(), {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${token}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      releaseId,
-      sourceBranch: AAS_PREVIEW_RELEASE_BRANCH,
-      sourceSha,
-    }),
+  await accessToken(client);
+  const row = await invokeReleaseDeploy(client, {
+    action: "start",
+    releaseId,
+    sourceBranch: AAS_PREVIEW_RELEASE_BRANCH,
+    sourceSha,
   });
-  const row = await parseResponse(response);
   return {
     requestId: text(row.requestId),
     status: text(row.status),
@@ -145,14 +122,11 @@ export async function loadPublicPwaDeployments(
   client: SupabaseClient,
   requestId?: string,
 ): Promise<PublicDeploymentSnapshot> {
-  const token = await accessToken(client);
-  const url = new URL(functionUrl());
-  if (requestId) url.searchParams.set("request_id", requestId);
-  const response = await fetch(url, {
-    headers: { authorization: `Bearer ${token}` },
-    cache: "no-store",
+  await accessToken(client);
+  const row = await invokeReleaseDeploy(client, {
+    action: "status",
+    requestId: requestId ?? "",
   });
-  const row = await parseResponse(response);
   const deployments = Array.isArray(row.deployments)
     ? row.deployments.flatMap((item) => {
         const parsed = parseDeployment(item);
