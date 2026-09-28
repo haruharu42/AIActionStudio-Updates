@@ -2,21 +2,34 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
+import { fetchCommerceConfig } from "@/lib/commerce";
 import { fetchPublicSalesSettings, safeExternalSalesUrl } from "@/lib/sales-settings";
+
+function safeHttpsUrl(value: string): string {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && !parsed.username && !parsed.password ? parsed.toString() : "";
+  } catch {
+    return "";
+  }
+}
 
 export function SupportRequestPage() {
   const [externalSalesUrl, setExternalSalesUrl] = useState("");
+  const [supportUrl, setSupportUrl] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     let active = true;
-    void fetchPublicSalesSettings().then(
-      (settings) => {
+    void Promise.all([fetchPublicSalesSettings(), fetchCommerceConfig()]).then(
+      ([settings, commerce]) => {
         if (!active) return;
         setExternalSalesUrl(settings.externalSalesEnabled ? safeExternalSalesUrl(settings.externalSalesUrl) : "");
+        setSupportUrl(safeHttpsUrl(commerce.seller.supportUrl));
       },
       () => {
-        if (active) setMessage("販売ページ情報を取得できませんでした。購入元に表示されている問い合わせ手段をご利用ください。");
+        if (active) setMessage("販売・問い合わせ情報を取得できませんでした。AASへログインできる場合は、アプリ内の問い合わせセンターをご利用ください。");
       },
     );
     return () => {
@@ -35,6 +48,23 @@ export function SupportRequestPage() {
             ? "現在の新規販売は、note・Brain・Tips等の外部販売ページと利用コードによる受付を基本としています。AAS内のStripe新規購入は停止中です。"
             : "外部販売と利用コードを初回販売経路として準備していますが、購入ページURLは現在未設定です。AAS内のStripe新規購入も停止中です。"}
         </p>
+
+        <section className="legal-commerce-notes">
+          <h2>AASアカウントをお持ちの方</h2>
+          <p>ログイン後の問い合わせセンターでは、購入・利用権、不具合、使い方、機能要望などを送信し、管理者からの返信履歴も確認できます。</p>
+          <p><Link href="/inquiries">AAS内の問い合わせセンターを開く →</Link></p>
+        </section>
+
+        <section className="legal-commerce-notes">
+          <h2>購入前・ログインできない場合</h2>
+          {supportUrl ? (
+            <p><a href={supportUrl} target="_blank" rel="noreferrer">公開サポート窓口を開く ↗</a></p>
+          ) : externalSalesUrl ? (
+            <p>現在の公開サポート窓口は準備中です。購入前の問い合わせ・販売者情報の開示請求は、外部販売ページに表示される問い合わせ手段をご利用ください。 <a href={externalSalesUrl} target="_blank" rel="noreferrer">外部販売ページを開く ↗</a></p>
+          ) : (
+            <p>公開サポート窓口と購入ページURLは現在未設定です。販売開始前に、購入前でも利用できる問い合わせ・開示請求窓口を設定します。</p>
+          )}
+        </section>
 
         <section className="legal-commerce-notes">
           <h2>販売者情報の開示請求</h2>
