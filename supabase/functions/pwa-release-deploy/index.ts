@@ -184,11 +184,40 @@ async function refreshRequestFromGithub(request: Request, deployment: JsonRecord
   }
 
   if (status === "completed" && conclusion === "success") {
+    const [sourceCommitResponse, mainBranchResponse] = await Promise.all([
+      github(`/commits/${sourceSha}`),
+      github("/branches/main"),
+    ]);
+    if (!sourceCommitResponse.ok || !mainBranchResponse.ok) {
+      throw new Error("github_release_commit_lookup_failed");
+    }
+
+    const sourceCommit = asRecord(await safeJson(sourceCommitResponse));
+    const mainBranch = asRecord(await safeJson(mainBranchResponse));
+    const mainCommitRef = asRecord(mainBranch?.commit);
+    const targetSha = clean(mainCommitRef?.sha).toLowerCase();
+    if (!/^[0-9a-f]{40}$/.test(targetSha)) {
+      throw new Error("invalid_public_target_sha");
+    }
+
+    const targetCommitResponse = await github(`/commits/${targetSha}`);
+    if (!targetCommitResponse.ok) {
+      throw new Error("github_public_commit_lookup_failed");
+    }
+    const targetCommit = asRecord(await safeJson(targetCommitResponse));
+    const sourceTree = asRecord(asRecord(sourceCommit?.commit)?.tree);
+    const targetTree = asRecord(asRecord(targetCommit?.commit)?.tree);
+    const sourceTreeSha = clean(sourceTree?.sha);
+    const targetTreeSha = clean(targetTree?.sha);
+    if (!sourceTreeSha || sourceTreeSha !== targetTreeSha) {
+      throw new Error("public_tree_does_not_match_approved_preview");
+    }
+
     await serviceRpc("service_finalize_app_release_deployment", {
       p_request_id: requestId,
       p_github_run_id: runId,
       p_github_run_url: runUrl,
-      p_target_sha: sourceSha,
+      p_target_sha: targetSha,
       p_deployment_url: PUBLIC_URL,
     });
     return;
