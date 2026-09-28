@@ -6,7 +6,7 @@ import { type ReactNode } from "react";
 import { NotePostAssistant } from "@/components/article-library/note-post-assistant";
 import { noteMagazineFromWorkspace } from "@/lib/article-library-v2";
 import { articleExportBody } from "@/lib/article-export";
-""import type { ArticleDetail } from "@/lib/phase7-articles";
+import type { ArticleDetail } from "@/lib/phase7-articles";
 import {
   ARTICLE_STATUS_LABELS,
   MAGAZINE_ROLE_LABELS,
