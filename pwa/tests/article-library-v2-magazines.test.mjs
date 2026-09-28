@@ -134,6 +134,12 @@ test('article library edit validation matches the positive-price database contra
   assert.match(invalidTarget.message, /掲載先/);
 });
 
+test('article library cannot mark an article published without publication metadata', () => {
+  assert.match(libraryEditorUi, /parsed\.value\.article\.status === "published"/);
+  assert.match(libraryEditorUi, /!detail\.publishedAt \|\| !detail\.publishedUrl/);
+  assert.match(libraryEditorUi, /公開済みへの変更は「公開管理」で公開日時と公開URLを登録して行ってください。/);
+});
+
 test('desktop export creates markdown text html json and a valid store-only zip envelope', async () => {
   const detail = {
     id: '10000000-0000-4000-8000-000000000001', userId: '00000000-0000-4000-8000-000000000002',
