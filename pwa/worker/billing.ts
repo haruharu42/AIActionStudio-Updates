@@ -22,6 +22,15 @@ type JsonRecord = Record<string, unknown>;
 type CommerceMode = "off" | "test" | "live";
 type SellerType = "individual" | "business";
 type SellerDisclosureMode = "public" | "on_request";
+type SellerConfig = {
+  type: SellerType;
+  disclosureMode: SellerDisclosureMode;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  supportUrl: string;
+};
 
 type PlanDefinition = {
   planCode: string;
@@ -109,16 +118,10 @@ function configured(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function sellerType(env: BillingEnv): SellerType {
-  return clean(env.AAS_SELLER_TYPE).toLowerCase() === "business" ? "business" : "individual";
-}
-
-function sellerDisclosureMode(env: BillingEnv): SellerDisclosureMode {
-  return clean(env.AAS_SELLER_DISCLOSURE_MODE).toLowerCase() === "public" ? "public" : "on_request";
-}
-
-function privateSellerConfig(env: BillingEnv) {
+function sellerConfigFromEnv(env: BillingEnv): SellerConfig {
   return {
+    type: clean(env.AAS_SELLER_TYPE).toLowerCase() === "business" ? "business" : "individual",
+    disclosureMode: clean(env.AAS_SELLER_DISCLOSURE_MODE).toLowerCase() === "public" ? "public" : "on_request",
     name: clean(env.AAS_SELLER_NAME),
     address: clean(env.AAS_SELLER_ADDRESS),
     phone: clean(env.AAS_SELLER_PHONE),
@@ -127,25 +130,39 @@ function privateSellerConfig(env: BillingEnv) {
   };
 }
 
-function publicSellerConfig(env: BillingEnv) {
-  const seller = privateSellerConfig(env);
-  const type = sellerType(env);
-  const disclosureMode = sellerDisclosureMode(env);
-  const discloseDirectly = disclosureMode === "public";
+function safeHttpsUrl(value: unknown): string {
+  const cleaned = clean(value);
+  if (!cleaned) return "";
+  try {
+    const parsed = new URL(cleaned);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+function publicSellerConfig(seller: SellerConfig) {
+  const discloseDirectly = seller.disclosureMode === "public";
   return {
-    type,
-    disclosureMode,
+    type: seller.type,
+    disclosureMode: seller.disclosureMode,
     name: discloseDirectly ? seller.name : "",
     address: discloseDirectly ? seller.address : "",
     phone: discloseDirectly ? seller.phone : "",
     email: seller.email,
-    supportUrl: seller.supportUrl,
+    supportUrl: safeHttpsUrl(seller.supportUrl),
   };
 }
 
-function sellerReady(env: BillingEnv): boolean {
-  const seller = privateSellerConfig(env);
-  return Boolean(seller.name && seller.address && seller.phone && seller.email && seller.supportUrl);
+function sellerReady(seller: SellerConfig): boolean {
+  return Boolean(
+    seller.name &&
+    seller.address &&
+    seller.phone &&
+    seller.email &&
+    safeHttpsUrl(seller.supportUrl)
+  );
 }
 
 function backendReady(env: BillingEnv): boolean {
@@ -259,6 +276,39 @@ async function supabaseRows(
   return Array.isArray(payload) ? payload.filter((item): item is JsonRecord => asRecord(item) !== null) : [];
 }
 
+async function loadSellerConfig(env: BillingEnv): Promise<SellerConfig> {
+  const fallback = sellerConfigFromEnv(env);
+  try {
+    const rows = await supabaseRows(
+      env,
+      "/rest/v1/commerce_sales_settings?id=eq.1&select=seller_type,seller_disclosure_mode,seller_name,seller_address,seller_phone,seller_email,seller_support_url&limit=1",
+    );
+    const row = rows[0];
+    if (!row) return fallback;
+
+    const databaseConfig: SellerConfig = {
+      type: row.seller_type === "business" ? "business" : "individual",
+      disclosureMode: row.seller_disclosure_mode === "public" ? "public" : "on_request",
+      name: clean(row.seller_name),
+      address: clean(row.seller_address),
+      phone: clean(row.seller_phone),
+      email: clean(row.seller_email),
+      supportUrl: safeHttpsUrl(row.seller_support_url),
+    };
+
+    const hasDatabaseSellerData = Boolean(
+      databaseConfig.name ||
+      databaseConfig.address ||
+      databaseConfig.phone ||
+      databaseConfig.email ||
+      databaseConfig.supportUrl
+    );
+    return hasDatabaseSellerData ? databaseConfig : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 async function authenticate(request: Request, env: BillingEnv): Promise<{
   id: string;
   email: string;
@@ -342,7 +392,8 @@ async function loadPrice(env: BillingEnv, plan: PlanDefinition): Promise<{
 async function publicConfig(env: BillingEnv): Promise<Response> {
   const mode = commerceMode(env);
   const baseReady = backendReady(env);
-  const legalReady = sellerReady(env);
+  const seller = await loadSellerConfig(env);
+  const legalReady = sellerReady(seller);
   const prices = await Promise.all(PLANS.map((plan) => loadPrice(env, plan)));
 
   const plans = PLANS.map((plan, index) => {
@@ -377,7 +428,7 @@ async function publicConfig(env: BillingEnv): Promise<Response> {
     mode,
     commerceReady: plans.some((plan) => plan.available),
     legalReady,
-    seller: publicSellerConfig(env),
+    seller: publicSellerConfig(seller),
     plans,
   });
 }
@@ -428,7 +479,8 @@ async function hasOverlappingSubscription(
 
 async function createCheckout(request: Request, env: BillingEnv): Promise<Response> {
   const mode = commerceMode(env);
-  if (mode === "off" || !backendReady(env) || (mode === "live" && !sellerReady(env))) {
+  const seller = mode === "live" ? await loadSellerConfig(env) : null;
+  if (mode === "off" || !backendReady(env) || (mode === "live" && (!seller || !sellerReady(seller)))) {
     return jsonResponse({ error: "販売準備中です。" }, 503);
   }
 
