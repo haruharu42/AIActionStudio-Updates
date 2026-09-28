@@ -137,3 +137,25 @@ test("promotion knowledge combines a shared attention layer with six channel-spe
   assert.match(promotionKnowledge, /find-your-community-with-new-threads-educational-insights/);
   assert.match(promotionKnowledge, /best-practices-education-hub-creators-instagram/);
 });
+
+
+test("promotion knowledge selects exactly one platform-specific publication rule", async () => {
+  const engine = await read("lib/knowledge-engine.ts");
+  const promotion = await read("lib/promotion-knowledge.ts");
+
+  for (const [key, label] of [
+    ["note", "note"],
+    ["brain", "Brain"],
+    ["tips", "Tips"],
+    ["x", "X"],
+    ["threads", "Threads"],
+    ["instagram", "Instagram"],
+  ]) {
+    assert.match(promotion, new RegExp(`key: "promotion:publication:${key}"[\\s\\S]*?label: "${label}"`));
+  }
+
+  assert.match(engine, /if \(input\.task === "promotion"\)/);
+  assert.match(engine, /PROMOTION_PUBLICATION_KNOWLEDGE\.find/);
+  assert.match(engine, /matches\(rule, input\.publicationTarget \?\? ""\)/);
+  assert.doesNotMatch(engine, /rules\.push\(\.\.\.PROMOTION_PUBLICATION_KNOWLEDGE\)/);
+});
