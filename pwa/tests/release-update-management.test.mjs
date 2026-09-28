@@ -304,8 +304,9 @@ test("public release publish requires current admin AAL2 while rollback remains 
 
 
 test("admin public deployment pipeline keeps Preview and public release coupled to the exact approved SHA", async () => {
-  const [migration, edgeFunction, client, page, workflow, previewWorkflow] = await Promise.all([
+  const [migration, buildGuardMigration, edgeFunction, client, page, workflow, previewWorkflow] = await Promise.all([
     readRepo("supabase/migrations/20260928133500_admin_pwa_public_deploy_pipeline.sql"),
+    readRepo("supabase/migrations/20260928141500_admin_pwa_public_deploy_build_guard.sql"),
     readRepo("supabase/functions/pwa-release-deploy/index.ts"),
     read("lib/release-deployment.ts"),
     read("components/admin-release-page.tsx"),
@@ -318,7 +319,7 @@ test("admin public deployment pipeline keeps Preview and public release coupled 
   assert.match(migration, /source_sha ~ '\^\[0-9a-f\]\{40\}\$'/);
   assert.match(migration, /aal2 required for public release deploy/);
   assert.match(migration, /candidate must pass tester stage before deploy/);
-  assert.match(migration, /candidate build does not match approved preview sha/);
+  assert.match(buildGuardMigration, /candidate build does not match approved preview sha/);
   assert.match(migration, /service_finalize_app_release_deployment/);
   assert.match(migration, /deployed sha does not match approved preview sha/);
   assert.match(migration, /grant execute on function public\.service_finalize_app_release_deployment[\s\S]*to service_role/);
