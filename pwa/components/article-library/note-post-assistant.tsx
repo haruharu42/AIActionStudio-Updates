@@ -14,6 +14,7 @@ import {
 import {
   buildNotePostSequence,
   copyImageBlobToClipboard,
+  copyNotePostSequenceWithImages,
   inlineImageOrders,
   readNotePostImagePlanMetadata,
   type NotePostSequenceItem,
@@ -80,6 +81,11 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
   );
 
   const cover = imageMap.get(recordKey("cover", 0));
+
+  const missingInlineOrders = useMemo(
+    () => inlineOrders.filter((order) => !imageMap.get(recordKey("inline", order))),
+    [imageMap, inlineOrders],
+  );
 
   const postingSteps = useMemo(() => {
     const steps: Array<
@@ -186,6 +192,27 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
     }
   };
 
+  const copyAllWithInlineImages = async () => {
+    const key = "batch-rich-with-images";
+    setBusyKey(key);
+    setMessage("");
+    try {
+      const mode = await copyNotePostSequenceWithImages(
+        sequence,
+        (order) => imageMap.get(recordKey("inline", order))?.blob,
+      );
+      setMessage(
+        inlineOrders.length > 0
+          ? `装飾付き本文と挿絵を一括コピーしました（${mode === "rich" ? "リッチコピー" : "互換コピー"}）。note本文へ貼り付けて、画像位置と有料ラインを最終確認してください。`
+          : "装飾付き本文を一括コピーしました。note本文へ貼り付けてください。",
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "一括コピーできませんでした。上の順番から個別にコピーしてください。");
+    } finally {
+      setBusyKey("");
+    }
+  };
+
   return (
     <section className="note-post-assistant" aria-label="note投稿アシスト">
       <div className="note-post-assistant-head">
@@ -208,6 +235,72 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
           有料記事ですが有料エリアの位置が見つかりません。記事本文に有料エリアを設定してから投稿アシストを利用してください。
         </div>
       )}
+
+      <section className="note-post-steps" aria-label="noteへ貼り付ける順番">
+        <div className="note-post-assistant-head">
+          <div>
+            <h4>noteへ貼り付ける順番</h4>
+            <p className="panel-muted">本文は各工程ごとに装飾付きでコピーできます。タイトルとアイキャッチはnoteの別欄へ貼り付けてください。</p>
+          </div>
+          <button
+            className="primary-action"
+            type="button"
+            disabled={busyKey === "batch-rich-with-images" || sequence.length === 0 || missingInlineOrders.length > 0}
+            onClick={() => void copyAllWithInlineImages()}
+          >
+            {busyKey === "batch-rich-with-images"
+              ? "一括コピー中…"
+              : inlineOrders.length > 0
+                ? "本文＋挿絵を一括コピー"
+                : "本文を装飾付きで一括コピー"}
+          </button>
+        </div>
+        {missingInlineOrders.length > 0 && (
+          <p className="beginner-help">画像込み一括コピーを使うには、挿絵 {missingInlineOrders.join("・")} を先に選択してください。</p>
+        )}
+        {inlineOrders.length > 0 && (
+          <p className="beginner-help">画像込み一括コピーは対応ブラウザ・noteエディタ向けです。画像が貼り付かない場合は、下の順番から本文・挿絵を個別にコピーしてください。</p>
+        )}
+        <ol>
+          {postingSteps.map((step, index) => {
+            const missingImage = step.kind === "inline" && !step.record;
+            const active = index === nextStep;
+            const done = index < nextStep;
+            return (
+              <li key={step.id} className={active ? "active" : done ? "done" : ""}>
+                <span className="note-post-step-number">{index + 1}</span>
+                <div>
+                  <strong>{step.label}</strong>
+                  <small>
+                    {step.kind === "title" && "noteのタイトル欄へ貼り付け"}
+                    {step.kind === "cover" && "noteの見出し画像欄へ貼り付け"}
+                    {step.kind === "body" && "note本文の現在位置へ装飾付きで貼り付け"}
+                    {step.kind === "paid-boundary" && "この目印を貼り付けた位置でnoteの有料ラインを設定し、公開前に目印を削除"}
+                    {step.kind === "inline" && (missingImage ? "画像未設定" : "note本文の現在位置へ画像を貼り付け")}
+                  </small>
+                </div>
+                <button
+                  className={active ? "primary-action" : "secondary-action"}
+                  type="button"
+                  disabled={busyKey === step.id || missingImage}
+                  onClick={() => void copyPostingStep(index)}
+                >
+                  {busyKey === step.id
+                    ? "コピー中…"
+                    : step.kind === "paid-boundary"
+                      ? "位置をコピー"
+                      : step.kind === "body"
+                        ? "装飾付きコピー"
+                        : "コピー"}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        {nextStep >= postingSteps.length && postingSteps.length > 0 && (
+          <div className="route-notice">すべてのコピー工程が完了しました。note側で画像位置・有料ライン・最終表示を確認して公開してください。</div>
+        )}
+      </section>
 
       <div className="note-post-image-slots">
         <ImageSlot
@@ -272,42 +365,7 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
         </div>
       </section>
 
-      <section className="note-post-steps" aria-label="noteへ貼り付ける順番">
-        <h4>noteへ貼り付ける順番</h4>
-        <ol>
-          {postingSteps.map((step, index) => {
-            const missingImage = step.kind === "inline" && !step.record;
-            const active = index === nextStep;
-            const done = index < nextStep;
-            return (
-              <li key={step.id} className={active ? "active" : done ? "done" : ""}>
-                <span className="note-post-step-number">{index + 1}</span>
-                <div>
-                  <strong>{step.label}</strong>
-                  <small>
-                    {step.kind === "title" && "noteのタイトル欄へ貼り付け"}
-                    {step.kind === "cover" && "noteの見出し画像欄へ貼り付け"}
-                    {step.kind === "body" && "note本文の現在位置へ装飾付きで貼り付け"}
-                    {step.kind === "paid-boundary" && "この目印を貼り付けた位置でnoteの有料ラインを設定し、公開前に目印を削除"}
-                    {step.kind === "inline" && (missingImage ? "画像未設定" : "note本文の現在位置へ画像を貼り付け")}
-                  </small>
-                </div>
-                <button
-                  className={active ? "primary-action" : "secondary-action"}
-                  type="button"
-                  disabled={busyKey === step.id || missingImage}
-                  onClick={() => void copyPostingStep(index)}
-                >
-                  {busyKey === step.id ? "コピー中…" : step.kind === "paid-boundary" ? "位置をコピー" : "コピー"}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-        {nextStep >= postingSteps.length && postingSteps.length > 0 && (
-          <div className="route-notice">すべてのコピー工程が完了しました。note側で画像位置・有料ライン・最終表示を確認して公開してください。</div>
-        )}
-      </section>
+
 
       {message && <div className="route-notice" role="status" aria-live="polite">{message}</div>}
     </section>
