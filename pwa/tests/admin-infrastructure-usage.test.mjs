@@ -53,7 +53,7 @@ test("usage dashboard keeps official quota and cost references explicit and cons
     read("components/admin-infrastructure-usage-page.tsx"),
   ]);
 
-  assert.match(usage, /INFRASTRUCTURE_PRICING_REFERENCE_DATE = "2026-09-24"/);
+  assert.match(usage, /INFRASTRUCTURE_PRICING_REFERENCE_DATE = "2026-09-28"/);
   assert.match(usage, /actionsMinutesPerMonth: 2_000/);
   assert.match(usage, /artifactStorageBytes: 500 \* MIB/);
   assert.match(usage, /actionsMinutesPerMonth: 3_000/);
