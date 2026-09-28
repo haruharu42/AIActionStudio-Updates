@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -6,9 +6,26 @@ import sharp from "sharp";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pwaRoot = path.resolve(here, "..");
 const publicDir = path.join(pwaRoot, "public");
-const source = path.join(publicDir, "aas-axia-app-icon-v1.svg");
+const sourcePath = path.join(publicDir, "aas-axia-app-icon-v1.svg");
 
-await access(source);
+const sourceSvg = await readFile(sourcePath, "utf8");
+const embedded = sourceSvg.match(/data:image\/jpeg;base64,([^"]+)/);
+if (!embedded?.[1]) {
+  throw new Error("Axia raster source is missing from aas-axia-app-icon-v1.svg");
+}
+
+const sourceRaster = Buffer.from(embedded[1], "base64");
+const sourceInfo = await sharp(sourceRaster).metadata();
+const sourceStats = await sharp(sourceRaster).stats();
+if (
+  !sourceInfo.width
+  || !sourceInfo.height
+  || sourceInfo.width < 512
+  || sourceInfo.height < 512
+  || sourceStats.entropy < 3
+) {
+  throw new Error("Embedded Axia source image is invalid or too small");
+}
 
 const targets = [
   { size: 180, name: "aas-axia-icon-180.png" },
@@ -18,7 +35,7 @@ const targets = [
 
 for (const target of targets) {
   const output = path.join(publicDir, target.name);
-  await sharp(source, { density: 384 })
+  await sharp(sourceRaster)
     .resize(target.size, target.size, { fit: "cover", position: "centre" })
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toFile(output);
@@ -35,4 +52,7 @@ for (const target of targets) {
   }
 }
 
-console.log("Generated Axia app icons:", targets.map((target) => target.name).join(", "));
+console.log(
+  "Generated Axia app icons from embedded raster:",
+  targets.map((target) => target.name).join(", "),
+);
