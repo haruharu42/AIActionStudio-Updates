@@ -125,3 +125,19 @@ test("side-hustle prompts keep task-specific Knowledge and safety instead of col
   }
   assert.equal(prompts.size, 12, "all side-hustles should produce distinct prompts");
 });
+
+
+test("every side-hustle prompt keeps all six selected conditions in the brief", () => {
+  for (const definition of catalog.SIDE_HUSTLE_DEFINITIONS) {
+    const draft = builder.initialSideHustleDraft(definition);
+    const result = builder.buildSideHustlePrompt(definition, draft);
+
+    assert.match(result.prompt, /【SIDE HUSTLE BRIEF】/, definition.slug);
+    assert.ok(result.prompt.includes("副業機能: " + definition.title), definition.slug + " should name its function");
+    for (const field of definition.fields) {
+      assert.ok(result.prompt.includes(field.label + ":"), definition.slug + " missing " + field.label);
+    }
+    assert.match(result.prompt, /SIDE HUSTLE BRIEFの全条件を最終出力前に内部確認/);
+    assert.match(result.prompt, /最終回答にはそのまま使える完成成果物だけを出し/);
+  }
+});
