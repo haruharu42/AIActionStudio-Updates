@@ -145,7 +145,7 @@ test("promotion UI is channel-first and keeps advanced settings collapsed", asyn
   assert.doesNotMatch(page, /QUICK_PRESETS/);
   assert.doesNotMatch(css, /admin-promo-quick-(?:start|head|grid|note)/);
   assert.doesNotMatch(page, /AdminPromotionThreeStep/);
-  assert.match(channelBuilder, /まず、投稿する場所を選ぶ/);
+  assert.match(channelBuilder, /3ステップでプロモーション素材を作る/);
   assert.match(channelBuilder, /どこでプロモーションしますか？/);
   assert.match(channelBuilder, /note/);
   assert.match(channelBuilder, /brain/);
@@ -273,10 +273,12 @@ test("channel-first promotion keeps beginner flow primary and advanced controls 
     read("components/admin-promotion/admin-promotion-channel-builder.tsx"),
   ]);
 
-  assert.match(builder, /まず、投稿する場所を選ぶ/);
+  assert.match(builder, /3ステップでプロモーション素材を作る/);
   assert.match(builder, /どこでプロモーションしますか？/);
   assert.match(builder, /迷った場合は初期設定のままでも作れます/);
   assert.match(builder, /媒体ごとに専用設計/);
+  assert.match(builder, /②の追加設定です/);
+  assert.match(builder, /<span>③<\/span><strong>プロンプトをコピーしてAIへ渡す<\/strong>/);
   assert.match(page, /<details className="admin-promo-advanced">/);
   assert.match(page, /詳細設定・キャンペーン・製品情報/);
   assert.doesNotMatch(page, /<details className="admin-promo-advanced" open/);
