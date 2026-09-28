@@ -236,6 +236,34 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
         </div>
       )}
 
+      <div className="note-post-image-slots">
+        <ImageSlot
+          label="アイキャッチ"
+          record={cover}
+          previewUrl={previewUrls[recordKey("cover", 0)]}
+          busy={busyKey === recordKey("cover", 0)}
+          suggestedFilename={imagePlanMetadata.suggestedFilenames[recordKey("cover", 0)]}
+          onSelect={(file) => void saveImage("cover", 0, file)}
+          onRemove={() => void removeImage("cover", 0)}
+        />
+        {inlineOrders.map((order) => (
+          <ImageSlot
+            key={order}
+            label={`挿絵 ${order}`}
+            record={imageMap.get(recordKey("inline", order))}
+            previewUrl={previewUrls[recordKey("inline", order)]}
+            busy={busyKey === recordKey("inline", order)}
+            suggestedFilename={imagePlanMetadata.suggestedFilenames[recordKey("inline", order)]}
+            onSelect={(file) => void saveImage("inline", order, file)}
+            onRemove={() => void removeImage("inline", order)}
+          />
+        ))}
+      </div>
+
+      {inlineOrders.length === 0 && (
+        <p className="beginner-help">本文内に挿絵マーカーがないため、現在はアイキャッチのみ設定できます。</p>
+      )}
+
       <section className="note-post-steps" aria-label="noteへ貼り付ける順番">
         <div className="note-post-assistant-head">
           <div>
@@ -301,34 +329,6 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
           <div className="route-notice">すべてのコピー工程が完了しました。note側で画像位置・有料ライン・最終表示を確認して公開してください。</div>
         )}
       </section>
-
-      <div className="note-post-image-slots">
-        <ImageSlot
-          label="アイキャッチ"
-          record={cover}
-          previewUrl={previewUrls[recordKey("cover", 0)]}
-          busy={busyKey === recordKey("cover", 0)}
-          suggestedFilename={imagePlanMetadata.suggestedFilenames[recordKey("cover", 0)]}
-          onSelect={(file) => void saveImage("cover", 0, file)}
-          onRemove={() => void removeImage("cover", 0)}
-        />
-        {inlineOrders.map((order) => (
-          <ImageSlot
-            key={order}
-            label={`挿絵 ${order}`}
-            record={imageMap.get(recordKey("inline", order))}
-            previewUrl={previewUrls[recordKey("inline", order)]}
-            busy={busyKey === recordKey("inline", order)}
-            suggestedFilename={imagePlanMetadata.suggestedFilenames[recordKey("inline", order)]}
-            onSelect={(file) => void saveImage("inline", order, file)}
-            onRemove={() => void removeImage("inline", order)}
-          />
-        ))}
-      </div>
-
-      {inlineOrders.length === 0 && (
-        <p className="beginner-help">本文内に挿絵マーカーがないため、現在はアイキャッチのみ設定できます。</p>
-      )}
 
       <section className="note-post-preview" aria-label="画像入り完成プレビュー">
         <h4>画像入り完成プレビュー</h4>
