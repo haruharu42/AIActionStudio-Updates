@@ -1301,20 +1301,16 @@ body.aas-crystal-theme .auth-character-visual {
   top: 50%;
   transform: translateY(-50%);
   min-height: 0;
-  background-image:
-    url("/aas-login-tile-1.svg?v=20260927-hq-v2"),
-    url("/aas-login-tile-2.svg?v=20260927-hq-v2"),
-    url("/aas-login-tile-3.svg?v=20260927-hq-v2"),
-    url("/aas-login-tile-4.svg?v=20260927-hq-v2");
-  background-size: 51.5% 51.4%;
-  background-position: left top, right top, left bottom, right bottom;
+  background-image: url("/aas-login-hero-hq.svg?v=20260928-natural-v3");
+  background-size: contain;
+  background-position: center;
   background-repeat: no-repeat;
   filter:
     saturate(1.015)
     contrast(1.01)
-    drop-shadow(0 26px 50px rgb(86 113 170 / 13%));
-  -webkit-mask-image: radial-gradient(ellipse 76% 78% at 52% 52%, #000 0 58%, rgb(0 0 0 / 96%) 67%, rgb(0 0 0 / 58%) 82%, transparent 100%);
-  mask-image: radial-gradient(ellipse 76% 78% at 52% 52%, #000 0 58%, rgb(0 0 0 / 96%) 67%, rgb(0 0 0 / 58%) 82%, transparent 100%);
+    drop-shadow(0 24px 48px rgb(86 113 170 / 12%));
+  -webkit-mask-image: radial-gradient(ellipse 68% 73% at 52% 51%, #000 0 45%, rgb(0 0 0 / 94%) 60%, rgb(0 0 0 / 62%) 76%, transparent 100%);
+  mask-image: radial-gradient(ellipse 68% 73% at 52% 51%, #000 0 45%, rgb(0 0 0 / 94%) 60%, rgb(0 0 0 / 62%) 76%, transparent 100%);
   pointer-events: none;
 }
 
@@ -1620,11 +1616,11 @@ body.aas-crystal-theme .status-card::after {
     min-height: 0;
     margin: -24px auto -8px;
     transform: none;
-    background-size: 51.5% 51.4%;
-    background-position: left top, right top, left bottom, right bottom;
+    background-size: contain;
+    background-position: center;
     background-repeat: no-repeat;
-    -webkit-mask-image: radial-gradient(ellipse 78% 80% at 50% 50%, #000 0 58%, rgb(0 0 0 / 90%) 72%, transparent 100%);
-    mask-image: radial-gradient(ellipse 78% 80% at 50% 50%, #000 0 58%, rgb(0 0 0 / 90%) 72%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 75% at 50% 50%, #000 0 43%, rgb(0 0 0 / 92%) 61%, rgb(0 0 0 / 58%) 79%, transparent 100%);
+    mask-image: radial-gradient(ellipse 70% 75% at 50% 50%, #000 0 43%, rgb(0 0 0 / 92%) 61%, rgb(0 0 0 / 58%) 79%, transparent 100%);
   }
 
   body.aas-crystal-theme .auth-character-label {
