@@ -1,6 +1,6 @@
 # AI Action Studio — PWA Sales Production Checklist
 
-Last updated: 2026-09-25
+Last updated: 2026-09-28
 
 This checklist is the current sales baseline for AI Action Studio (AAS). It intentionally keeps Production release and Stripe LIVE disabled until the relevant gates are explicitly approved.
 
@@ -41,8 +41,26 @@ Required E2E:
 7. Invalid, expired, exhausted and reused codes fail closed.
 8. Turning off new code redemption does not revoke an already-active entitlement.
 
-The Sales Center readiness panel checks only the first three configuration prerequisites. It is not a full Production approval.
+The Sales Center has two different checks:
 
+- the lightweight readiness panel checks the basic external-sale configuration
+- the pre-sale panel reads the persisted Supabase launch-readiness snapshot for purchase URL, seller information, usable invite stock and verified admin MFA
+
+Neither check starts sales by itself. Public sales remain locked until an active admin explicitly approves the final public-sales gate after the automated and manual checks are complete.
+
+## 2A. Public-sales approval lock
+
+Saving sales settings is not the same as starting sales.
+
+- `commerce_sales_settings.public_sales_approved` defaults to `false`.
+- `/api/sales/settings` returns effective public-sale state only after the Worker confirms the approval lock and runtime readiness.
+- `/api/billing/config` must not advertise a plan as available while the public-sales lock is closed.
+- approving public sales is rejected at the database layer when the persisted automated readiness check is incomplete.
+- changing sales settings or seller/legal settings automatically revokes the approval and re-locks new sales.
+- loss of usable invite stock or verified active-admin MFA makes the external route fail closed at runtime even if it was approved earlier.
+- stopping public sales keeps existing entitlements and historical billing records intact.
+
+Manual approval still requires a human check of leaked-password protection, legal pages, actual price/refund terms and the purchase-before-login support path.
 ## 3. Tester and release gates
 
 Before general paid release:
