@@ -7,13 +7,19 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = path.resolve(root, "..");
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readArticleStepSource = async () => (await Promise.all([
+  "components/article-create/article-create-steps.tsx",
+  "components/article-create/article-create-generation-steps.tsx",
+  "components/article-create/article-create-finish-steps.tsx",
+  "components/article-create/article-create-step-shared.tsx",
+].map((relative) => read(relative)))).join("\n");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
 test("article creation keeps AI selection as wizard step one and allows returning to it", async () => {
   const [route, page, steps, draft, progress, personalization] = await Promise.all([
     read("app/create/page.tsx"),
     read("components/phase11-create-page.tsx"),
-    read("components/article-create/article-create-steps.tsx"),
+    readArticleStepSource(),
     read("lib/article-create-draft.ts"),
     read("lib/phase11-wizard-progress.ts"),
     read("lib/user-personalization.ts"),
@@ -217,7 +223,7 @@ test("prompt builder applies provider plan and optional user preferences", async
 test("article wizard supports direct back navigation and safe clearing of pasted AI content", async () => {
   const [page, steps, css] = await Promise.all([
     read("components/phase11-create-page.tsx"),
-    read("components/article-create/article-create-steps.tsx"),
+    readArticleStepSource(),
     read("app/phase9-11.css"),
   ]);
 
