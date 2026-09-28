@@ -14,6 +14,8 @@ test("legal and support route metadata use the current AI Action Studio brand", 
     read("app/terms/page.tsx"),
     read("app/privacy/page.tsx"),
     read("app/ai-terms/page.tsx"),
+    read("app/plans/page.tsx"),
+    read("app/billing/page.tsx"),
   ]);
 
   for (const route of routes) {
