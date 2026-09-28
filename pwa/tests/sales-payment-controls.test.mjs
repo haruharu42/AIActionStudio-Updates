@@ -355,3 +355,19 @@ test("external purchase URL is HTTPS-only and credential-free before rendering a
   assert.match(workerSales, /runtime\.stripeRouteReady/);
   assert.match(workerSales, /externalSalesUrl: externalSalesEnabled \? externalSalesUrl : ""/);
 });
+
+
+test("public sales approval requires the current admin session to be AAL2 while emergency stop stays available", async () => {
+  const [migration, readinessClient] = await Promise.all([
+    readRepo("supabase/migrations/20260928040500_commerce_public_sales_approval_aal2_v1.sql"),
+    readPwa("lib/sales-launch-readiness.ts"),
+  ]);
+
+  assert.match(migration, /v_aal text := coalesce\(\(select auth\.jwt\(\)->>'aal'\), 'aal1'\)/);
+  assert.match(migration, /if p_approved then[\s\S]*?if v_aal <> 'aal2' then[\s\S]*?aal2 required for public sales approval/);
+  assert.match(migration, /if p_approved then[\s\S]*?admin_get_sales_launch_readiness/);
+  assert.match(migration, /else[\s\S]*?public_sales_approved = false/);
+  assert.match(migration, /grant execute on function public\.admin_set_public_sales_approval\(boolean\) to authenticated/);
+  assert.match(readinessClient, /aal2 required for public sales approval/);
+  assert.match(readinessClient, /現在の管理者セッションでMFA認証（AAL2）が必要/);
+});
