@@ -10,6 +10,13 @@ type SalesSettings = {
   stripeCheckoutEnabled: boolean;
   pwa7DayEnabled: boolean;
   pwaMonthlyEnabled: boolean;
+  publicSalesApproved: boolean;
+};
+
+type SalesLaunchRuntime = {
+  approved: boolean;
+  externalRouteReady: boolean;
+  stripeRouteReady: boolean;
 };
 
 const PLAN_FLAGS: Record<string, keyof Pick<SalesSettings, "pwa7DayEnabled" | "pwaMonthlyEnabled">> = {
@@ -34,6 +41,39 @@ function safeExternalSalesUrl(value: unknown): string {
 }
 
 
+function serviceHeaders(serviceKey: string): Record<string, string> {
+  return {
+    apikey: serviceKey,
+    ...(!serviceKey.startsWith("sb_secret_") ? { authorization: `Bearer ${serviceKey}` } : {}),
+    accept: "application/json",
+  };
+}
+
+async function loadSalesLaunchRuntime(
+  baseUrl: string,
+  serviceKey: string,
+): Promise<SalesLaunchRuntime | null> {
+  const response = await fetch(`${baseUrl}/rest/v1/rpc/service_get_sales_launch_runtime`, {
+    method: "POST",
+    headers: {
+      ...serviceHeaders(serviceKey),
+      "content-type": "application/json",
+    },
+    body: "{}",
+  });
+  if (!response.ok) return null;
+
+  const payload = await response.json().catch(() => null);
+  const row = Array.isArray(payload) ? payload[0] : payload;
+  if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+  const value = row as Record<string, unknown>;
+  return {
+    approved: value.public_sales_approved === true,
+    externalRouteReady: value.external_route_ready === true,
+    stripeRouteReady: value.stripe_route_ready === true,
+  };
+}
+
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
     status,
@@ -54,11 +94,7 @@ async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | 
     `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,external_sales_url,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled&limit=1`,
     {
       method: "GET",
-      headers: {
-        apikey: serviceKey,
-        ...(!serviceKey.startsWith("sb_secret_") ? { authorization: `Bearer ${serviceKey}` } : {}),
-        accept: "application/json",
-      },
+      headers: serviceHeaders(serviceKey),
     },
   );
   if (!response.ok) return null;
@@ -66,13 +102,29 @@ async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | 
   const payload = await response.json().catch(() => null);
   if (!Array.isArray(payload) || !payload[0] || typeof payload[0] !== "object") return null;
   const row = payload[0] as Record<string, unknown>;
+  const runtime = await loadSalesLaunchRuntime(baseUrl, serviceKey);
+  if (!runtime) return null;
+
+  const externalSalesUrl = safeExternalSalesUrl(row.external_sales_url);
+  const externalSalesEnabled =
+    runtime.approved &&
+    runtime.externalRouteReady &&
+    row.external_sales_enabled === true &&
+    row.access_code_enabled === true &&
+    Boolean(externalSalesUrl);
+  const stripeCheckoutEnabled =
+    runtime.approved &&
+    runtime.stripeRouteReady &&
+    row.stripe_checkout_enabled === true;
+
   return {
-    externalSalesEnabled: row.external_sales_enabled === true,
+    externalSalesEnabled,
     accessCodeEnabled: row.access_code_enabled === true,
-    externalSalesUrl: safeExternalSalesUrl(row.external_sales_url),
-    stripeCheckoutEnabled: row.stripe_checkout_enabled === true,
-    pwa7DayEnabled: row.pwa_7day_enabled === true,
-    pwaMonthlyEnabled: row.pwa_monthly_enabled === true,
+    externalSalesUrl: externalSalesEnabled ? externalSalesUrl : "",
+    stripeCheckoutEnabled,
+    pwa7DayEnabled: stripeCheckoutEnabled && row.pwa_7day_enabled === true,
+    pwaMonthlyEnabled: stripeCheckoutEnabled && row.pwa_monthly_enabled === true,
+    publicSalesApproved: runtime.approved,
   };
 }
 
