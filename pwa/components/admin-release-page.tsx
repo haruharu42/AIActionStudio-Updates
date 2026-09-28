@@ -80,12 +80,32 @@ export function AdminReleasePage() {
   const [error, setError] = useState("");
   const [testerAasId, setTesterAasId] = useState("AAS-000002");
   const [publishVerification, setPublishVerification] = useState<PublishVerificationKey[]>([]);
+  const [currentSessionAal, setCurrentSessionAal] = useState<"aal1" | "aal2" | null>(null);
+  const [aalCheckFailed, setAalCheckFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
-    void adminListAppReleases(getSupabaseClient())
+    const client = getSupabaseClient();
+    void adminListAppReleases(client)
       .then((next) => { if (active) setSnapshot(next); })
       .catch(() => { if (active) setError("リリース情報を取得できませんでした。"); });
+    void client.auth.mfa.getAuthenticatorAssuranceLevel().then(
+      ({ data, error: aalError }) => {
+        if (!active) return;
+        if (aalError) {
+          setCurrentSessionAal(null);
+          setAalCheckFailed(true);
+          return;
+        }
+        setCurrentSessionAal(data.currentLevel === "aal2" ? "aal2" : "aal1");
+        setAalCheckFailed(false);
+      },
+      () => {
+        if (!active) return;
+        setCurrentSessionAal(null);
+        setAalCheckFailed(true);
+      },
+    );
     return () => { active = false; };
   }, []);
 
@@ -205,6 +225,10 @@ export function AdminReleasePage() {
       setError("全体公開前チェックをすべて確認してください。");
       return;
     }
+    if (currentSessionAal !== "aal2") {
+      setError("全体公開には現在の管理者セッションでMFA認証（AAL2）が必要です。管理者MFA画面で再認証してください。");
+      return;
+    }
     if (!window.confirm("第1段階・第2段階の確認済みとして、v" + release.version + " を全一般ユーザー向けに公開承認しますか？\nこの操作後に一般ユーザー向け安定版へ確認済みリリースをデプロイする運用です。")) return;
 
     setBusy(true);
@@ -214,8 +238,8 @@ export function AdminReleasePage() {
       const next = await adminPublishAppRelease(getSupabaseClient(), release.id);
       setSnapshot(next);
       setMessage("アップデートを公開しました。ユーザー側へ更新通知が表示されます。");
-    } catch {
-      setError("アップデートを公開できませんでした。候補版の状態を確認してください。");
+    } catch (publishError) {
+      setError(publishError instanceof Error ? publishError.message : "アップデートを公開できませんでした。候補版の状態を確認してください。");
     } finally {
       setBusy(false);
     }
@@ -385,7 +409,7 @@ export function AdminReleasePage() {
               {candidate.update_kind === "required" ? "必須アップデート" : "任意アップデート"}
             </span>
             {snapshot?.channel.candidate_stage === "tester" ? (
-              <button className="primary-action" type="button" disabled={busy || !publishVerificationReady} onClick={() => void publish(candidate)}>
+              <button className="primary-action" type="button" disabled={busy || !publishVerificationReady || currentSessionAal !== "aal2"} onClick={() => void publish(candidate)}>
                 第3段階：全一般ユーザーへ公開承認
               </button>
             ) : (
@@ -427,6 +451,14 @@ export function AdminReleasePage() {
               ? "全項目を確認しました。候補版の内容を再確認してから全体公開承認へ進めます。"
               : "未確認項目があります。全項目を確認するまで全体公開ボタンは有効になりません。"}
           </p>
+          {currentSessionAal !== "aal2" && (
+            <p className="route-notice error">
+              {aalCheckFailed
+                ? "現在の管理者セッションのMFA認証レベルを確認できません。"
+                : "現在の管理者セッションはAAL2未認証です。"}
+              {" "}<Link href="/admin/security">管理者MFAで再認証 →</Link>
+            </p>
+          )}
         </section>
       )}
 
