@@ -91,19 +91,19 @@ export function NoteMembershipAdvisor({
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const copyPrompt = async () => {
+  const copyPrompt = async (): Promise<boolean> => {
     try {
       await navigator.clipboard.writeText(prompt);
       onMessage("noteメンバーシップ相談プロンプトをコピーしました。");
+      return true;
     } catch {
       onMessage("自動コピーできませんでした。下のプロンプト欄からコピーしてください。");
+      return false;
     }
   };
 
   const copyAndOpenAi = async () => {
-    const copyTask = copyPrompt();
-    launchAiApp(selectedAi);
-    await copyTask;
+    if (await copyPrompt()) launchAiApp(selectedAi);
   };
 
   return (
