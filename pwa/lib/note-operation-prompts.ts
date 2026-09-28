@@ -144,6 +144,8 @@ export function buildNoteScheduleResearchPrompt(
   currentDate = todayJstDateKey(),
   referencePerformance?: NoteSchedulePerformanceSnapshot | null,
   articleOutput?: NoteArticleOutputSnapshot | null,
+  previousPerformance?: NoteSchedulePerformanceSnapshot | null,
+  previousArticleOutput?: NoteArticleOutputSnapshot | null,
 ): string {
   const { start, end } = noteMonthBounds(targetMonth);
   const selected = noteProfileSelectionLabels(profile);
@@ -180,9 +182,25 @@ ${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
 - ただし作成数と公開成果は同義ではない。draft・writing等も含むため、作成本数だけを理由に投稿数を機械的に増やさない。
 - 対象月の途中で再計画する場合、ここまでに作った本数を既存実績として扱い、残り期間だけを現実的に再設計する。
 `;
+  const previousPerformanceSection = previousPerformance === undefined
+    ? ""
+    : `
+【前月のAAS運用スケジュール実績】
+${formatSchedulePerformanceForPrompt(previousPerformance, previousMonth)}
+- 前月の完了/スキップ/未完了、曜日・時刻の続けやすさを今月の負荷調整に使う。
+- 前月の予定本数をそのまま今月のノルマにしない。
+`;
+  const previousArticleOutputSection = previousArticleOutput === undefined
+    ? ""
+    : `
+【前月にAASで実際に作成したnote記事数】
+${formatArticleOutputForPrompt(previousArticleOutput, previousMonth)}
+- 前月に実際に作れた無料/有料の本数を制作ペースの参考にする。
+- 作成数と公開成果は同義ではないため、作成数だけで投稿数を増減しない。
+`;
 
   return `あなたは日本のnote運営に詳しい編集者・コンテンツ戦略担当です。
-目的は、ユーザーに投稿回数を手入力させるのではなく、${targetMonth}の1か月について、最新情報を調査したうえで「無理なく継続でき、無料noteと有料noteの役割が分かれた運用スケジュール」を設計し、AASが読み込めるMarkdown表で返すことです。
+目的は、ユーザーが設定した月間本数を固定ノルマにせず、${targetMonth}の1か月について、前月までの実績・当月の作成実績・最新情報を合わせて「無理なく継続でき、無料noteと有料noteの役割が分かれた運用スケジュール」を設計し、AASが読み込めるMarkdown表で返すことです。
 
 【対象期間】
 - 基準日: ${currentDate}（日本時間）
@@ -215,12 +233,25 @@ ${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
 - アカウント作成済み: ${profile.accountReady ? "はい" : "いいえ"}
 - プロフィール準備済み: ${profile.profileReady ? "はい" : "いいえ"}
 - ユーザーが事実として入力した経験・資格・背景: ${factualBackground}
+
+【ユーザーが設定した月間目安（ノルマではない）】
+- 無料note: 月 ${profile.freePostsPerMonth}本を目安
+- 有料note: 月 ${profile.paidPostsPerMonth}本を目安
+- 無料noteの文字数初期値: 約${profile.freeTargetLength}文字
+- 有料noteの文字数初期値: 約${profile.paidTargetLength}文字
+- 詳細ジャンル: ${profile.articleGenre}
+- サブジャンル: ${profile.articleSubgenre}
+- 本数は固定しない。通常は目安の近くから考え、前月/当月の実績・残り日数・継続できた制作ペースに応じて1〜2本または概ね20%程度の増減を許容する。
+- 実績から負荷が高すぎる/低すぎると判断できる場合は上記幅を超えて調整してよい。品質と継続性を本数より優先する。
+- 対象月の途中では、すでに作成した無料/有料noteを月間目安へ含め、残り期間へ同じ本数を二重に積み増さない。
 ${performanceSection}
 ${articleOutputSection}
+${previousPerformanceSection}
+${previousArticleOutputSection}
 ${workspacePresetContext ? `${workspacePresetContext}
 ` : ""}${accountPresetContext ? `${accountPresetContext}
 ` : ""}【スケジュール設計】
-- あなた自身が、平均の週投稿数・有料noteの週平均・1日の最大投稿数・無料/有料の本数を決定する。
+- ユーザーの月間目安を出発点に、前月と当月の実績・最新リサーチ・残り日数から、実際の無料/有料本数・平均週投稿数・1日の最大投稿数を決定する。
 - scheduleに入れてよいtypeは free_note と paid_note の2種類だけ。review / sns_share / profile_setup は出力しない。
 - free_note / paid_note には、実際に記事作成へ進める具体的なテーマとタイトルを入れる。
 - カレンダーは「無料note作成」「有料note作成」の制作予定として使う。SNS告知、振り返り、初期設定などの記事制作以外の予定は入れない。
