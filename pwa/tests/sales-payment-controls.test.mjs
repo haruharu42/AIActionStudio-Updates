@@ -76,6 +76,15 @@ test("admin UI exposes sales controls while PWA runtime omits legacy plan switch
   ]) assert.ok(settingsPage.includes(label), `missing admin setting: ${label}`);
   assert.match(settingsPage, /既存の契約・利用期間・利用権は停止・取消しされません/);
   assert.match(settingsPage, /販売モードプリセット/);
+  assert.match(settingsPage, /SellerSettingsPanel/);
+  const sellerPanel = await readPwa("components/admin-sales/seller-settings-panel.tsx");
+  const sellerLib = await readPwa("lib/seller-settings.ts");
+  assert.match(sellerPanel, /販売者情報・公開方法/);
+  assert.match(sellerPanel, /公開サポートURL/);
+  assert.match(sellerPanel, /販売者情報を保存/);
+  assert.match(sellerLib, /admin_get_commerce_seller_settings/);
+  assert.match(sellerLib, /admin_update_commerce_seller_settings/);
+  assert.match(sellerLib, /認証情報を含まないHTTPS URL/);
   assert.match(presets, /外部販売中心（推奨）/);
   assert.match(presets, /applySalesPresetToSettings/);
   assert.match(presets, /inferSalesPreset/);
