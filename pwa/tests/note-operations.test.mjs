@@ -7,7 +7,24 @@ import { fileURLToPath } from "node:url";
 const pwaRoot = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = path.resolve(pwaRoot, "..");
 const readPwa = (relative) => readFile(path.join(pwaRoot, relative), "utf8");
+const readNoteOperationsSource = async () => (await Promise.all([
+  "components/note-operations-page.tsx",
+  "components/note-operations/note-operations-static-tabs.tsx",
+].map((relative) => readPwa(relative)))).join("\n");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
+
+test("note operations keeps static start and calendar tabs outside the controller page", async () => {
+  const [page, staticTabs] = await Promise.all([
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-operations/note-operations-static-tabs.tsx"),
+  ]);
+
+  assert.match(page, /NoteStartGuideTab/);
+  assert.match(page, /NoteCalendarTab/);
+  assert.match(staticTabs, /export function NoteStartGuideTab/);
+  assert.match(staticTabs, /export function NoteCalendarTab/);
+  assert.doesNotMatch(staticTabs, /getSupabaseClient|\.rpc\(|saveNoteOperationProfile|replaceNoteSchedule/);
+});
 
 test("note operations data is owner-scoped and never stores note credentials", async () => {
   const migration = await readRepo("supabase/migrations/20260919123613_note_operations_planner_v1.sql");
@@ -54,7 +71,7 @@ test("note operations engine generates mixed schedules and supports download upl
 
 test("note operations UI covers setup profile planning calendar and home todo", async () => {
   const [page, today, home, tools, toolCatalog, desktop, mobile, layout, css] = await Promise.all([
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("components/note-today-panel.tsx"),
     readPwa("components/phase18-beginner-home.tsx"),
     readPwa("components/phase-tools-page.tsx"),
@@ -109,7 +126,7 @@ test("note beginner profile builder uses dropdown presets and current-web resear
     readRepo("supabase/migrations/20260919125425_note_operations_profile_builder_presets.sql"),
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-operation-profile.ts"),
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("app/phase38-note-operations.css"),
   ]);
 
@@ -169,7 +186,7 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
     readPwa("lib/note-ai-schedule-json.ts"),
     readPwa("lib/note-ai-schedule-normalize.ts"),
     readPwa("lib/note-ai-schedule-plan.ts"),
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
     readPwa("lib/note-schedule-performance.ts"),
@@ -308,7 +325,7 @@ test("note schedule import accepts full AI response prose and keeps file import 
   const [lib, parser, page, css, layout] = await Promise.all([
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-ai-schedule-json.ts"),
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("app/phase39-readability.css"),
     readPwa("app/layout.tsx"),
   ]);
@@ -333,7 +350,7 @@ test("AI note calendar is article-only and tolerates common free paid aliases", 
     readPwa("lib/note-ai-schedule-json.ts"),
     readPwa("lib/note-ai-schedule-normalize.ts"),
     readPwa("lib/note-ai-schedule-plan.ts"),
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("components/note-today-panel.tsx"),
   ]);
 
@@ -359,7 +376,7 @@ test("AI note calendar is article-only and tolerates common free paid aliases", 
 test("note schedule can be recovered from a plain markdown table without JSON", async () => {
   const [normalizer, page, manual] = await Promise.all([
     readPwa("lib/note-ai-schedule-normalize.ts"),
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("app/manual/page.tsx"),
   ]);
 
@@ -380,7 +397,7 @@ test("AI schedule output is copy-only, multi-post times are explicit, and pasted
   const [lib, normalizer, page, helpers, css, manual] = await Promise.all([
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-ai-schedule-normalize.ts"),
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase39-readability.css"),
     readPwa("app/manual/page.tsx"),
@@ -410,7 +427,7 @@ test("AAS note operation preset is available only inside the active-admin UI pat
   const [lib, profileLib, page, helpers, css] = await Promise.all([
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-operation-profile.ts"),
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
   ]);
@@ -589,7 +606,7 @@ test("note operation file transfer helpers are isolated from scheduling and pers
 
 test("note membership cockpit covers grounded improvement metrics and article source metadata", async () => {
   const [page, cockpit, advisor, metricsPanel, createPage, cockpitLib, metricsLib, knowledge, draftLib, createLib, css] = await Promise.all([
-    readPwa("components/note-operations-page.tsx"),
+    readNoteOperationsSource(),
     readPwa("components/note-operations/note-membership-cockpit.tsx"),
     readPwa("components/note-operations/note-membership-advisor.tsx"),
     readPwa("components/note-operations/note-membership-metrics-panel.tsx"),
