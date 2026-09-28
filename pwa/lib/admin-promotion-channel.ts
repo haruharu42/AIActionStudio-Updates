@@ -49,6 +49,42 @@ export type AdminPromotionChannelMeta = {
   socialPlatform?: AdminSocialPlatform;
 };
 
+export type AdminPromotionCtaResolution = {
+  cta: string;
+  corrected: boolean;
+  reason: string;
+};
+
+function promotionSalesAvailable(facts: AdminProductFacts, phase: string): boolean {
+  const normalizedPhase = phase.trim();
+  const normalizedStage = facts.releaseStage.trim();
+  const explicitlyPrelaunch = /販売前|テスト中|開発中|公開前|公開予定|販売開始前|カウントダウン/.test(normalizedPhase);
+  const unavailableStage = /^(未定|開発中|内部テスト|クローズドベータ|オープンベータ|販売一時停止|提供終了)$/.test(normalizedStage);
+  if (explicitlyPrelaunch || unavailableStage) return false;
+
+  return normalizedPhase === "販売開始後"
+    || /^(有料ベータ|先行販売|正式販売)$/.test(normalizedStage);
+}
+
+export function resolveAdminPromotionCta(
+  facts: AdminProductFacts,
+  input: Pick<AdminChannelPromotionInput, "phase" | "cta">,
+): AdminPromotionCtaResolution {
+  const cta = input.cta.trim() || "CTAなし";
+  if (cta !== "販売URLへ誘導" || promotionSalesAvailable(facts, input.phase)) {
+    return { cta, corrected: false, reason: "" };
+  }
+
+  const replacement = /公開|ベータ|販売開始前/.test(input.phase)
+    ? "先行案内を確認してもらう"
+    : "フォローして続報を待ってもらう";
+  return {
+    cta: replacement,
+    corrected: true,
+    reason: `現在の発信フェーズ「${input.phase || "未指定"}」と提供状況「${facts.releaseStage || "未指定"}」では販売URLへの誘導を確定情報として扱えないため、CTAを「${replacement}」へ補正しました。`,
+  };
+}
+
 export const ADMIN_PROMOTION_CHANNELS: Record<AdminPromotionChannel, AdminPromotionChannelMeta> = {
   note: {
     label: "note",
@@ -128,6 +164,7 @@ function buildChannelPrompt(
     audience: input.audience || facts.targetAudience,
     purpose: input.purpose,
   }).promptBlock;
+  const ctaResolution = resolveAdminPromotionCta(facts, input);
   const optimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
   const directScreenshotMode = input.directScreenshotAttachment === true;
   const screenshotContext = directScreenshotMode
@@ -167,7 +204,7 @@ ${spec.label}
 目的: ${input.purpose}
 想定読者: ${input.audience || facts.targetAudience || "要確認"}
 特に紹介したい内容: ${input.focus || "製品全体"}
-CTA: ${input.cta || "要確認"}${socialStyle ? `\n\n【SNS表現設定】\n${socialStyle}` : ""}
+CTA: ${ctaResolution.cta || "要確認"}${ctaResolution.corrected ? `\nCTA補正: ${ctaResolution.reason}` : ""}${socialStyle ? `\n\n【SNS表現設定】\n${socialStyle}` : ""}
 
 【この媒体専用の戦略】
 ${spec.strategy}
@@ -189,7 +226,8 @@ ${spec.output}
 - 販売前なら購入可能と誤認させない。
 - 確認していない成果・売上・PV・レビュー・体験談を作らない。
 - SNSでは選択された「人間味・絵文字量・口調」を守りつつ、同じ語尾・定型句・過剰な絵文字連打を避ける。
-- 最後に事実関係、読みやすさ、媒体適合、CTA、スクショ位置を自己点検し、修正済みの完成版だけを出す。`;
+- 最後に事実関係、読みやすさ、媒体適合、CTA、スクショ位置を自己点検し、修正済みの完成版だけを出す。
+- 最終回答には公開・投稿に使う完成素材だけを出し、内部検討・自己点検の途中経過は出さない。`;
 }
 
 export function buildNotePromotionPrompt(
