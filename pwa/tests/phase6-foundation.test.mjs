@@ -47,9 +47,11 @@ test("service worker never caches auth callbacks, remote Supabase traffic, or pe
   assert.match(worker, /url\.searchParams\.has\("code"\)/);
   assert.match(worker, /url\.searchParams\.has\("access_token"\)/);
   assert.match(worker, /url\.searchParams\.has\("refresh_token"\)/);
-  assert.match(worker, /aas-pwa-phase17-prod-v2-runtime-v10-axia-icon/);
+  assert.match(worker, /aas-pwa-phase17-prod-v2-runtime-v11-axia-generated/);
   assert.match(worker, /const FRESH_BRANDING_ASSETS = new Set/);
   assert.match(worker, /"\/manifest\.webmanifest"/);
+  assert.match(worker, /"\/aas-axia-icon-180\.png"/);
+  assert.match(worker, /"\/aas-axia-icon-192\.png"/);
   assert.match(worker, /"\/aas-axia-icon-512\.png"/);
   assert.match(worker, /"\/aas-login-tile-1\.svg"/);
   assert.match(worker, /"\/aas-login-tile-4\.svg"/);
@@ -66,10 +68,11 @@ test("manifest and install icons are complete", async () => {
   const manifest = JSON.parse(await read("public/manifest.webmanifest"));
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.start_url, "/");
-  assert.deepEqual(manifest.icons.map((icon) => icon.sizes), ["512x512"]);
-  assert.equal(manifest.icons[0]?.src, "/aas-axia-icon-512.png?v=20260928-axia-v1");
-  assert.equal(manifest.icons[0]?.type, "image/png");
-  assert.equal(manifest.icons[0]?.purpose, "any");
+  assert.deepEqual(manifest.icons.map((icon) => icon.sizes), ["192x192", "512x512"]);
+  assert.equal(manifest.icons[0]?.src, "/aas-axia-icon-192.png?v=20260928-axia-v2");
+  assert.equal(manifest.icons[1]?.src, "/aas-axia-icon-512.png?v=20260928-axia-v2");
+  assert.ok(manifest.icons.every((icon) => icon.type === "image/png"));
+  assert.ok(manifest.icons.every((icon) => icon.purpose === "any"));
 });
 
 test("build configuration rejects secret browser keys", async () => {
