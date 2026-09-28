@@ -41,3 +41,10 @@ This document records validation results only and does not change runtime behavi
 
 - Initial Security & Operations status now remains unknown until both the protected snapshot and Worker health probe are available.
 - This prevents a transient false healthy state during first load while preserving the existing monitoring and refresh behavior.
+
+
+## Phase 7 note operations structure checkpoint
+
+- The static Start Guide and Calendar presentation were extracted from `note-operations-page.tsx` into `note-operations/note-operations-static-tabs.tsx`.
+- Supabase/RPC, AI launch, persistence, atomic schedule replacement, import parsing, and status mutations remain in the controller page.
+- Regression tests read the controller and extracted static-tab module together while a dedicated boundary test keeps database/runtime logic out of the static tabs.
