@@ -9,7 +9,7 @@ const read = (relative) => readFile(path.join(root, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(root, "..", relative), "utf8");
 
 test("workspace preset preferences are owner scoped and admin-only AAS is enforced by RLS", async () => {
-  const migration = await readRepo("supabase/migrations/20260921035000_user_workspace_preset_preferences.sql");
+  const migration = await readRepo("supabase/migrations/20260921034342_user_workspace_preset_preferences.sql");
 
   assert.match(migration, /create table if not exists public\.user_workspace_preset_preferences/);
   assert.match(migration, /preset_key in \('balanced','note_growth','longform','sns_growth','aas_official'\)/);
