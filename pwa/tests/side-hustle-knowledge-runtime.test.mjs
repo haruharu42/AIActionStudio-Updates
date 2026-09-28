@@ -90,26 +90,31 @@ test("default side-hustle selections inject scenario knowledge for all six input
   }
 });
 
-test("at least one curated combination can actually fire for every side-hustle", () => {
+test("every curated combination can actually fire for every side-hustle", () => {
+  let fired = 0;
   for (const definition of catalog.SIDE_HUSTLE_DEFINITIONS) {
-    const rule = combination.SIDE_HUSTLE_COMBINATION_KNOWLEDGE[definition.slug]?.[0];
-    assert.ok(rule, "missing first combination for " + definition.slug);
+    const rules = combination.SIDE_HUSTLE_COMBINATION_KNOWLEDGE[definition.slug] ?? [];
+    assert.equal(rules.length, 5, definition.slug + " should expose five curated combinations");
 
-    const draft = builder.initialSideHustleDraft(definition);
-    for (const [fieldKey, expected] of Object.entries(rule.when)) {
-      draft.values[fieldKey] = {
-        selected: chooseExpected(expected),
-        custom: "",
-      };
+    for (const rule of rules) {
+      const draft = builder.initialSideHustleDraft(definition);
+      for (const [fieldKey, expected] of Object.entries(rule.when)) {
+        draft.values[fieldKey] = {
+          selected: chooseExpected(expected),
+          custom: "",
+        };
+      }
+
+      const result = builder.buildSideHustlePrompt(definition, draft);
+      assert.match(result.prompt, /【複合条件KNOWLEDGE】/, definition.slug + "/" + rule.key);
+      assert.ok(
+        result.appliedKnowledge.includes("複合: " + rule.label),
+        definition.slug + "/" + rule.key + " curated combination should be applied",
+      );
+      fired += 1;
     }
-
-    const result = builder.buildSideHustlePrompt(definition, draft);
-    assert.match(result.prompt, /【複合条件KNOWLEDGE】/, definition.slug);
-    assert.ok(
-      result.appliedKnowledge.includes("複合: " + rule.label),
-      definition.slug + " first curated combination should be applied",
-    );
   }
+  assert.equal(fired, 60, "12 side-hustles x 5 curated combinations should all fire");
 });
 
 test("side-hustle prompts keep task-specific Knowledge and safety instead of collapsing to a generic prompt", () => {
