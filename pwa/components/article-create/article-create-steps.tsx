@@ -382,9 +382,9 @@ export function ArticleConditionsStep({
                 <input type="number" min={1} step={1} value={draft.price ?? 980} onChange={(event) => patch("price", Math.max(1, Math.trunc(Number(event.target.value) || 1)))} />
               </label>
             )}
-            {draft.publicationTarget === "note" && (
-              <p className="beginner-help paid-price-note">note公式では通常会員100〜50,000円、プレミアム/note proは上限100,000円です。読み物系の売上上位記事平均983円、実用ノウハウ系1,842円を参考に、980円・1,980円付近を選びやすくしています。</p>
-            )}
+            <p className="beginner-help paid-price-note">
+              980円・1,480円・1,980円などはAASの入力用プリセットです。実際に設定できる価格帯・手数料・販売条件は、{draft.publicationTarget === "note" ? "note" : draft.publicationTarget === "tips" ? "Tips" : draft.publicationTarget === "brain" ? "Brain" : "利用中のブログ／販売サービス"}側の最新ルールを投稿前に確認してください。
+            </p>
           </div>
         )}
         <label className="choice-card compact"><input type="checkbox" checked={draft.affiliateEnabled} onChange={(event) => patch("affiliateEnabled", event.target.checked)} /><span><strong>アフィリエイトを使う</strong><small>商品・サービス紹介を含む記事の場合にON</small></span></label>
@@ -775,10 +775,18 @@ export function SaveStep({
           <CopyButton value={draft.title} label="タイトルをコピー" setMessage={setMessage} />
           <button className="primary-action" type="button" disabled={!publicationBody} onClick={() => void copyPublicationBody()}>{publicationCopied ? "装飾付きでコピーしました ✓" : "完成本文を装飾付きコピー"}</button>
         </div>
-        {draft.publicationTarget === "note" && draft.articleType === "paid" && (
+        {draft.articleType === "paid" && (
           <div className="note-paid-area-guide">
-            <strong>有料noteの仕上げ</strong>
-            <small>本文をnoteへ貼り付けると「【ここから有料エリア】」の前後に空きスペースが残ります。その位置でnoteの「有料エリア設定」を行い、設定後に目印の文字だけ削除してください。</small>
+            <strong>{publicationLabel}の有料記事を仕上げる</strong>
+            <small>
+              {draft.publicationTarget === "note"
+                ? "本文をnoteへ貼り付けると「【ここから有料エリア】」の前後に空きスペースが残ります。その位置でnoteの有料エリアを設定し、設定後に目印の文字だけ削除してください。"
+                : draft.publicationTarget === "tips"
+                  ? "本文をTipsへ貼り付けると「【ここから有料エリア】」の前後に空きスペースが残ります。その位置をTipsの有料エリア境界として調整し、設定後に目印の文字だけ削除してください。"
+                  : draft.publicationTarget === "brain"
+                    ? "本文をBrainへ貼り付けた後、「【ここから有料エリア】」の目印を基準に、Brain側の現在の販売・公開設定に合わせて無料説明部分と購入者向け本文の境界を調整してください。設定後は目印の文字を削除してください。"
+                    : "利用中のブログ／販売サービスへ貼り付けた後、「【ここから有料エリア】」の目印を基準に、そのサービスの販売・公開設定に合わせて無料部分と購入者向け本文の境界を調整してください。設定後は目印の文字を削除してください。"}
+            </small>
           </div>
         )}
         {draft.inlineEnabled && (
