@@ -43,6 +43,22 @@ const EMPTY_FORM: FormState = {
   updateKind: "optional",
 };
 
+const PUBLISH_VERIFICATION_ITEMS = [
+  { key: "preview-ci", label: "最新PreviewとCIを確認", detail: "公開対象と同じ候補版でTypecheck / Lint / 回帰テスト / Preview反映が成功している。" },
+  { key: "tester-core", label: "指定テスターで主要導線を確認", detail: "AAS-000002等の一般ユーザーテスターでログイン・記事作成・保存・設定など主要導線を確認した。" },
+  { key: "iphone-pwa", label: "iPhone実機PWAを確認", detail: "ホーム画面追加、起動、主要画面、復帰、キャッシュ更新を実機で確認した。" },
+  { key: "second-device", label: "別端末・別ブラウザを確認", detail: "PCまたは別対応ブラウザでも主要導線に致命的な崩れ・runtime errorがない。" },
+  { key: "tester-notifications", label: "Tester通知を確認", detail: "Tester段階の通知センター・必要な端末通知が想定どおり動作する。" },
+  { key: "rollback", label: "停止・ロールバック経路を確認", detail: "Feature Controlのメンテナンス停止と、直前公開版へ戻す手順を確認した。" },
+  { key: "operations", label: "重大な未解決障害がないことを確認", detail: "Security & Operationsで公開を止めるべきcritical/errorが残っていない。" },
+] as const;
+
+type PublishVerificationKey = (typeof PUBLISH_VERIFICATION_ITEMS)[number]["key"];
+
+function publishVerificationStorageKey(releaseId: string): string {
+  return `aas.release.publish-verification.${releaseId}`;
+}
+
 function formatDate(value: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
@@ -63,6 +79,7 @@ export function AdminReleasePage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [testerAasId, setTesterAasId] = useState("AAS-000002");
+  const [publishVerification, setPublishVerification] = useState<PublishVerificationKey[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -80,6 +97,39 @@ export function AdminReleasePage() {
     () => snapshot?.releases.find((release) => release.id === snapshot.channel.candidate_release_id) ?? null,
     [snapshot],
   );
+
+  useEffect(() => {
+    if (!candidate) {
+      queueMicrotask(() => setPublishVerification([]));
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(publishVerificationStorageKey(candidate.id));
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      const allowed = new Set(PUBLISH_VERIFICATION_ITEMS.map((item) => item.key));
+      const restored = Array.isArray(parsed)
+        ? parsed.filter((key): key is PublishVerificationKey => typeof key === "string" && allowed.has(key as PublishVerificationKey))
+        : [];
+      queueMicrotask(() => setPublishVerification(restored));
+    } catch {
+      queueMicrotask(() => setPublishVerification([]));
+    }
+  }, [candidate]);
+
+  const publishVerificationReady = PUBLISH_VERIFICATION_ITEMS.every((item) => publishVerification.includes(item.key));
+
+  const togglePublishVerification = (key: PublishVerificationKey) => {
+    if (!candidate) return;
+    setPublishVerification((current) => {
+      const next = current.includes(key) ? current.filter((item) => item !== key) : [...current, key];
+      try {
+        window.localStorage.setItem(publishVerificationStorageKey(candidate.id), JSON.stringify(next));
+      } catch {
+        // Verification remains available for this browser session.
+      }
+      return next;
+    });
+  };
 
   const createCandidate = async () => {
     if (busy) return;
@@ -151,6 +201,10 @@ export function AdminReleasePage() {
 
   const publish = async (release: AdminAppRelease) => {
     if (busy) return;
+    if (!publishVerificationReady) {
+      setError("全体公開前チェックをすべて確認してください。");
+      return;
+    }
     if (!window.confirm("第1段階・第2段階の確認済みとして、v" + release.version + " を全一般ユーザー向けに公開承認しますか？\nこの操作後に一般ユーザー向け安定版へ確認済みリリースをデプロイする運用です。")) return;
 
     setBusy(true);
@@ -331,7 +385,7 @@ export function AdminReleasePage() {
               {candidate.update_kind === "required" ? "必須アップデート" : "任意アップデート"}
             </span>
             {snapshot?.channel.candidate_stage === "tester" ? (
-              <button className="primary-action" type="button" disabled={busy} onClick={() => void publish(candidate)}>
+              <button className="primary-action" type="button" disabled={busy || !publishVerificationReady} onClick={() => void publish(candidate)}>
                 第3段階：全一般ユーザーへ公開承認
               </button>
             ) : (
@@ -340,6 +394,39 @@ export function AdminReleasePage() {
               </button>
             )}
           </div>
+        </section>
+      )}
+
+      {candidate && snapshot?.channel.candidate_stage === "tester" && (
+        <section className="release-admin-panel release-publish-verification">
+          <div className="admin-panel-heading">
+            <div>
+              <p className="eyebrow">PUBLIC RELEASE VERIFICATION</p>
+              <h2>全体公開前チェック</h2>
+              <p>v{candidate.version} を全一般ユーザーへ公開する前に、現在の候補版そのものを確認してください。</p>
+            </div>
+            <strong>{publishVerification.length} / {PUBLISH_VERIFICATION_ITEMS.length}</strong>
+          </div>
+          <p className="trial-admin-note">
+            候補版登録: {formatDate(candidate.created_at)} / build: {candidate.build_key}。候補版が長期間残っている場合は、現在のPreview・最新HEADと同一内容か必ず再確認してください。
+          </p>
+          <div className="release-publish-checklist">
+            {PUBLISH_VERIFICATION_ITEMS.map((item) => (
+              <label key={item.key} className={publishVerification.includes(item.key) ? "checked" : ""}>
+                <input
+                  type="checkbox"
+                  checked={publishVerification.includes(item.key)}
+                  onChange={() => togglePublishVerification(item.key)}
+                />
+                <span><strong>{item.label}</strong><small>{item.detail}</small></span>
+              </label>
+            ))}
+          </div>
+          <p className={publishVerificationReady ? "route-notice" : "route-notice error"}>
+            {publishVerificationReady
+              ? "全項目を確認しました。候補版の内容を再確認してから全体公開承認へ進めます。"
+              : "未確認項目があります。全項目を確認するまで全体公開ボタンは有効になりません。"}
+          </p>
         </section>
       )}
 
