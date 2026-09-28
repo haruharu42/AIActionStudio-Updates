@@ -185,7 +185,7 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(options, /value: 4980/);
   assert.match(options, /value: 49800/);
   assert.match(stepUi, /自由入力/);
-  assert.match(stepUi, /note公式では通常会員100〜50,000円/);
+  assert.match(stepUi, /AASの入力用プリセット/);
   assert.match(page, /price: value === "free" \? null : current\.price !== null && current\.price > 0 \? current\.price : 980/);
   assert.doesNotMatch(stepUi, />タイトル候補を生成<|>タイトル候補を作り直す</);
   assert.doesNotMatch(page, /generateTitleCandidates|titleQuotaInFlightRef|titlePromptAuthorized|suggestLocalTitles/);
@@ -234,8 +234,11 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /画像生成では一時チャットは使用不可/);
   assert.match(stepUi, /完成本文を装飾付きコピー/);
   assert.match(stepUi, /装飾付きでコピーしました ✓/);
-  assert.match(stepUi, /有料noteの仕上げ/);
+  assert.match(stepUi, /有料記事を仕上げる/);
   assert.match(stepUi, /【ここから有料エリア】/);
+  assert.match(stepUi, /Tipsの有料エリア境界/);
+  assert.match(stepUi, /Brain側の現在の販売・公開設定/);
+  assert.match(stepUi, /実際に設定できる価格帯・手数料・販売条件/);
   assert.match(stepUi, /【挿絵1をここに挿入】/);
   assert.match(stepUi, /copyNoteRichText/);
   assert.match(stepUi, /投稿先を開く/);
