@@ -189,3 +189,47 @@ test('publication marker normalization removes stale paid and image markers with
   assert.match(source, /<!-- PAID_AREA -->/);
   assert.match(source, /<!-- IMAGE:03 -->/);
 });
+
+
+test('note post assistant follows saved image plan metadata and suggested filenames', () => {
+  const metadata = postAssistant.readNotePostImagePlanMetadata({
+    inline: { enabled: true, count: 1 },
+    prompt_plan: [
+      { kind: 'cover', order: 0, suggestedFilename: 'article_cover.png' },
+      { kind: 'inline', order: 1, suggestedFilename: 'article_inline01.png' },
+      { kind: 'inline', order: 2, suggestedFilename: 'article_inline02.png' },
+    ],
+  });
+
+  assert.equal(metadata.inlineEnabled, true);
+  assert.equal(metadata.inlineCount, 1);
+  assert.equal(metadata.suggestedFilenames['cover-0'], 'article_cover.png');
+  assert.equal(metadata.suggestedFilenames['inline-1'], 'article_inline01.png');
+
+  const body = `導入
+
+<!-- IMAGE:01 -->
+
+本文1
+
+<!-- IMAGE:02 -->
+
+本文2
+
+<!-- PAID_AREA -->
+
+後半`;
+  const sequence = postAssistant.buildNotePostSequence(body, '', {
+    articleType: 'free',
+    inlineEnabled: metadata.inlineEnabled,
+    inlineCount: metadata.inlineCount,
+  });
+
+  assert.deepEqual(postAssistant.inlineImageOrders(sequence), [1]);
+  const bodyText = sequence
+    .filter((item) => item.kind === 'body')
+    .map((item) => item.markdown)
+    .join('\n');
+  assert.doesNotMatch(bodyText, /ここから有料エリア/);
+  assert.doesNotMatch(bodyText, /挿絵2をここに挿入/);
+});
