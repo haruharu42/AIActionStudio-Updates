@@ -109,6 +109,7 @@ test("individual seller on-request mode keeps private identity out of public con
   assert.match(worker, /name: discloseDirectly \? seller\.name : ""/);
   assert.match(worker, /address: discloseDirectly \? seller\.address : ""/);
   assert.match(worker, /phone: discloseDirectly \? seller\.phone : ""/);
+  assert.match(worker, /email: discloseDirectly \? seller\.email : ""/);
   assert.match(worker, /seller: publicSellerConfig\(seller\)/);
   assert.match(worker, /safeHttpsUrl\(seller\.supportUrl\)/);
   assert.match(migration, /admin_get_commerce_seller_settings/);
