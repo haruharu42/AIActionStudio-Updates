@@ -35,6 +35,8 @@ export type AppReleaseState = {
 };
 
 export type AdminAppRelease = AppRelease & {
+  update_notes: string;
+  fix_notes: string;
   status: "candidate" | "published" | "retired" | "rolled_back";
   created_at: string;
   published_at: string | null;
@@ -105,6 +107,8 @@ function normalizeAdminSnapshot(value: unknown): AdminReleaseSnapshot {
     if (!["candidate", "published", "retired", "rolled_back"].includes(String(status))) return [];
     return [{
       ...item,
+      update_notes: typeof release.update_notes === "string" ? release.update_notes : "",
+      fix_notes: typeof release.fix_notes === "string" ? release.fix_notes : "",
       status: status as AdminAppRelease["status"],
       created_at: typeof release.created_at === "string" ? release.created_at : "",
       published_at: typeof release.published_at === "string" ? release.published_at : null,
@@ -201,12 +205,22 @@ export async function adminListAppReleases(client: SupabaseClient): Promise<Admi
 
 export async function adminCreateAppRelease(
   client: SupabaseClient,
-  input: { version: string; title: string; notes: string; updateKind: "optional" | "required"; buildKey: string },
+  input: {
+    version: string;
+    title: string;
+    notes: string;
+    updateNotes: string;
+    fixNotes: string;
+    updateKind: "optional" | "required";
+    buildKey: string;
+  },
 ): Promise<AdminReleaseSnapshot> {
-  const { data, error } = await client.rpc("admin_create_app_release", {
+  const { data, error } = await client.rpc("admin_create_app_release_v2", {
     p_version: input.version,
     p_title: input.title,
     p_notes: input.notes,
+    p_update_notes: input.updateNotes,
+    p_fix_notes: input.fixNotes,
     p_update_kind: input.updateKind,
     p_build_key: input.buildKey,
   });
