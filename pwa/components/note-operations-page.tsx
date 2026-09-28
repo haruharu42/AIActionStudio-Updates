@@ -92,6 +92,7 @@ export function NoteOperationsPage() {
   const [schedulePreview, setSchedulePreview] = useState<NoteAiSchedulePlan | null>(null);
   const [performanceLoopEnabled, setPerformanceLoopEnabled] = useState(false);
   const [articleOutput, setArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
+  const [previousArticleOutput, setPreviousArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
 
   const gate = useMemo(() => noteOperationsGateFor(accessState, initError), [accessState, initError]);
 
@@ -139,6 +140,11 @@ export function NoteOperationsPage() {
     () => summarizeNoteSchedulePerformance(schedule, referenceMonth),
     [schedule, referenceMonth],
   );
+  const previousMonth = useMemo(() => previousJstMonth(targetMonth), [targetMonth]);
+  const previousPerformance = useMemo(
+    () => referenceMonth === previousMonth ? undefined : summarizeNoteSchedulePerformance(schedule, previousMonth),
+    [schedule, referenceMonth, previousMonth],
+  );
 
   useEffect(() => {
     const syncReleaseGate = () => setPerformanceLoopEnabled(notePerformanceLoopAvailable());
@@ -164,12 +170,19 @@ export function NoteOperationsPage() {
   useEffect(() => {
     if (gate.kind !== "ready" || !performanceLoopEnabled) return;
     let active = true;
-    void loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth).then(
-      (snapshot) => { if (active) setArticleOutput(snapshot); },
-      () => { if (active) setArticleOutput(null); },
-    );
+    const client = getSupabaseClient();
+    void Promise.all([
+      loadNoteArticleOutputSnapshot(client, gate.userId, referenceMonth).catch(() => null),
+      referenceMonth === previousMonth
+        ? Promise.resolve(null)
+        : loadNoteArticleOutputSnapshot(client, gate.userId, previousMonth).catch(() => null),
+    ]).then(([currentSnapshot, previousSnapshot]) => {
+      if (!active) return;
+      setArticleOutput(currentSnapshot);
+      setPreviousArticleOutput(previousSnapshot);
+    });
     return () => { active = false; };
-  }, [gate, performanceLoopEnabled, referenceMonth]);
+  }, [gate, performanceLoopEnabled, previousMonth, referenceMonth]);
 
   const articleSchedule = useMemo(
     () => schedule.filter((item) => isNoteArticleScheduleItem(item)),
@@ -252,10 +265,18 @@ export function NoteOperationsPage() {
         const saved = await saveWritingProfile(getSupabaseClient(), { ...writingProfile, preferredAi: selectedAi });
         setWritingProfile(saved);
       }
-      const freshArticleOutput = performanceLoopEnabled
-        ? await loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth)
-        : undefined;
-      if (performanceLoopEnabled) setArticleOutput(freshArticleOutput ?? null);
+      const [freshArticleOutput, freshPreviousArticleOutput] = performanceLoopEnabled
+        ? await Promise.all([
+            loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth).catch(() => null),
+            referenceMonth === previousMonth
+              ? Promise.resolve(null)
+              : loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, previousMonth).catch(() => null),
+          ])
+        : [undefined, undefined];
+      if (performanceLoopEnabled) {
+        setArticleOutput(freshArticleOutput ?? null);
+        setPreviousArticleOutput(freshPreviousArticleOutput ?? null);
+      }
       const prompt = buildNoteScheduleResearchPrompt(
         profile,
         selectedAi,
@@ -263,6 +284,8 @@ export function NoteOperationsPage() {
         todayJstDateKey(),
         performanceLoopEnabled ? referencePerformance : undefined,
         freshArticleOutput,
+        performanceLoopEnabled ? previousPerformance : undefined,
+        freshPreviousArticleOutput,
       );
       setSchedulePrompt(prompt);
       setSchedulePreview(null);
@@ -619,7 +642,7 @@ export function NoteOperationsPage() {
             <div className="note-ai-month-controls">
               <label>
                 <span>① 計画したい月</span>
-                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setSchedulePreview(null); setArticleOutput(null); }} />
+                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setSchedulePreview(null); setArticleOutput(null); setPreviousArticleOutput(null); }} />
               </label>
               <div>
                 <span>② リサーチに使うAI</span>
@@ -674,7 +697,9 @@ export function NoteOperationsPage() {
                   {articleOutput
                     ? ` AASではnote記事を${articleOutput.createdPosts}本作成済み（無料${articleOutput.freeCreated} / 有料${articleOutput.paidCreated}）です。`
                     : " AAS内のnote記事作成実績はまだありません。"}
-                  本文・PV・売上・購入率はAIへ渡しません。予定より多くても少なくても問題なく、再計画時は実績を参考に今日以降だけを組み直します。
+                  {previousPerformance && ` 前月${previousMonth.replace("-", "年")}月は予定${previousPerformance.scheduledPosts}件・完了${previousPerformance.donePosts}件（無料完了${previousPerformance.freeDone} / 有料完了${previousPerformance.paidDone}）でした。`}
+                  {previousArticleOutput && ` 前月にAASで実際に作成したnoteは${previousArticleOutput.createdPosts}本（無料${previousArticleOutput.freeCreated} / 有料${previousArticleOutput.paidCreated}）です。`}
+                  本文・PV・売上・購入率はAIへ渡しません。予定より多くても少なくても問題なく、再計画時は前月までの実績も参考に今日以降だけを組み直します。
                 </span>
               </div>
             )}
