@@ -265,3 +265,19 @@ test("channel-specific promotion prompts are isolated by publication", async () 
   assert.match(channelLib, /カルーセル何枚目か/);
   assert.match(channelLib, /スクリーンショット画像そのものは取得・生成しない/);
 });
+
+
+test("channel-first promotion keeps beginner flow primary and advanced controls collapsed", async () => {
+  const [page, builder] = await Promise.all([
+    read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-channel-builder.tsx"),
+  ]);
+
+  assert.match(builder, /まず、投稿する場所を選ぶ/);
+  assert.match(builder, /どこでプロモーションしますか？/);
+  assert.match(builder, /迷った場合は初期設定のままでも作れます/);
+  assert.match(builder, /媒体ごとに専用設計/);
+  assert.match(page, /<details className="admin-promo-advanced">/);
+  assert.match(page, /詳細設定・キャンペーン・製品情報/);
+  assert.doesNotMatch(page, /<details className="admin-promo-advanced" open/);
+});
