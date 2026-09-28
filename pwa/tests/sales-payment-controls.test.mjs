@@ -229,7 +229,7 @@ test("sales center groups legal support, DB readiness, and explicit public appro
     readPwa("components/sales-settings-admin-page.tsx"),
     readPwa("components/admin-sales/sales-release-preflight-panel.tsx"),
     readPwa("lib/sales-launch-readiness.ts"),
-    readRepo("supabase/migrations/20260928035030_commerce_public_sales_approval_v1.sql"),
+    readRepo("supabase/migrations/20260928035226_commerce_public_sales_approval_v1.sql"),
     readPwa("app/phase32-sales-settings.css"),
   ]);
 
@@ -365,7 +365,7 @@ test("external purchase URL is HTTPS-only and credential-free before rendering a
 
 test("public sales approval requires the current admin session to be AAL2 while emergency stop stays available", async () => {
   const [migration, readinessClient] = await Promise.all([
-    readRepo("supabase/migrations/20260928040500_commerce_public_sales_approval_aal2_v1.sql"),
+    readRepo("supabase/migrations/20260928040519_commerce_public_sales_approval_aal2_v1.sql"),
     readPwa("lib/sales-launch-readiness.ts"),
   ]);
 
