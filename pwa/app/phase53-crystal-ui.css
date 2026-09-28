@@ -1252,7 +1252,7 @@ body.aas-crystal-theme .auth-character-stage::after {
 body.aas-crystal-theme .auth-character-copy {
   position: relative;
   z-index: 5;
-  width: min(44%, 500px);
+  width: min(42%, 500px);
   max-width: 500px;
   padding: 28px 0 78px;
 }
@@ -1295,9 +1295,9 @@ body.aas-crystal-theme .auth-character-copy .trust-row span {
 body.aas-crystal-theme .auth-character-visual {
   position: absolute;
   z-index: 1;
-  width: min(54%, 620px);
+  width: min(48%, 580px);
   aspect-ratio: 690 / 750;
-  right: -0.5%;
+  right: 0;
   top: 50%;
   transform: translateY(-50%);
   min-height: 0;
@@ -1516,7 +1516,7 @@ body.aas-crystal-theme .status-card::after {
   }
 
   body.aas-crystal-theme .auth-character-copy {
-    width: min(42%, 430px);
+    width: min(43%, 430px);
     max-width: 430px;
     padding-bottom: 70px;
   }
@@ -1534,8 +1534,8 @@ body.aas-crystal-theme .status-card::after {
   }
 
   body.aas-crystal-theme .auth-character-visual {
-    width: min(54%, 520px);
-    right: -1%;
+    width: min(48%, 500px);
+    right: 0;
   }
 
   body.aas-crystal-theme .auth-character-label {
