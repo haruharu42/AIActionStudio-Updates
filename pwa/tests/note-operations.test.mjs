@@ -178,10 +178,12 @@ test("note beginner profile builder uses dropdown presets and current-web resear
   assert.match(lib, /経歴、年齢、職業、収入、実績、資格/);
   assert.match(lib, /アカウント構成を3案/);
 
-  assert.match(page, /どのジャンルで運営したい/);
+  assert.match(page, /noteアカウントの大きなジャンル/);
+  assert.match(page, /記事作成で使う詳細ジャンル/);
+  assert.match(page, /記事作成で使うサブジャンル/);
   assert.match(page, /どんなアカウントにしたい/);
   assert.match(page, /主に誰に届けたい/);
-  assert.match(page, /文章の雰囲気は/);
+  assert.match(page, /文体・文章の雰囲気/);
   assert.match(page, /収益化はどうしたい/);
   assert.match(profileLib, /その他（自由入力）/);
   assert.match(page, /chatgpt","gemini","claude/);
@@ -195,6 +197,71 @@ test("note beginner profile builder uses dropdown presets and current-web resear
   assert.doesNotMatch(`${lib}\n${page}\n${migration}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
 });
 
+
+test("note profile stores detailed article defaults and soft monthly targets", async () => {
+  const [columnsMigration, constraintsMigration, lib, profileLib, page, helpers, staticTabs, createDraft, css] = await Promise.all([
+    readRepo("supabase/migrations/20260928093057_note_operation_monthly_targets_and_article_defaults_v1.sql"),
+    readRepo("supabase/migrations/20260928093155_note_operation_profile_flexibility_constraints_v1.sql"),
+    readNoteOperationsLibSource(),
+    readPwa("lib/note-operation-profile.ts"),
+    readNoteOperationsSource(),
+    readPwa("components/note-operations/note-operations-page-helpers.ts"),
+    readPwa("components/note-operations/note-operations-static-tabs.tsx"),
+    readPwa("lib/article-create-draft.ts"),
+    readPwa("app/phase39-readability.css"),
+  ]);
+
+  for (const column of [
+    "article_genre",
+    "article_subgenre",
+    "free_posts_per_month",
+    "free_target_length",
+    "paid_target_length",
+  ]) assert.match(columnsMigration, new RegExp(column));
+
+  assert.match(constraintsMigration, /paid_posts_per_month <= 60/);
+  assert.match(constraintsMigration, /free_posts_per_month <= 60/);
+  assert.match(constraintsMigration, /free_target_length >= 500/);
+  assert.match(constraintsMigration, /paid_target_length <= 50000/);
+  assert.match(constraintsMigration, /storytelling/);
+  assert.match(constraintsMigration, /humorous/);
+
+  assert.match(profileLib, /freePostsPerMonth: number/);
+  assert.match(profileLib, /articleGenre: string/);
+  assert.match(profileLib, /articleSubgenre: string/);
+  assert.match(profileLib, /freeTargetLength: number/);
+  assert.match(profileLib, /paidTargetLength: number/);
+  for (const tone of ["logical", "empathetic", "storytelling", "concise", "essay", "warm", "formal", "humorous"]) {
+    assert.match(profileLib, new RegExp(`value: "${tone}"`));
+  }
+
+  assert.match(lib, /free_posts_per_month: Math\.max\(0, Math\.min\(60/);
+  assert.match(lib, /paid_posts_per_month: Math\.max\(0, Math\.min\(60/);
+  assert.match(lib, /article_genre: profile\.articleGenre/);
+  assert.match(lib, /free_target_length:/);
+  assert.match(lib, /paid_target_length:/);
+
+  assert.match(page, /月の記事作成数の目安/);
+  assert.match(page, /無料note \/ 月の目安/);
+  assert.match(page, /有料note \/ 月の目安/);
+  assert.match(page, /無料noteの文字数目安/);
+  assert.match(page, /有料noteの文字数目安/);
+  assert.match(page, /ノルマではありません/);
+  assert.match(page, /前月までの実績/);
+  assert.match(page, /previousPerformance/);
+  assert.match(page, /previousArticleOutput/);
+  assert.match(css, /\.note-monthly-target-card/);
+  assert.match(css, /\.note-monthly-target-grid/);
+
+  assert.match(helpers, /title: item\.title/);
+  assert.match(helpers, /genre: profile\.articleGenre/);
+  assert.match(helpers, /subgenre: profile\.articleSubgenre/);
+  assert.match(helpers, /targetLength: String\(paid \? profile\.paidTargetLength : profile\.freeTargetLength\)/);
+  assert.match(staticTabs, /createHref\(item, profile\)/);
+  assert.match(createDraft, /const title = params\.get\("title"\)/);
+  assert.match(createDraft, /const targetLength = Number\(params\.get\("targetLength"\)\)/);
+  assert.match(createDraft, /source === "note-operations"/);
+});
 
 test("AI monthly note schedule uses month-based research, validation, and owner-scoped plan storage", async () => {
   const [migration, lib, parser, normalizer, planner, page, helpers, css, performance, persistenceMigration] = await Promise.all([
@@ -276,6 +343,10 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(lib, /status === "done"/);
   assert.match(lib, /AAS運用スケジュール実績/);
   assert.match(lib, /AASで実際に作成したnote記事数/);
+  assert.match(lib, /前月のAAS運用スケジュール実績/);
+  assert.match(lib, /前月にAASで実際に作成したnote記事数/);
+  assert.match(lib, /月間目安（ノルマではない）/);
+  assert.match(lib, /概ね20%程度の増減/);
   assert.match(performance, /投稿予定に対する完了率/);
   assert.match(lib, /無料30本・有料20本/);
   assert.match(lib, /未完了分やスキップ分を「借金」/);
@@ -290,9 +361,9 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
 
   assert.match(page, /type="month"/);
   assert.match(page, /min=\{currentJstMonth\(\)\}/);
-  assert.match(page, /週に何回投稿するか/);
+  assert.match(page, /月間目安から実際の無料/有料本数を調整/);
   assert.match(page, /1日に何回まで投稿するか/);
-  assert.match(page, /有料noteを週何回にするか/);
+  assert.match(page, /前月・今月の実績に合わせた増減/);
   assert.match(page, /ChatGPT \/ Gemini \/ Claude/);
   assert.match(page, /コピーしたAI回答を読み込んで反映/);
   assert.match(page, /貼り付けた回答をそのまま反映/);
@@ -313,6 +384,8 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /今月の実績から残り期間を組み直せます/);
   assert.match(page, /referencePerformance\.adherenceRate/);
   assert.match(page, /articleOutput\.freeCreated/);
+  assert.match(page, /previousArticleOutput/);
+  assert.match(page, /previousPerformance/);
   assert.match(page, /本文・PV・売上・購入率はAIへ渡しません/);
   assert.match(page, /AAS用JSONをコピー/);
   assert.match(page, /JSONファイルで保存/);
