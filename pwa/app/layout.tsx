@@ -60,7 +60,7 @@ export const metadata: Metadata = {
   description:
     "AI Action Studio（AAS）— AIで副業を、もっと簡単に。記事・SNS・画像・副業支援を、スマホとPCから手軽に進められるAIアクション支援PWAです。",
   applicationName: "AI Action Studio",
-  manifest: "/manifest.webmanifest?v=20260928-axia-v1",
+  manifest: "/manifest.webmanifest?v=20260928-axia-v2",
   robots: { index: false, follow: false },
   other: {
     "aas-phase": "17",
@@ -68,9 +68,9 @@ export const metadata: Metadata = {
     "aas-build-sha": process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev",
   },
   icons: {
-    icon: "/aas-axia-icon-512.png?v=20260928-axia-v1",
-    shortcut: "/aas-axia-icon-512.png?v=20260928-axia-v1",
-    apple: "/aas-axia-icon-512.png?v=20260928-axia-v1",
+    icon: "/aas-axia-icon-192.png?v=20260928-axia-v2",
+    shortcut: "/aas-axia-icon-192.png?v=20260928-axia-v2",
+    apple: "/aas-axia-icon-180.png?v=20260928-axia-v2",
   },
 };
 
