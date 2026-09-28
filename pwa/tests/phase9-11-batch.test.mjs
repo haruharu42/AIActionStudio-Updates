@@ -7,6 +7,12 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = path.resolve(root, "..");
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readArticleStepSource = async () => (await Promise.all([
+  "components/article-create/article-create-steps.tsx",
+  "components/article-create/article-create-generation-steps.tsx",
+  "components/article-create/article-create-finish-steps.tsx",
+  "components/article-create/article-create-step-shared.tsx",
+].map((relative) => read(relative)))).join("\n");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
 const migrationPath = "supabase/migrations/20260910112000_phase9_pwa_invites_admin.sql";
@@ -84,7 +90,7 @@ test("Phase 10 admin route uses the current PWA-only account entitlement and acc
 test("Phase 11 article creator separates access, controller, draft logic and step UI", async () => {
   const api = await read("lib/phase11-create.ts");
   const page = await read("components/phase11-create-page.tsx");
-  const stepUi = await read("components/article-create/article-create-steps.tsx");
+  const stepUi = await readArticleStepSource();
   const draftHelpers = await read("lib/article-create-draft.ts");
   const accessControl = await read("lib/access-control.ts");
   const progress = await read("lib/phase11-wizard-progress.ts");
