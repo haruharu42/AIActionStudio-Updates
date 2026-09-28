@@ -69,8 +69,8 @@ test('article library exposes filters, sorting, paging, archive, duplicate and P
   assert.match(libraryListUi, /PWAで作成した記事や、これまでに同期済みの記事/);
 });
 
-test('article library filters can be collapsed without clearing the selected conditions', () => {
-  assert.match(libraryListUi, /useState\(true\)/);
+test('article library filters start collapsed and can be opened without clearing the selected conditions', () => {
+  assert.match(libraryListUi, /useState\(false\)/);
   assert.match(libraryListUi, /検索・絞り込み/);
   assert.match(libraryListUi, /aria-expanded=\{filtersOpen\}/);
   assert.match(libraryListUi, /setFiltersOpen\(\(current\) => !current\)/);
