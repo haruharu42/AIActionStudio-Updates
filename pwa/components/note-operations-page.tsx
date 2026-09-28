@@ -50,6 +50,12 @@ import {
   type NoteScheduleItem,
 } from "@/features/note";
 import {
+  GENRE_OPTIONS,
+  genreSelectionValue,
+  subgenreOptionsFor,
+  subgenreSelectionValue,
+} from "@/lib/phase18-content-options";
+import {
   downloadText,
   noteOperationsGateFor,
   notePerformanceLoopAvailable,
@@ -445,6 +451,10 @@ export function NoteOperationsPage() {
     );
   }
 
+  const detailedGenreSelection = genreSelectionValue(profile.articleGenre);
+  const detailedSubgenreOptions = subgenreOptionsFor(profile.articleGenre);
+  const detailedSubgenreSelection = subgenreSelectionValue(profile.articleGenre, profile.articleSubgenre);
+
   return (
     <div className="note-ops-shell">
       <AasReferenceHeader />
@@ -547,12 +557,14 @@ export function NoteOperationsPage() {
             )}
 
             <div className="note-profile-choice-grid">
-              <label><span>① どのジャンルで運営したい？</span><select value={profile.accountGenre} onChange={(event) => setProfile({ ...profile, accountGenre: event.target.value as NoteOperationProfile["accountGenre"] })}>{NOTE_ACCOUNT_GENRES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountGenre === "other" && <input value={profile.customGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, customGenre: event.target.value })} placeholder="運営したいジャンルを入力" />}</label>
-              <label><span>② どんなアカウントにしたい？</span><select value={profile.accountStyle} onChange={(event) => setProfile({ ...profile, accountStyle: event.target.value as NoteOperationProfile["accountStyle"] })}>{NOTE_ACCOUNT_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountStyle === "other" && <input value={profile.customAccountStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customAccountStyle: event.target.value })} placeholder="例：失敗談も含めて一緒に学ぶアカウント" />}</label>
-              <label><span>③ 主に誰に届けたい？</span><select value={profile.audiencePreset} onChange={(event) => setProfile({ ...profile, audiencePreset: event.target.value as NoteOperationProfile["audiencePreset"] })}>{NOTE_AUDIENCE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.audiencePreset === "other" && <input value={profile.customAudience} maxLength={300} onChange={(event) => setProfile({ ...profile, customAudience: event.target.value })} placeholder="届けたい読者を入力" />}</label>
-              <label><span>④ 文章の雰囲気は？</span><select value={profile.tonePreset} onChange={(event) => setProfile({ ...profile, tonePreset: event.target.value as NoteOperationProfile["tonePreset"] })}>{NOTE_TONE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.tonePreset === "other" && <input value={profile.customTone} maxLength={120} onChange={(event) => setProfile({ ...profile, customTone: event.target.value })} placeholder="希望する雰囲気を入力" />}</label>
-              <label><span>⑤ 収益化はどうしたい？</span><select value={profile.monetizationStyle} onChange={(event) => setProfile({ ...profile, monetizationStyle: event.target.value as NoteOperationProfile["monetizationStyle"] })}>{NOTE_MONETIZATION_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.monetizationStyle === "other" && <input value={profile.customMonetizationStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customMonetizationStyle: event.target.value })} placeholder="希望する収益化方針を入力" />}</label>
-              <label><span>⑥ 運営の目的は？</span><select value={profile.operationGoal} onChange={(event) => setProfile({ ...profile, operationGoal: event.target.value as NoteOperationProfile["operationGoal"] })}>{NOTE_OPERATION_GOALS.map((goal) => <option key={goal.value} value={goal.value}>{goal.label}</option>)}</select></label>
+              <label><span>① noteアカウントの大きなジャンル</span><select value={profile.accountGenre} onChange={(event) => setProfile({ ...profile, accountGenre: event.target.value as NoteOperationProfile["accountGenre"] })}>{NOTE_ACCOUNT_GENRES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountGenre === "other" && <input value={profile.customGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, customGenre: event.target.value })} placeholder="運営したいジャンルを入力" />}</label>
+              <label><span>② 記事作成で使う詳細ジャンル</span><select value={detailedGenreSelection} onChange={(event) => { const value = event.target.value; setProfile({ ...profile, articleGenre: value, articleSubgenre: subgenreOptionsFor(value)[0] ?? "AIおまかせ" }); }}>{GENRE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</select>{detailedGenreSelection === "その他" && <input value={profile.articleGenre === "その他" ? "" : profile.articleGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, articleGenre: event.target.value || "その他", articleSubgenre: "AIおまかせ" })} placeholder="詳細ジャンルを自由入力" />}</label>
+              <label><span>③ 記事作成で使うサブジャンル</span><select value={detailedSubgenreSelection} onChange={(event) => setProfile({ ...profile, articleSubgenre: event.target.value })}>{detailedSubgenreOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select>{detailedSubgenreSelection === "その他" && <input value={profile.articleSubgenre === "その他" ? "" : profile.articleSubgenre} maxLength={120} onChange={(event) => setProfile({ ...profile, articleSubgenre: event.target.value || "その他" })} placeholder="サブジャンルを自由入力" />}</label>
+              <label><span>④ どんなアカウントにしたい？</span><select value={profile.accountStyle} onChange={(event) => setProfile({ ...profile, accountStyle: event.target.value as NoteOperationProfile["accountStyle"] })}>{NOTE_ACCOUNT_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountStyle === "other" && <input value={profile.customAccountStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customAccountStyle: event.target.value })} placeholder="例：失敗談も含めて一緒に学ぶアカウント" />}</label>
+              <label><span>⑤ 主に誰に届けたい？</span><select value={profile.audiencePreset} onChange={(event) => setProfile({ ...profile, audiencePreset: event.target.value as NoteOperationProfile["audiencePreset"] })}>{NOTE_AUDIENCE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.audiencePreset === "other" && <input value={profile.customAudience} maxLength={300} onChange={(event) => setProfile({ ...profile, customAudience: event.target.value })} placeholder="届けたい読者を入力" />}</label>
+              <label><span>⑥ 文体・文章の雰囲気</span><select value={profile.tonePreset} onChange={(event) => setProfile({ ...profile, tonePreset: event.target.value as NoteOperationProfile["tonePreset"] })}>{NOTE_TONE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.tonePreset === "other" && <input value={profile.customTone} maxLength={120} onChange={(event) => setProfile({ ...profile, customTone: event.target.value })} placeholder="希望する文体・雰囲気を入力" />}</label>
+              <label><span>⑦ 収益化はどうしたい？</span><select value={profile.monetizationStyle} onChange={(event) => setProfile({ ...profile, monetizationStyle: event.target.value as NoteOperationProfile["monetizationStyle"] })}>{NOTE_MONETIZATION_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.monetizationStyle === "other" && <input value={profile.customMonetizationStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customMonetizationStyle: event.target.value })} placeholder="希望する収益化方針を入力" />}</label>
+              <label><span>⑧ 運営の目的は？</span><select value={profile.operationGoal} onChange={(event) => setProfile({ ...profile, operationGoal: event.target.value as NoteOperationProfile["operationGoal"] })}>{NOTE_OPERATION_GOALS.map((goal) => <option key={goal.value} value={goal.value}>{goal.label}</option>)}</select></label>
             </div>
 
             <details className="note-profile-advanced">
@@ -622,11 +634,26 @@ export function NoteOperationsPage() {
               </div>
             </div>
 
+            <section className="note-monthly-target-card">
+              <div>
+                <strong>月の記事作成数の目安</strong>
+                <span>ノルマではありません。AIは前月までの予定・完了状況とAASで実際に作成した記事数、今月の残り日数を見て多少前後させます。途中で何度でも組み直せます。</span>
+              </div>
+              <div className="note-monthly-target-grid">
+                <label><span>無料note / 月の目安</span><input type="number" min={0} max={60} value={profile.freePostsPerMonth} onChange={(event) => setProfile({ ...profile, freePostsPerMonth: Math.max(0, Math.min(60, Number(event.target.value) || 0)) })} /></label>
+                <label><span>有料note / 月の目安</span><input type="number" min={0} max={60} value={profile.paidPostsPerMonth} onChange={(event) => setProfile({ ...profile, paidPostsPerMonth: Math.max(0, Math.min(60, Number(event.target.value) || 0)) })} /></label>
+                <label><span>無料noteの文字数目安</span><input type="number" min={500} max={50000} step={500} value={profile.freeTargetLength} onChange={(event) => setProfile({ ...profile, freeTargetLength: Math.max(500, Math.min(50000, Number(event.target.value) || 4000)) })} /></label>
+                <label><span>有料noteの文字数目安</span><input type="number" min={500} max={50000} step={500} value={profile.paidTargetLength} onChange={(event) => setProfile({ ...profile, paidTargetLength: Math.max(500, Math.min(50000, Number(event.target.value) || 7000)) })} /></label>
+              </div>
+              <small>月間本数は「目安」です。通常は近い本数を基準にしつつ、継続できた本数・前月実績・当月作成数によってAIが増減します。文字数はカレンダーから記事作成へ進む際の初期値として自動反映されます。</small>
+              <button type="button" disabled={busy} onClick={() => void saveProfile()}>この目安をAASに保存</button>
+            </section>
+
             <div className="note-ai-decision-list">
               <strong>AIに決めてもらう内容</strong>
               <div>
-                <span>週に何回投稿するか</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの比率</span>
-                <span>有料noteを週何回にするか</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
+                <span>月間目安から実際の無料/有料本数を調整</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの配分</span>
+                <span>前月・今月の実績に合わせた増減</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
                 <span>トレンド記事と長期記事の配分</span><span>無料note / 有料noteの作成日・時間</span>
                 {performanceLoopEnabled && <span>実際の作成本数に合わせた途中再計画</span>}
               </div>
