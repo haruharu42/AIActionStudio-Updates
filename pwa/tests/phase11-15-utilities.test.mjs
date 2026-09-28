@@ -166,3 +166,18 @@ test("article creator UI v2 keeps the eight-step rail readable and preserves two
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: 1fr/);
 });
+
+
+test("article image generation exposes batch and individual prompts and forbids temporary chat", async () => {
+  const prompts = await read("lib/phase13-image-prompts.ts");
+  const steps = await read("components/article-create/article-create-steps.tsx");
+
+  assert.match(prompts, /画像生成では一時チャットは使用不可です。通常チャットを使用してください。/);
+  assert.match(prompts, /buildCombinedImagePrompt/);
+  assert.match(prompts, /IMAGE_CHAT_USAGE_RULE/);
+  assert.match(steps, /画像生成プロンプト（一括・個別）/);
+  assert.match(steps, /個別に画像を作成/);
+  assert.match(steps, /個別作成プロンプト/);
+  assert.match(steps, /画像生成では一時チャットは使用不可/);
+  assert.match(steps, /imagePrompts\.map/);
+});
