@@ -44,6 +44,9 @@ test("Stripe Checkout is gated server-side and billing portal remains available"
   assert.match(salesWorker, /\/api\/billing\/checkout/);
   assert.match(salesWorker, /stripeCheckoutEnabled/);
   assert.match(salesWorker, /PLAN_FLAGS/);
+  assert.match(salesWorker, /loadEffectiveSalesSettings/);
+  assert.match(salesWorker, /service_get_sales_launch_runtime/);
+  assert.match(salesWorker, /publicSalesApproved/);
   assert.match(salesWorker, /販売受付設定を確認できないため、新規決済を停止しています/);
   assert.match(salesWorker, /Stripeでの新規購入受付は停止しています/);
   assert.doesNotMatch(salesWorker, /\/api\/billing\/portal/);
@@ -53,6 +56,10 @@ test("Stripe Checkout is gated server-side and billing portal remains available"
   assert.doesNotMatch(salesWorker, /bundle_monthly_enabled/);
   assert.ok(index.indexOf("handleSalesControlRequest") < index.indexOf("handleBillingRequest(request, env)"));
   assert.match(index, /rejectLegacyCheckout/);
+  assert.match(index, /loadEffectiveSalesSettings/);
+  assert.match(index, /effectivePlanEnabled/);
+  assert.match(index, /available: plan\.available === true && effectivePlanEnabled\(salesSettings, planCode\)/);
+  assert.match(index, /filterPublicBillingConfig\(request, url, billingResponse, env\)/);
   assert.match(billing, /\/api\/billing\/portal/);
 });
 
