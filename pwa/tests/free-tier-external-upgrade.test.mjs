@@ -100,3 +100,19 @@ test("quota exhaustion prompt is dismissible, resets by usage date, and only lin
   assert.match(freeTrialLib, /notifyFreeTrialUsageChanged\(result\)/);
   assert.match(layout, /<FreeTrialBanner \/>/);
 });
+
+
+test("free-plan summary can collapse to a persistent usage-only view", async () => {
+  const [banner, styles] = await Promise.all([
+    readPwa("components/free-trial-banner.tsx"),
+    readPwa("app/phase28-free-trial.css"),
+  ]);
+
+  assert.match(banner, /aas:free-trial-details-collapsed:\$\{userId\}/);
+  assert.match(banner, /detailsCollapsed \? " is-collapsed" : ""/);
+  assert.match(banner, /無料プラン詳細を閉じる/);
+  assert.match(banner, /無料プラン詳細を開く/);
+  assert.match(banner, /!detailsCollapsed && \(/);
+  assert.match(styles, /\.free-trial-banner\.is-collapsed/);
+  assert.match(styles, /\.free-trial-banner\.is-collapsed \.free-trial-usage/);
+});
