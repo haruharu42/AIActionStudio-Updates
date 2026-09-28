@@ -154,3 +154,30 @@ test("note membership advisor connects design, pricing, launch article and SNS p
   assert.match(prompt, /note公式で公開前に確認する項目/);
   assert.match(prompt, /売上、加入率、会員数、継続率などの成果を保証しない/);
 });
+
+
+test("prelaunch sales CTA is corrected while live sales keeps the requested CTA", () => {
+  const prelaunch = channel.resolveAdminPromotionCta(facts, {
+    phase: "販売開始前",
+    cta: "販売URLへ誘導",
+  });
+  assert.equal(prelaunch.corrected, true);
+  assert.notEqual(prelaunch.cta, "販売URLへ誘導");
+  assert.match(prelaunch.reason, /販売URLへの誘導を確定情報として扱えない/);
+
+  const liveFacts = { ...facts, releaseStage: "正式販売" };
+  const live = channel.resolveAdminPromotionCta(liveFacts, {
+    phase: "販売開始後",
+    cta: "販売URLへ誘導",
+  });
+  assert.equal(live.corrected, false);
+  assert.equal(live.cta, "販売URLへ誘導");
+
+  const prompt = channel.buildAdminChannelPromotionPrompt(facts, {
+    ...inputFor("note"),
+    cta: "販売URLへ誘導",
+  });
+  assert.match(prompt, /CTA補正:/);
+  assert.doesNotMatch(prompt, /CTA: 販売URLへ誘導\n/);
+  assert.match(prompt, /最終回答には公開・投稿に使う完成素材だけを出し/);
+});
