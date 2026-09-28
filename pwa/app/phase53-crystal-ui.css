@@ -1274,7 +1274,7 @@ body.aas-crystal-theme .auth-character-copy h1 {
 body.aas-crystal-theme .auth-character-copy .lead {
   max-width: 520px;
   margin: 0;
-  color: #667e9c !important;
+  color: #536b89 !important;
   font-size: 13px;
   line-height: 1.95;
   text-shadow: 0 1px 12px rgb(255 255 255 / 76%);
@@ -1404,7 +1404,7 @@ body.aas-crystal-theme .auth-card.auth-crystal-card h2 {
 }
 
 body.aas-crystal-theme .auth-card.auth-crystal-card .form-caption {
-  color: #7286a1 !important;
+  color: #566f8e !important;
 }
 
 body.aas-crystal-theme .auth-card.auth-crystal-card .field > span {
