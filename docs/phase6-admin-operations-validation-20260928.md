@@ -99,3 +99,9 @@ This document records validation results only and does not change runtime behavi
 - The public hero no longer references `aas-login-tile-*.svg`; CSS cache identity was advanced to `20260928-natural-v4`.
 - Regression coverage now requires the self-contained data images and seam masks and rejects external tile references.
 - Baseline signed-out route smoke testing covered /create, /images, /prompts, /sns, /note-operations, /workflow, /membership, /settings, /admin, and /admin/operations: all returned the expected access gate with no protected-content exposure or 404/500.
+
+
+### Phase 8 login hero lint follow-up
+
+- The first seamless-hero Preview stopped at ESLint because the regression test contained an over-escaped regex literal; runtime code was not implicated.
+- The assertion now uses a constructed RegExp, and the current branch still contains the self-contained hero, natural-v4 cache identity, and external-tile rejection checks.
