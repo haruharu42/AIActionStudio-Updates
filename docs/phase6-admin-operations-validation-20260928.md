@@ -35,3 +35,9 @@ This document records validation results only and does not change runtime behavi
 
 - Regression tests now inspect the article step aggregator plus generation, finish, and shared step modules after the component split.
 - No article workflow behavior was rolled back to satisfy the tests.
+
+
+## Phase 7 operations UI checkpoint
+
+- Initial Security & Operations status now remains unknown until both the protected snapshot and Worker health probe are available.
+- This prevents a transient false healthy state during first load while preserving the existing monitoring and refresh behavior.
