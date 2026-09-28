@@ -119,6 +119,8 @@ test("individual seller on-request mode keeps private identity out of public con
   assert.match(migration, /seller_support_url/);
   assert.match(client, /disclosureMode: SellerDisclosureMode/);
   assert.match(disclosure, /請求があった場合には遅滞なく開示します/);
+  assert.match(disclosure, /seller\?\.disclosureMode === "on_request"/);
+  assert.match(disclosure, /販売者情報の開示について/);
   assert.match(disclosure, /問い合わせ・開示請求窓口/);
   assert.match(disclosure, /function safeHttpsUrl/);
   assert.match(disclosure, /parsed\.protocol === "https:"/);
