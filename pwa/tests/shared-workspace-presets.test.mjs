@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readNotePromptSource = async () => (await Promise.all(["lib/note-operations.ts", "lib/note-operation-prompts.ts"].map((relative) => read(relative)))).join("\n");
 const readRepo = (relative) => readFile(path.join(root, "..", relative), "utf8");
 
 test("workspace preset preferences are owner scoped and admin-only AAS is enforced by RLS", async () => {
@@ -84,7 +85,7 @@ test("shared preset is injected into prompt generation and visible across featur
     read("lib/phase13-image-prompts.ts"),
     read("components/phase13-image-page.tsx"),
     read("components/phase14-sns-page.tsx"),
-    read("lib/note-operations.ts"),
+    readNotePromptSource(),
     read("components/note-operations-page.tsx"),
     read("lib/platform-account-starter.ts"),
     read("lib/content-lifecycle.ts"),
