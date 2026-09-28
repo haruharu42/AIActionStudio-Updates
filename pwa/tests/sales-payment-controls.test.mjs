@@ -229,6 +229,10 @@ test("sales center groups legal support and access-code review without auto-appr
   assert.match(preflight, /fetchCommerceConfig/);
   assert.match(preflight, /legalReady/);
   assert.match(preflight, /販売者情報/);
+  assert.match(preflight, /admin_list_pwa_invites/);
+  assert.match(preflight, /usableInviteCount/);
+  assert.match(preflight, /購入者へ渡せる有効な利用コードがありません/);
+  assert.match(preflight, /販売用の利用コード/);
   assert.match(preflight, /automatedBlockers/);
   assert.match(preflight, /active管理者に確認済みMFAがありません/);
   assert.match(preflight, /解消するまで販売開始扱いにしないでください/);
