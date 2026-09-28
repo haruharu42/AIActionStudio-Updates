@@ -110,6 +110,7 @@ test("signed-out auth and access surfaces use the Axia and Rumo crystal design",
   assert.match(css, /auth-character-visual::before/);
   assert.match(css, /auth-character-visual::after/);
   assert.match(css, /status-card::after/);
+  assert.match(css, /@media \(min-width: 901px\) and \(max-width: 1440px\)[\s\S]*auth-character-copy h1[\s\S]*auth-character-visual/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-stage/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-visual \{[\s\S]*position: relative;[\s\S]*width: min\(94vw, 560px\);[\s\S]*background-size: 51.5% 51.4%;/);
   assert.match(layout, /"aas-build-sha"/);
