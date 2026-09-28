@@ -9,13 +9,19 @@ import {
   adminCreateAppRelease,
   adminListAppReleases,
   adminPromoteAppReleaseToTesters,
-  adminPublishAppRelease,
   adminRollbackAppRelease,
   adminSetAppReleaseTester,
   type AdminAppRelease,
   type AdminReleaseSnapshot,
 } from "@/lib/app-release";
 import { getSupabaseClient } from "@/lib/supabase";
+import {
+  AAS_PREVIEW_RELEASE_BRANCH,
+  loadPublicPwaDeployments,
+  requestPublicPwaDeployment,
+  type PublicDeployment,
+  type PublicDeploymentSnapshot,
+} from "@/lib/release-deployment";
 
 type FormState = {
   version: string;
@@ -35,6 +41,14 @@ const RELEASE_TITLE_OPTIONS = [
   "新機能追加",
   "軽微な修正",
 ] as const;
+
+const PREVIEW_BUILD_SHA = (process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "").trim();
+const IS_PREVIEW_DEPLOYMENT = process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview";
+const PREVIEW_BUILD_SHORT = /^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA) ? PREVIEW_BUILD_SHA.slice(0, 12) : "";
+
+function releaseMatchesPreviewBuild(release: AdminAppRelease | null): boolean {
+  return Boolean(release && PREVIEW_BUILD_SHORT && release.build_key.endsWith("-" + PREVIEW_BUILD_SHORT));
+}
 
 const EMPTY_FORM: FormState = {
   version: "",
@@ -65,6 +79,15 @@ function formatDate(value: string | null): string {
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ja-JP");
 }
 
+function deploymentStatusLabel(status: PublicDeployment["status"]): string {
+  if (status === "requested") return "公開要求を受付";
+  if (status === "dispatched") return "GitHubへ送信済み";
+  if (status === "running") return "テスト・一般公開処理中";
+  if (status === "succeeded") return "一般公開PWAへ反映済み";
+  if (status === "failed") return "一般公開に失敗";
+  return "公開処理をキャンセル";
+}
+
 function statusLabel(status: AdminAppRelease["status"]): string {
   if (status === "candidate") return "管理者テスト中";
   if (status === "published") return "公開済み";
@@ -82,6 +105,7 @@ export function AdminReleasePage() {
   const [publishVerification, setPublishVerification] = useState<PublishVerificationKey[]>([]);
   const [currentSessionAal, setCurrentSessionAal] = useState<"aal1" | "aal2" | null>(null);
   const [aalCheckFailed, setAalCheckFailed] = useState(false);
+  const [deploymentSnapshot, setDeploymentSnapshot] = useState<PublicDeploymentSnapshot | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -89,6 +113,9 @@ export function AdminReleasePage() {
     void adminListAppReleases(client)
       .then((next) => { if (active) setSnapshot(next); })
       .catch(() => { if (active) setError("リリース情報を取得できませんでした。"); });
+    void loadPublicPwaDeployments(client)
+      .then((next) => { if (active) setDeploymentSnapshot(next); })
+      .catch(() => { if (active) setDeploymentSnapshot(null); });
     void client.auth.mfa.getAuthenticatorAssuranceLevel().then(
       ({ data, error: aalError }) => {
         if (!active) return;
@@ -137,6 +164,45 @@ export function AdminReleasePage() {
   }, [candidate]);
 
   const publishVerificationReady = PUBLISH_VERIFICATION_ITEMS.every((item) => publishVerification.includes(item.key));
+  const candidateDeployment = useMemo(
+    () => candidate
+      ? deploymentSnapshot?.deployments.find((deployment) => deployment.release_id === candidate.id) ?? null
+      : null,
+    [candidate, deploymentSnapshot],
+  );
+  const deploymentInProgress = candidateDeployment
+    ? ["requested", "dispatched", "running"].includes(candidateDeployment.status)
+    : false;
+  const candidateMatchesPreview = releaseMatchesPreviewBuild(candidate);
+
+  useEffect(() => {
+    if (!candidateDeployment || !["requested", "dispatched", "running"].includes(candidateDeployment.status)) return;
+    let active = true;
+    const client = getSupabaseClient();
+    const timer = window.setInterval(() => {
+      void loadPublicPwaDeployments(client, candidateDeployment.id)
+        .then(async (next) => {
+          if (!active) return;
+          setDeploymentSnapshot(next);
+          const refreshed = next.deployments.find((deployment) => deployment.id === candidateDeployment.id);
+          if (refreshed?.status === "succeeded") {
+            const releases = await adminListAppReleases(client);
+            if (!active) return;
+            setSnapshot(releases);
+            setMessage("一般公開PWAへの反映が完了しました。");
+          } else if (refreshed?.status === "failed") {
+            setError(refreshed.error_message || "一般公開PWAへの反映に失敗しました。内容を確認して再実行してください。");
+          }
+        })
+        .catch(() => {
+          // A temporary status refresh failure must not interrupt an in-progress deployment.
+        });
+    }, 5000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [candidateDeployment]);
 
   const togglePublishVerification = (key: PublishVerificationKey) => {
     if (!candidate) return;
@@ -163,6 +229,10 @@ export function AdminReleasePage() {
       setError("アップデート名を入力してください。");
       return;
     }
+    if (!IS_PREVIEW_DEPLOYMENT || !PREVIEW_BUILD_SHORT) {
+      setError("管理者テスト版の登録は最新Preview PWAから行ってください。Preview Build SHAを確認できません。");
+      return;
+    }
 
     setBusy(true);
     setError("");
@@ -173,7 +243,7 @@ export function AdminReleasePage() {
         title,
         notes: form.notes.trim(),
         updateKind: form.updateKind,
-        buildKey: "pwa-" + version.replace(/[^0-9A-Za-z.-]/g, "-"),
+        buildKey: "pwa-" + version.replace(/[^0-9A-Za-z.-]/g, "-") + "-" + PREVIEW_BUILD_SHORT,
       });
       setSnapshot(next);
       setForm(EMPTY_FORM);
@@ -220,26 +290,45 @@ export function AdminReleasePage() {
   };
 
   const publish = async (release: AdminAppRelease) => {
-    if (busy) return;
+    if (busy || deploymentInProgress) return;
+    if (!IS_PREVIEW_DEPLOYMENT) {
+      setError("一般公開PWAへの反映はPreview PWAの管理者画面から実行してください。");
+      return;
+    }
     if (!publishVerificationReady) {
       setError("全体公開前チェックをすべて確認してください。");
       return;
     }
     if (currentSessionAal !== "aal2") {
-      setError("全体公開には現在の管理者セッションでMFA認証（AAL2）が必要です。管理者MFA画面で再認証してください。");
+      setError("一般公開PWAへの反映には現在の管理者セッションでMFA認証（AAL2）が必要です。管理者MFA画面で再認証してください。");
       return;
     }
-    if (!window.confirm("第1段階・第2段階の確認済みとして、v" + release.version + " を全一般ユーザー向けに公開承認しますか？\nこの操作後に一般ユーザー向け安定版へ確認済みリリースをデプロイする運用です。")) return;
+    if (!/^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA)) {
+      setError("現在のPreview Build SHAを確認できません。Previewを最新化してから再度お試しください。");
+      return;
+    }
+    if (!releaseMatchesPreviewBuild(release)) {
+      setError("候補版と現在のPreview Buildが一致しません。最新Previewで新しい管理者テスト版を登録し直してください。");
+      return;
+    }
+    if (!window.confirm(
+      "v" + release.version + " の確認済みPreviewを一般公開PWAへ反映しますか？\n\n"
+      + "対象: " + AAS_PREVIEW_RELEASE_BRANCH + "\n"
+      + "Build: " + PREVIEW_BUILD_SHA.slice(0, 12) + "\n\n"
+      + "実行後はTypecheck / Lint / 回帰テスト / Cloudflare事前確認を再実行し、すべて成功した場合だけ一般公開PWAへ反映します。",
+    )) return;
 
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const next = await adminPublishAppRelease(getSupabaseClient(), release.id);
-      setSnapshot(next);
-      setMessage("アップデートを公開しました。ユーザー側へ更新通知が表示されます。");
+      const client = getSupabaseClient();
+      const request = await requestPublicPwaDeployment(client, release.id, PREVIEW_BUILD_SHA);
+      const deployments = await loadPublicPwaDeployments(client, request.requestId);
+      setDeploymentSnapshot(deployments);
+      setMessage("一般公開PWAへの反映を開始しました。アップデート管理を開いたままにすると進捗が自動更新されます。");
     } catch (publishError) {
-      setError(publishError instanceof Error ? publishError.message : "アップデートを公開できませんでした。候補版の状態を確認してください。");
+      setError(publishError instanceof Error ? publishError.message : "一般公開PWAへの反映を開始できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -409,8 +498,13 @@ export function AdminReleasePage() {
               {candidate.update_kind === "required" ? "必須アップデート" : "任意アップデート"}
             </span>
             {snapshot?.channel.candidate_stage === "tester" ? (
-              <button className="primary-action" type="button" disabled={busy || !publishVerificationReady || currentSessionAal !== "aal2"} onClick={() => void publish(candidate)}>
-                第3段階：全一般ユーザーへ公開承認
+              <button
+                className="primary-action"
+                type="button"
+                disabled={busy || deploymentInProgress || !publishVerificationReady || currentSessionAal !== "aal2" || !IS_PREVIEW_DEPLOYMENT || !candidateMatchesPreview}
+                onClick={() => void publish(candidate)}
+              >
+                {deploymentInProgress ? "一般公開PWAへ反映中…" : "第3段階：一般公開PWAへ反映"}
               </button>
             ) : (
               <button className="primary-action" type="button" disabled={busy || !(snapshot?.testers ?? []).some((tester) => tester.enabled)} onClick={() => void promoteToTesters(candidate)}>
@@ -451,6 +545,33 @@ export function AdminReleasePage() {
               ? "全項目を確認しました。候補版の内容を再確認してから全体公開承認へ進めます。"
               : "未確認項目があります。全項目を確認するまで全体公開ボタンは有効になりません。"}
           </p>
+          <div className="admin-safety-confirm">
+            <strong>一般公開PWAへの反映</strong><br />
+            Preview branch: {AAS_PREVIEW_RELEASE_BRANCH}<br />
+            Preview Build: {/^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA) ? PREVIEW_BUILD_SHA.slice(0, 12) : "取得できません"}
+            {candidateDeployment && (
+              <>
+                <br />状態: {deploymentStatusLabel(candidateDeployment.status)}
+                {candidateDeployment.github_run_url && (
+                  <> ・ <a href={candidateDeployment.github_run_url} target="_blank" rel="noopener noreferrer">GitHub Actionsを確認 ↗</a></>
+                )}
+                {candidateDeployment.error_message && <><br />エラー: {candidateDeployment.error_message}</>}
+              </>
+            )}
+          </div>
+          {!candidateMatchesPreview && (
+            <p className="route-notice error">
+              候補版のBuildと現在のPreview Buildが一致していません。最新Previewで新しい管理者テスト版を登録し直すと公開ボタンが有効になります。
+            </p>
+          )}
+          {deploymentSnapshot && !deploymentSnapshot.configured && (
+            <p className="route-notice error">
+              管理画面からの一般公開連携は初回設定待ちです。Supabase Edge Function secret「AAS_GITHUB_RELEASE_TOKEN」を設定すると有効になります。
+            </p>
+          )}
+          {!IS_PREVIEW_DEPLOYMENT && (
+            <p className="route-notice error">一般公開PWAへの反映操作はPreview PWAでのみ有効です。</p>
+          )}
           {currentSessionAal !== "aal2" && (
             <p className="route-notice error">
               {aalCheckFailed
