@@ -56,6 +56,8 @@ Saving sales settings is not the same as starting sales.
 - `/api/sales/settings` returns effective public-sale state only after the Worker confirms the approval lock and runtime readiness.
 - `/api/billing/config` must not advertise a plan as available while the public-sales lock is closed.
 - approving public sales is rejected at the database layer when the persisted automated readiness check is incomplete.
+- approving public sales also requires the current admin session to be MFA-backed AAL2; stopping public sales remains available to an active admin for emergency fail-closed operation.
+- unavailable Stripe plans are returned as unavailable with no public price payload, so TEST prices are not advertised while sales are locked.
 - changing sales settings or seller/legal settings automatically revokes the approval and re-locks new sales.
 - loss of usable invite stock or verified active-admin MFA makes the external route fail closed at runtime even if it was approved earlier.
 - stopping public sales keeps existing entitlements and historical billing records intact.
