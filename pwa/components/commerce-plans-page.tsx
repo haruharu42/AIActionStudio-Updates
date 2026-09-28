@@ -57,10 +57,10 @@ export function CommercePlansPage() {
   }, [state]);
 
   const externalPurchaseUrl = useMemo(
-    () => salesSettings?.externalSalesEnabled
+    () => salesSettings?.externalSalesEnabled && config?.legalReady === true
       ? safeExternalSalesUrl(salesSettings.externalSalesUrl)
       : "",
-    [salesSettings],
+    [config?.legalReady, salesSettings],
   );
 
   const visiblePlans = useMemo(
@@ -118,7 +118,9 @@ export function CommercePlansPage() {
             ? salesSettings.accessCodeEnabled
               ? "外部販売ページで購入後、案内された利用コードをAASへ登録できます。"
               : "外部販売ページで販売を受付中です。購入後の利用方法は販売ページの案内に従ってください。"
-            : "外部販売の受付設定は有効ですが、現在は購入ページURLが未設定のため、この画面から購入先へは移動できません。"}</p>
+            : config?.legalReady !== true
+              ? "外部販売の受付設定は有効ですが、販売者情報・公開サポート等の販売前情報が未完了のため、購入導線を公開していません。"
+              : "外部販売の受付設定は有効ですが、現在は購入ページURLが未設定のため、この画面から購入先へは移動できません。"}</p>
           {externalPurchaseUrl && (
             <a
               className="commerce-external-purchase"
