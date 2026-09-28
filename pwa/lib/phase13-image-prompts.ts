@@ -46,6 +46,8 @@ const avoid = [
   "記事に根拠のない数字・ランキング・価格・評価を画像内へ書かない",
 ].join("。") + "。";
 
+const IMAGE_CHAT_USAGE_RULE = "画像生成では一時チャットは使用不可です。通常チャットを使用してください。";
+
 function articleBodyContext(body: string | undefined): string {
   const normalized = (body ?? "").replace(/\r\n?/g, "\n").trim();
   if (!normalized) return "";
@@ -122,7 +124,7 @@ alt候補: ${item.altText}`;
   return `以下の記事用画像を、1つの依頼としてまとめて作成してください。
 
 【重要】
-- 必要画像数: ${items.length}枚（アイキャッチ ${coverCount}枚 / 挿絵 ${inlineCount}枚）。
+- 必要画像数: ${items.length}枚（アイキャッチ ${coverCount}枚 / 挿絵 ${inlineCount}枚）。\n- ${IMAGE_CHAT_USAGE_RULE}
 - 各画像は必ず別々の画像として生成してください。1枚のコラージュ、分割画面、複数画像を1枚へ合成したレイアウトにはしないでください。
 - アイキャッチ → 挿絵1 → 挿絵2…の順に、同じ世界観・人物設計・色調を保ちながら個別画像として作成してください。
 - 各画像の指示にある本文内容・差し込み位置・役割を優先し、同じ構図の繰り返しを避けてください。
@@ -143,7 +145,7 @@ export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptIt
       insertionMarker: null,
       suggestedFilename,
       altText,
-      prompt: `次の記事用アイキャッチ画像を1枚作成してください。\n${common(input)}\n構図: 横長のアイキャッチを想定し、記事テーマが一目で伝わる主役を1つに絞る。人物を使う場合は親しみやすく、余白を十分に取る。\n文字方針: 原則として画像内文字は入れない。必要な場合でも記事タイトル全文を描画せず、短い補助語だけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASのクラウドへアップロードせず、端末へこのファイル名で保存してください。AASでは端末内画像として読み込めます。`,
+      prompt: `次の記事用アイキャッチ画像を1枚作成してください。\n${IMAGE_CHAT_USAGE_RULE}\n${common(input)}\n構図: 横長のアイキャッチを想定し、記事テーマが一目で伝わる主役を1つに絞る。人物を使う場合は親しみやすく、余白を十分に取る。\n文字方針: 原則として画像内文字は入れない。必要な場合でも記事タイトル全文を描画せず、短い補助語だけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASのクラウドへアップロードせず、端末へこのファイル名で保存してください。AASでは端末内画像として読み込めます。`,
     });
   }
   if (input.inlineEnabled) {
@@ -158,7 +160,7 @@ export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptIt
         insertionMarker: `IMAGE:${number}`,
         suggestedFilename,
         altText,
-        prompt: `次の記事の挿絵${index + 1}を1枚作成してください。\n${common(input)}\nこの挿絵が対応する本文周辺: ${inlineBodyContext(input.body, index + 1) || "本文全体から最適な場面を選ぶ"}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASのクラウドへアップロードせず、端末へこのファイル名で保存してください。AASでは端末内画像として読み込めます。`,
+        prompt: `次の記事の挿絵${index + 1}を1枚作成してください。\n${IMAGE_CHAT_USAGE_RULE}\n${common(input)}\nこの挿絵が対応する本文周辺: ${inlineBodyContext(input.body, index + 1) || "本文全体から最適な場面を選ぶ"}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASのクラウドへアップロードせず、端末へこのファイル名で保存してください。AASでは端末内画像として読み込めます。`,
       });
     }
   }
