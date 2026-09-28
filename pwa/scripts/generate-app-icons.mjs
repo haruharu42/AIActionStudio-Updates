@@ -23,9 +23,16 @@ for (const target of targets) {
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toFile(output);
 
-  const info = await sharp(output).metadata();
+  const image = sharp(output);
+  const info = await image.metadata();
+  const stats = await image.stats();
   const file = await stat(output);
-  if (info.width !== target.size || info.height !== target.size || file.size < 10_000) {
+  if (
+    info.width !== target.size
+    || info.height !== target.size
+    || file.size < 10_000
+    || stats.entropy < 3
+  ) {
     throw new Error(`Invalid generated Axia icon: ${target.name}`);
   }
 }
