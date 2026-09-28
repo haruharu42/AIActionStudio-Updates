@@ -105,9 +105,11 @@ async function filterPublicBillingConfig(
     const plan = item as Record<string, unknown>;
     const planCode = plan.planCode;
     if (typeof planCode !== "string" || !PWA_NEW_SALE_PLAN_CODES.has(planCode)) return [];
+    const available = plan.available === true && effectivePlanEnabled(salesSettings, planCode);
     return [{
       ...plan,
-      available: plan.available === true && effectivePlanEnabled(salesSettings, planCode),
+      available,
+      price: available ? plan.price ?? null : null,
     }];
   });
   const commerceReady = plans.some((item) => item.available === true);
