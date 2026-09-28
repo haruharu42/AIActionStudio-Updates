@@ -37,6 +37,26 @@ export type AdminFeatureSnapshot = {
   features: AdminFeatureControl[];
 };
 
+export function validateFeatureRolloutTransition(
+  currentStage: FeatureRolloutStage,
+  targetStage: FeatureRolloutStage,
+  activeTesterCount: number,
+): string | null {
+  if (currentStage === targetStage) return null;
+
+  if (currentStage === "admin" && targetStage === "public") {
+    return "全体公開の前に「AAS-000002等でテスト」段階を通してください。管理者のみから全一般ユーザーへ直接公開はできません。";
+  }
+
+  const isForwardToTester = currentStage === "admin" && targetStage === "tester";
+  const isForwardToPublic = currentStage === "tester" && targetStage === "public";
+  if ((isForwardToTester || isForwardToPublic) && activeTesterCount < 1) {
+    return "段階反映にはactiveなテストユーザーが1件以上必要です。先にAAS-000002等のテストアカウントを登録してください。";
+  }
+
+  return null;
+}
+
 function rolloutStage(value: unknown): FeatureRolloutStage {
   return value === "admin" || value === "tester" || value === "public" ? value : "admin";
 }
