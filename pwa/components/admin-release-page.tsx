@@ -27,6 +27,8 @@ type FormState = {
   version: string;
   title: string;
   notes: string;
+  updateNotes: string;
+  fixNotes: string;
   updateKind: "optional" | "required";
 };
 
@@ -54,6 +56,8 @@ const EMPTY_FORM: FormState = {
   version: "",
   title: "",
   notes: "",
+  updateNotes: "",
+  fixNotes: "",
   updateKind: "optional",
 };
 
@@ -242,6 +246,8 @@ export function AdminReleasePage() {
         version,
         title,
         notes: form.notes.trim(),
+        updateNotes: form.updateNotes.trim(),
+        fixNotes: form.fixNotes.trim(),
         updateKind: form.updateKind,
         buildKey: "pwa-" + version.replace(/[^0-9A-Za-z.-]/g, "-") + "-" + PREVIEW_BUILD_SHORT,
       });
@@ -409,7 +415,7 @@ export function AdminReleasePage() {
         <p className="trial-admin-note">
           登録した時点では一般ユーザーへは反映されません。まず管理者だけで確認し、問題がなければ第2段階として指定テスターへ反映します。第2段階を通過するまで全体公開はDB側でも禁止します。
         </p>
-        <div className="admin-safety-confirm">入力順：①バージョン → ②更新名を選択 → ③ユーザー向け変更内容 → ④任意/必須を選択。登録後も、テスター確認と全体公開は別操作です。</div>
+        <div className="admin-safety-confirm">入力順：①バージョン → ②更新名 → ③アップデート・追加内容 → ④修正内容 → ⑤ユーザー向け案内 → ⑥任意/必須。登録後も、テスター確認と全体公開は別操作です。</div>
 
         <div className="release-admin-form">
           <label className="editor-field">
@@ -430,11 +436,31 @@ export function AdminReleasePage() {
             customPlaceholder="例: 記事ライブラリ検索改善"
           />
           <label className="editor-field release-admin-notes">
+            <span>アップデート・追加内容</span>
+            <textarea
+              value={form.updateNotes}
+              onChange={(event) => setForm((value) => ({ ...value, updateNotes: event.target.value }))}
+              placeholder={"例:\n・記事ライブラリに検索条件の折りたたみを追加\n・一般公開PWAへの反映フローを改善"}
+              maxLength={6000}
+            />
+            <small>新機能・UI改善・仕様変更など、今回追加または変更した内容を管理者向けに記録します。</small>
+          </label>
+          <label className="editor-field release-admin-notes">
+            <span>修正内容</span>
+            <textarea
+              value={form.fixNotes}
+              onChange={(event) => setForm((value) => ({ ...value, fixNotes: event.target.value }))}
+              placeholder={"例:\n・Googleログイン後にlocalhostへ戻る問題を修正\n・スマホ表示のレイアウト崩れを修正"}
+              maxLength={6000}
+            />
+            <small>不具合修正・表示修正・回帰対応などを記録します。修正がない場合は空欄で構いません。</small>
+          </label>
+          <label className="editor-field release-admin-notes">
             <span>ユーザーへ表示する更新内容</span>
             <textarea
               value={form.notes}
               onChange={(event) => setForm((value) => ({ ...value, notes: event.target.value }))}
-              placeholder="変更点を分かりやすく入力してください。"
+              placeholder="一般ユーザーへ見せる短い案内文を入力してください。"
               maxLength={4000}
             />
           </label>
@@ -491,7 +517,22 @@ export function AdminReleasePage() {
                 : `v${candidate.version} を管理者確認中`}
             </h2>
             <p>{candidate.title}</p>
-            {candidate.notes && <pre>{candidate.notes}</pre>}
+            <div className="release-change-details">
+              <div className="release-change-block update">
+                <strong>アップデート・追加内容</strong>
+                {candidate.update_notes ? <pre>{candidate.update_notes}</pre> : <small>記載なし</small>}
+              </div>
+              <div className="release-change-block fix">
+                <strong>修正内容</strong>
+                {candidate.fix_notes ? <pre>{candidate.fix_notes}</pre> : <small>記載なし</small>}
+              </div>
+              {candidate.notes && (
+                <div className="release-change-block user">
+                  <strong>ユーザー向け案内</strong>
+                  <pre>{candidate.notes}</pre>
+                </div>
+              )}
+            </div>
           </div>
           <div className="release-admin-publish">
             <span className={candidate.update_kind === "required" ? "required" : ""}>
@@ -603,7 +644,18 @@ export function AdminReleasePage() {
                 <div>
                   <strong>{release.title}</strong>
                   <small>{formatDate(release.published_at ?? release.created_at)} ・ 利用中 {release.adopted_users}人</small>
-                  {release.notes && <p>{release.notes}</p>}
+                  <div className="release-history-change-details">
+                    {release.update_notes && (
+                      <div><b>アップデート</b><pre>{release.update_notes}</pre></div>
+                    )}
+                    {release.fix_notes && (
+                      <div><b>修正</b><pre>{release.fix_notes}</pre></div>
+                    )}
+                    {release.notes && (
+                      <div><b>ユーザー向け案内</b><pre>{release.notes}</pre></div>
+                    )}
+                    {!release.update_notes && !release.fix_notes && !release.notes && <small>変更内容の記録はありません。</small>}
+                  </div>
                 </div>
                 <div className="release-history-actions">
                   {release.status === "published" && !isCurrent && (
