@@ -243,7 +243,7 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
             <p className="panel-muted">本文は各工程ごとに装飾付きでコピーできます。タイトルとアイキャッチはnoteの別欄へ貼り付けてください。</p>
           </div>
           <button
-            className="primary-action"
+            className="primary-action note-post-batch-copy-desktop"
             type="button"
             disabled={busyKey === "batch-rich-with-images" || sequence.length === 0 || missingInlineOrders.length > 0}
             onClick={() => void copyAllWithInlineImages()}
@@ -256,10 +256,10 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
           </button>
         </div>
         {missingInlineOrders.length > 0 && (
-          <p className="beginner-help">画像込み一括コピーを使うには、挿絵 {missingInlineOrders.join("・")} を先に選択してください。</p>
+          <p className="beginner-help note-post-batch-copy-desktop">画像込み一括コピーを使うには、挿絵 {missingInlineOrders.join("・")} を先に選択してください。</p>
         )}
         {inlineOrders.length > 0 && (
-          <p className="beginner-help">画像込み一括コピーは対応ブラウザ・noteエディタ向けです。画像が貼り付かない場合は、下の順番から本文・挿絵を個別にコピーしてください。</p>
+          <p className="beginner-help note-post-batch-copy-desktop">画像込み一括コピーはPC向け機能です。対応ブラウザ・noteエディタで画像が貼り付かない場合は、下の順番から本文・挿絵を個別にコピーしてください。</p>
         )}
         <ol>
           {postingSteps.map((step, index) => {
