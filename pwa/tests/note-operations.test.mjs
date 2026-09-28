@@ -362,7 +362,7 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
 
   assert.match(page, /type="month"/);
   assert.match(page, /min=\{currentJstMonth\(\)\}/);
-  assert.match(page, /月間目安から実際の無料/有料本数を調整/);
+  assert.match(page, /月間目安から実際の無料\/有料本数を調整/);
   assert.match(page, /1日に何回まで投稿するか/);
   assert.match(page, /前月・今月の実績に合わせた増減/);
   assert.match(page, /ChatGPT \/ Gemini \/ Claude/);
