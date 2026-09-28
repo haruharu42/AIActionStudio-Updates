@@ -22,6 +22,39 @@ const REVIEW_LINKS = [
   { href: "/support", label: "サポート・開示請求", note: "購入者が問い合わせできる導線と対応方法を確認" },
 ] as const;
 
+const OPERATOR_RELEASE_CHECKS = [
+  {
+    label: "販売価格・返金条件",
+    note: "実際の外部販売ページに出す価格、利用期間、返金・キャンセル条件を購入前表示と照合します。",
+    href: "/commercial-transactions",
+  },
+  {
+    label: "実ブラウザの購入後導線",
+    note: "認証済みブラウザで購入後の利用コード登録、利用権反映、重複・期限切れ・上限到達時の失敗表示を確認します。",
+    href: "/plans",
+  },
+  {
+    label: "テスター実機通知",
+    note: "テスター端末でPush購読を有効にし、テスター限定通知の受信・タップ遷移を確認します。",
+    href: null,
+  },
+  {
+    label: "クローズド有料ベータ",
+    note: "少人数の実購入で、購入→コード→登録→利用権→実利用→問い合わせ対応まで一連の運用を確認します。",
+    href: null,
+  },
+  {
+    label: "最終RC・実機確認",
+    note: "販売対象の完全SHAでCIを通し、PC・スマホの主要導線と公開内容を実機で確認します。",
+    href: null,
+  },
+  {
+    label: "Production公開承認",
+    note: "Feature Controlの公開範囲、Production Worker/route/domain反映を別途明示承認します。販売承認だけでProductionへ自動配布しません。",
+    href: null,
+  },
+] as const;
+
 function externalPurchaseUrl(value: string): string {
   const normalized = value.trim();
   if (!normalized.startsWith("https://")) return "";
@@ -240,7 +273,7 @@ export function SalesReleasePreflightPanel({
               />
               <span>
                 <strong>手動確認項目を確認済み</strong>
-                <small>漏洩パスワード保護、特商法・利用規約・プライバシー・AI利用条件、実際の価格・返金条件、購入前サポート導線を確認しました。</small>
+                <small>法務・価格・返金・サポートに加え、実ブラウザの利用コード導線、テスター実機通知、クローズド有料ベータ、最終RC/実機確認、Production公開判断まで確認しました。</small>
               </span>
             </label>
             <button
@@ -325,6 +358,25 @@ export function SalesReleasePreflightPanel({
           </article>
         ))}
       </div>
+
+      <section className="sales-release-operator-review" aria-labelledby="sales-release-operator-review-title">
+        <div className="admin-panel-heading">
+          <div>
+            <p className="eyebrow">OPERATOR CHECK</p>
+            <h3 id="sales-release-operator-review-title">実機・運用で完了確認する項目</h3>
+            <p>ここはAASが自動で完了判定しません。実際の販売条件・端末・購入者運用で確認してから上の最終承認チェックを入れてください。</p>
+          </div>
+        </div>
+        <div className="sales-release-preflight-grid">
+          {OPERATOR_RELEASE_CHECKS.map((item) => (
+            <article key={item.label}>
+              <div><strong>{item.label}</strong><span className="review">要人確認</span></div>
+              <small>{item.note}</small>
+              {item.href && <Link href={item.href}>確認画面を開く →</Link>}
+            </article>
+          ))}
+        </div>
+      </section>
 
       <p className="sales-release-preflight-footnote">
         価格・返金条件・販売者情報・サポート方針・公開段階は自動確定しません。実際の販売内容と一致していることを公開直前に人が確認してください。
