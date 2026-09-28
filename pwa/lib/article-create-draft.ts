@@ -206,14 +206,44 @@ export function validateArticleCreateStep(
   if (step === 4 && (!draft.title.trim() || draft.title.trim().length > 500)) {
     return "タイトルを1〜500文字で入力してください。候補を選ぶか、タイトルを直接入力してください。";
   }
-  if (step === 5 && draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
-    return "有料記事には有料エリア開始位置が必要です。本文に「<!-- PAID_AREA -->」を入れてください。";
-  }
-  if (step === 5 && draft.inlineEnabled) {
-    for (let index = 1; index <= draft.inlineCount; index += 1) {
-      const marker = new RegExp(`<!--\\s*IMAGE:0?${index}\\s*-->`, "i");
-      if (!marker.test(draft.body)) {
-        return `挿絵${index}の差し込み位置が本文にありません。「<!-- IMAGE:${String(index).padStart(2, "0")} -->」を入れてください。`;
+  if (step === 5) {
+    const body = draft.body;
+    const paidMarkers = body.match(/<!--\s*PAID_AREA\s*-->/gi) ?? [];
+    if (draft.articleType === "paid" && body.trim() && paidMarkers.length === 0) {
+      return "有料記事には有料エリア開始位置が必要です。本文に「<!-- PAID_AREA -->」を入れてください。";
+    }
+    if (draft.articleType === "paid" && paidMarkers.length > 1) {
+      return "有料エリア開始位置は本文に1か所だけ設定してください。";
+    }
+    if (draft.articleType === "free" && paidMarkers.length > 0) {
+      return "無料記事には有料エリア開始位置を入れないでください。";
+    }
+
+    const markerOrders = [...body.matchAll(/<!--\s*IMAGE:0*(\d+)\s*-->/gi)]
+      .map((match) => Number(match[1]))
+      .filter((order) => Number.isSafeInteger(order));
+
+    if (!draft.inlineEnabled && markerOrders.length > 0) {
+      return "挿絵をOFFにしているため、本文の挿絵マーカーを削除してください。";
+    }
+
+    if (draft.inlineEnabled) {
+      for (let order = 1; order <= draft.inlineCount; order += 1) {
+        const occurrences = markerOrders.filter((value) => value === order).length;
+        if (occurrences === 0) {
+          return `挿絵${order}の差し込み位置が本文にありません。「<!-- IMAGE:${String(order).padStart(2, "0")} -->」を入れてください。`;
+        }
+        if (occurrences > 1) {
+          return `挿絵${order}の差し込み位置が重複しています。各挿絵マーカーは1か所だけにしてください。`;
+        }
+      }
+      const unexpected = markerOrders.find((order) => order < 1 || order > draft.inlineCount);
+      if (unexpected !== undefined) {
+        return `設定枚数に含まれない挿絵${unexpected}のマーカーがあります。不要な挿絵マーカーを削除してください。`;
+      }
+      const expectedOrder = Array.from({ length: draft.inlineCount }, (_unused, index) => index + 1);
+      if (markerOrders.length !== expectedOrder.length || markerOrders.some((order, index) => order !== expectedOrder[index])) {
+        return "挿絵マーカーは本文内で挿絵1→挿絵2→…の順に1回ずつ配置してください。";
       }
     }
   }
