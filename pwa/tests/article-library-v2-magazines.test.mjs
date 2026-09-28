@@ -80,16 +80,11 @@ test('article library filters can be collapsed without clearing the selected con
   assert.match(libraryListUi, /value=\{filters\.status\}/);
 });
 
-test('article library detail can copy title and rich publication body', () => {
-  assert.match(libraryDetailUi, /掲載用コピー/);
-  assert.match(libraryDetailUi, /タイトルをコピー/);
-  assert.match(libraryDetailUi, /完成本文を装飾付きコピー/);
+test('article library detail delegates note copying to the posting assistant', () => {
+  assert.doesNotMatch(libraryDetailUi, /掲載用コピー/);
+  assert.doesNotMatch(libraryDetailUi, /完成本文を装飾付きコピー/);
+  assert.match(libraryDetailUi, /NotePostAssistant/);
   assert.match(libraryDetailUi, /articleExportBody\(detail\)/);
-  assert.match(libraryDetailUi, /publicationBodyForCopy/);
-  assert.match(libraryDetailUi, /copyNoteRichText\(publicationBody\)/);
-  assert.match(libraryDetailUi, /navigator\.clipboard\?\.writeText/);
-  assert.match(libraryDetailUi, /【ここから有料エリア】/);
-  assert.match(libraryDetailUi, /【挿絵/);
 });
 
 test('note article detail exposes local image posting assistant without Supabase Storage', () => {
@@ -106,6 +101,14 @@ test('note article detail exposes local image posting assistant without Supabase
   assert.match(notePostAssistantUi, /有料本文/);
   assert.match(notePostAssistantUi, /位置をコピー/);
   assert.match(notePostAssistantUi, /有料エリアの目印/);
+  assert.match(notePostAssistantUi, /装飾付きコピー/);
+  assert.match(notePostAssistantUi, /本文＋挿絵を一括コピー/);
+  assert.match(notePostAssistantUi, /copyNotePostSequenceWithImages/);
+  assert.ok(
+    notePostAssistantUi.indexOf('aria-label="noteへ貼り付ける順番"')
+      < notePostAssistantUi.indexOf('aria-label="画像入り完成プレビュー"'),
+    'note posting steps should render above the image preview',
+  );
   assert.match(localArticleImagesSource, /indexedDB\.open/);
   assert.match(localArticleImagesSource, /createObjectStore/);
   assert.match(localArticleImagesSource, /saveLocalArticleImage/);
@@ -154,6 +157,27 @@ test('note paid posting sequence separates free and paid content around the paid
   );
   assert.doesNotMatch(freeSequence.map((item) => item.kind).join(','), /paid-boundary/);
   assert.ok(freeSequence.every((item) => item.kind !== 'body' || item.paid === false));
+});
+
+test('note rich batch clipboard payload keeps formatting, paid boundary and inline image order', () => {
+  const sequence = [
+    { kind: 'body', id: 'body-1', markdown: '## 見出し\n**重要**です', paid: false },
+    { kind: 'inline-image', id: 'inline-1', order: 1, paid: false },
+    { kind: 'paid-boundary', id: 'paid-boundary' },
+    { kind: 'body', id: 'body-2', markdown: '### 有料部分\n- 手順A', paid: true },
+  ];
+  const payload = notePostAssistant.buildNotePostClipboardPayload(
+    sequence,
+    new Map([[1, 'data:image/png;base64,AAAA']]),
+  );
+
+  assert.match(payload.html, /<h2>見出し<\/h2>/);
+  assert.match(payload.html, /<strong>重要<\/strong>/);
+  assert.match(payload.html, /<img src="data:image\/png;base64,AAAA" alt="挿絵1"/);
+  assert.match(payload.html, /【ここから有料エリア】/);
+  assert.match(payload.html, /<h3>有料部分<\/h3>/);
+  assert.match(payload.plain, /挿絵1/);
+  assert.match(payload.plain, /ここから有料エリア/);
 });
 
 test('article library edit validation matches the positive-price database contract', () => {
