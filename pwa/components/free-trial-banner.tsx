@@ -14,6 +14,10 @@ import { fetchPublicSalesSettings, type SalesSettings } from "@/lib/sales-settin
 
 type LimitKind = "daily" | "feature" | null;
 
+function detailsCollapsedKey(userId: string): string {
+  return `aas:free-trial-details-collapsed:${userId}`;
+}
+
 function formatEnd(value: string | null): string {
   if (!value) return "—";
   try {
@@ -33,6 +37,7 @@ export function FreeTrialBanner() {
   const [status, setStatus] = useState<FreeTrialStatus | null>(null);
   const [sales, setSales] = useState<SalesSettings | null>(null);
   const [limitKind, setLimitKind] = useState<LimitKind>(null);
+  const [detailsCollapsed, setDetailsCollapsed] = useState(false);
 
   const loadStatus = useCallback(async (forcedKind: Exclude<LimitKind, null> | null = null) => {
     if (!accessUserId || !client) {
@@ -65,6 +70,22 @@ export function FreeTrialBanner() {
       setLimitKind(null);
     }
   }, [accessUserId, client]);
+
+  useEffect(() => {
+    let active = true;
+    let nextCollapsed = false;
+    if (accessUserId) {
+      try {
+        nextCollapsed = window.localStorage.getItem(detailsCollapsedKey(accessUserId)) === "1";
+      } catch {
+        nextCollapsed = false;
+      }
+    }
+    queueMicrotask(() => {
+      if (active) setDetailsCollapsed(nextCollapsed);
+    });
+    return () => { active = false; };
+  }, [accessUserId]);
 
   useEffect(() => {
     let active = true;
@@ -114,6 +135,15 @@ export function FreeTrialBanner() {
   const remaining = Math.max(0, status.dailyTotalLimit - status.totalUsed);
   const purchaseUrl = sales?.externalSalesEnabled && sales.accessCodeEnabled && sales.externalSalesUrl ? sales.externalSalesUrl : "";
   const permanentFree = status.endsAt === null && status.remainingDays === null;
+  const updateDetailsCollapsed = (next: boolean) => {
+    setDetailsCollapsed(next);
+    if (!accessUserId) return;
+    try {
+      window.localStorage.setItem(detailsCollapsedKey(accessUserId), next ? "1" : "0");
+    } catch {
+      // The current view still updates even when persistent browser storage is unavailable.
+    }
+  };
   const closeLimitDialog = () => {
     if (limitKind === "daily") {
       try {
@@ -127,21 +157,49 @@ export function FreeTrialBanner() {
 
   return (
     <>
-      <section className="free-trial-banner" aria-label="無料利用状態">
-        <div>
-          <span className="free-trial-badge">{permanentFree ? "無料プラン" : "無料トライアル"}</span>
-          <strong>{permanentFree ? "期限なし" : `残り ${status.remainingDays ?? 0} 日`}</strong>
-          <small>{permanentFree ? "日次の無料回数はリセット後に復活します" : `終了予定 ${formatEnd(status.endsAt)}`}</small>
-        </div>
+      <section className={`free-trial-banner${detailsCollapsed ? " is-collapsed" : ""}`} aria-label="無料利用状態">
+        {!detailsCollapsed && (
+          <div className="free-trial-summary">
+            <div className="free-trial-summary-head">
+              <span className="free-trial-badge">{permanentFree ? "無料プラン" : "無料トライアル"}</span>
+              <button
+                className="free-trial-collapse-toggle"
+                type="button"
+                aria-label="無料プラン詳細を閉じる"
+                onClick={() => updateDetailsCollapsed(true)}
+              >
+                <span aria-hidden="true">⌃</span>
+                閉じる
+              </button>
+            </div>
+            <strong>{permanentFree ? "期限なし" : `残り ${status.remainingDays ?? 0} 日`}</strong>
+            <small>{permanentFree ? "日次の無料回数はリセット後に復活します" : `終了予定 ${formatEnd(status.endsAt)}`}</small>
+          </div>
+        )}
         <div className="free-trial-usage">
-          <span>本日の利用</span>
+          <div className="free-trial-usage-head">
+            <span>本日の利用</span>
+            {detailsCollapsed && (
+              <button
+                className="free-trial-collapse-toggle compact"
+                type="button"
+                aria-label="無料プラン詳細を開く"
+                title="無料プラン詳細を開く"
+                onClick={() => updateDetailsCollapsed(false)}
+              >
+                <span aria-hidden="true">⌄</span>
+              </button>
+            )}
+          </div>
           <strong>{status.totalUsed} / {status.dailyTotalLimit} 回</strong>
           <small>残り {remaining} 回 · {status.resetTimezone} {String(status.resetHour).padStart(2, "0")}:00 リセット</small>
         </div>
-        {purchaseUrl ? (
-          <a href={purchaseUrl} target="_blank" rel="noopener noreferrer">利用権を見る</a>
-        ) : (
-          <Link href="/plans">利用プランを見る</Link>
+        {!detailsCollapsed && (
+          purchaseUrl ? (
+            <a href={purchaseUrl} target="_blank" rel="noopener noreferrer">利用権を見る</a>
+          ) : (
+            <Link href="/plans">利用プランを見る</Link>
+          )
         )}
       </section>
 
