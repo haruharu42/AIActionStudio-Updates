@@ -24,7 +24,7 @@ body {
   margin: 0;
   background: var(--ink);
   color: var(--text);
-  font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", Meiryo, system-ui, sans-serif;
+  font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", Meiryo, "Noto Sans JP", "Noto Sans CJK JP", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 button, input, select, textarea { font: inherit; }
