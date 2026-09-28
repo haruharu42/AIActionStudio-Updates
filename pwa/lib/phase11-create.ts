@@ -242,6 +242,9 @@ export function validateCreationDraft(
   if (!draft.title || draft.title.length > 500) {
     throw new Error("タイトルを1〜500文字で入力してください。");
   }
+  if (draft.saveStatus === "ready" && !draft.body) {
+    throw new Error("完成状態で保存するには本文を入力してください。");
+  }
   if (!draft.genre || draft.genre === "その他") {
     throw new Error("「その他」を選んだ場合はジャンル名を入力してください。");
   }
