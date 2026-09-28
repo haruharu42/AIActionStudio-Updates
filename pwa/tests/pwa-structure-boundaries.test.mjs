@@ -8,6 +8,12 @@ import { createServer } from "vite";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readArticleStepSource = async () => (await Promise.all([
+  "components/article-create/article-create-steps.tsx",
+  "components/article-create/article-create-generation-steps.tsx",
+  "components/article-create/article-create-finish-steps.tsx",
+  "components/article-create/article-create-step-shared.tsx",
+].map((relative) => read(relative)))).join("\n");
 
 const vite = await createServer({
   appType: "custom",
@@ -107,7 +113,7 @@ test("article draft URL parsing and step validation stay pure and bounded", () =
 
 test("article creator keeps UI, access and pure draft responsibilities separated", async () => {
   const page = await read("components/phase11-create-page.tsx");
-  const stepUi = await read("components/article-create/article-create-steps.tsx");
+  const stepUi = await readArticleStepSource();
   const draftHelpers = await read("lib/article-create-draft.ts");
   const progress = await read("lib/phase11-wizard-progress.ts");
 
