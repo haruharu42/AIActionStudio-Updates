@@ -73,9 +73,7 @@ export async function loadPublicSalesApproval(
 ): Promise<PublicSalesApproval> {
   const { data, error } = await client.rpc("admin_get_public_sales_approval");
   if (error) throw new Error("公開販売承認の状態を取得できませんでした。");
-  const result = parseApproval(data);
-  notifySalesLaunchStateChanged();
-  return result;
+  return parseApproval(data);
 }
 
 export async function setPublicSalesApproval(
@@ -92,5 +90,7 @@ export async function setPublicSalesApproval(
     }
     throw new Error(approved ? "公開販売を承認できませんでした。" : "公開販売を停止できませんでした。");
   }
-  return parseApproval(data);
+  const result = parseApproval(data);
+  notifySalesLaunchStateChanged();
+  return result;
 }
