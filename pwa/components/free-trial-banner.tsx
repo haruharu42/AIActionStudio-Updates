@@ -72,15 +72,19 @@ export function FreeTrialBanner() {
   }, [accessUserId, client]);
 
   useEffect(() => {
-    if (!accessUserId) {
-      setDetailsCollapsed(false);
-      return;
+    let active = true;
+    let nextCollapsed = false;
+    if (accessUserId) {
+      try {
+        nextCollapsed = window.localStorage.getItem(detailsCollapsedKey(accessUserId)) === "1";
+      } catch {
+        nextCollapsed = false;
+      }
     }
-    try {
-      setDetailsCollapsed(window.localStorage.getItem(detailsCollapsedKey(accessUserId)) === "1");
-    } catch {
-      setDetailsCollapsed(false);
-    }
+    queueMicrotask(() => {
+      if (active) setDetailsCollapsed(nextCollapsed);
+    });
+    return () => { active = false; };
   }, [accessUserId]);
 
   useEffect(() => {
