@@ -313,9 +313,43 @@ export function validateCreationDraft(
   ) {
     throw new Error("有料記事は1以上の整数価格を設定してください。");
   }
-  if (draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
+  const paidMarkers = draft.body.match(/<!--\s*PAID_AREA\s*-->/gi) ?? [];
+  if (draft.articleType === "paid" && draft.body.trim() && paidMarkers.length === 0) {
     throw new Error("有料記事の本文に有料エリア開始位置がありません。本文工程で「ここから有料エリア」を設定してください。");
   }
+  if (draft.articleType === "paid" && paidMarkers.length > 1) {
+    throw new Error("有料エリア開始位置は本文に1か所だけ設定してください。");
+  }
+  if (draft.articleType === "free" && paidMarkers.length > 0) {
+    throw new Error("無料記事には有料エリア開始位置を入れないでください。");
+  }
+
+  const markerOrders = [...draft.body.matchAll(/<!--\s*IMAGE:0*(\d+)\s*-->/gi)]
+    .map((match) => Number(match[1]))
+    .filter((order) => Number.isSafeInteger(order));
+  if (!draft.inlineEnabled && markerOrders.length > 0) {
+    throw new Error("挿絵をOFFにしているため、本文の挿絵マーカーを削除してください。");
+  }
+  if (draft.inlineEnabled && draft.body.trim()) {
+    for (let order = 1; order <= draft.inlineCount; order += 1) {
+      const occurrences = markerOrders.filter((value) => value === order).length;
+      if (occurrences === 0) {
+        throw new Error(`挿絵${order}の差し込み位置が本文にありません。`);
+      }
+      if (occurrences > 1) {
+        throw new Error(`挿絵${order}の差し込み位置が重複しています。`);
+      }
+    }
+    const unexpected = markerOrders.find((order) => order < 1 || order > draft.inlineCount);
+    if (unexpected !== undefined) {
+      throw new Error(`設定枚数に含まれない挿絵${unexpected}のマーカーがあります。`);
+    }
+    const expectedOrder = Array.from({ length: draft.inlineCount }, (_unused, index) => index + 1);
+    if (markerOrders.length !== expectedOrder.length || markerOrders.some((order, index) => order !== expectedOrder[index])) {
+      throw new Error("挿絵マーカーは本文内で挿絵1→挿絵2→…の順に1回ずつ配置してください。");
+    }
+  }
+
   if (draft.articleType === "free") draft.price = null;
   if (!draft.inlineEnabled) draft.inlineCount = 0;
   return draft;
