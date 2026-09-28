@@ -38,6 +38,8 @@ export function SalesReleasePreflightPanel({
   const [mfaCheckFailed, setMfaCheckFailed] = useState(false);
   const [legalReady, setLegalReady] = useState<boolean | null>(null);
   const [legalCheckFailed, setLegalCheckFailed] = useState(false);
+  const [usableInviteCount, setUsableInviteCount] = useState<number | null>(null);
+  const [inviteCheckFailed, setInviteCheckFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -62,6 +64,32 @@ export function SalesReleasePreflightPanel({
     let active = true;
     try {
       const client = getSupabaseClient();
+      void client.rpc("admin_list_pwa_invites", { p_status: "active" }).then(
+        ({ data, error }) => {
+          if (!active) return;
+          if (error) {
+            setInviteCheckFailed(true);
+            setUsableInviteCount(null);
+            return;
+          }
+          const now = Date.now();
+          const usable = (Array.isArray(data) ? data : []).filter((value) => {
+            if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+            const invite = value as Record<string, unknown>;
+            const maxUses = typeof invite.max_uses === "number" ? invite.max_uses : null;
+            const useCount = typeof invite.use_count === "number" ? invite.use_count : 0;
+            const expiresAt = typeof invite.expires_at === "string" ? Date.parse(invite.expires_at) : Number.NaN;
+            return (maxUses === null || useCount < maxUses) && (!Number.isFinite(expiresAt) || expiresAt > now);
+          }).length;
+          setInviteCheckFailed(false);
+          setUsableInviteCount(usable);
+        },
+        () => {
+          if (!active) return;
+          setInviteCheckFailed(true);
+          setUsableInviteCount(null);
+        },
+      );
       void client.auth.mfa.listFactors().then(
         ({ data, error }) => {
           if (!active) return;
@@ -118,6 +146,13 @@ export function SalesReleasePreflightPanel({
         : !legalReady
           ? "販売者情報（氏名・所在地・電話・メール・サポートURL）が未完了です。"
           : "",
+    inviteCheckFailed
+      ? "販売用の利用コード在庫を確認できません。"
+      : usableInviteCount === null
+        ? "販売用の利用コード在庫を確認中です。"
+        : usableInviteCount < 1
+          ? "購入者へ渡せる有効な利用コードがありません。"
+          : "",
   ].filter(Boolean);
   const automatedReady = automatedBlockers.length === 0;
 
@@ -167,6 +202,16 @@ export function SalesReleasePreflightPanel({
           <div><strong>購入ページ</strong><span className={purchaseUrl ? "ready" : "action"}>{purchaseUrl ? "設定あり" : "未設定"}</span></div>
           <small>実際に公開する外部購入ページのURLを確認します。</small>
           {purchaseUrl && <a href={purchaseUrl} target="_blank" rel="noopener noreferrer">購入ページを開く ↗</a>}
+        </article>
+        <article>
+          <div>
+            <strong>販売用の利用コード</strong>
+            <span className={usableInviteCount !== null && usableInviteCount > 0 ? "ready" : inviteCheckFailed ? "review" : "action"}>
+              {inviteCheckFailed ? "確認失敗" : usableInviteCount === null ? "確認中" : usableInviteCount > 0 ? `${usableInviteCount}件利用可` : "0件"}
+            </span>
+          </div>
+          <small>外部販売で購入者へ渡せる、未期限切れ・未上限到達のactive利用コードが1件以上必要です。</small>
+          <Link href="/admin/users">利用コードを発行・確認 →</Link>
         </article>
         <article>
           <div>
