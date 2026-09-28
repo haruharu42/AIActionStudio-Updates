@@ -775,8 +775,11 @@ body.aas-crystal-theme :where(
   }
 
   body.aas-crystal-theme .action-studio-hero h2 {
-    max-width: 360px;
-    font-size: clamp(27px, 8.4vw, 38px);
+    max-width: none;
+    white-space: nowrap;
+    font-size: clamp(18px, 5.7vw, 24px);
+    line-height: 1.16;
+    letter-spacing: -.055em;
   }
 
   body.aas-crystal-theme .action-studio-hero p {
@@ -785,13 +788,18 @@ body.aas-crystal-theme :where(
   }
 
   body.aas-crystal-theme .action-studio-hero-chips {
-    max-width: 390px;
+    max-width: none;
+    flex-wrap: nowrap;
+    gap: 4px;
     margin-top: 12px;
   }
 
   body.aas-crystal-theme .action-studio-hero-chips span {
-    padding: 5px 8px;
-    font-size: 8px;
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    padding: 4px 5px;
+    font-size: clamp(6.5px, 1.8vw, 8px);
   }
 
   body.aas-crystal-theme .action-studio-character-caption {
