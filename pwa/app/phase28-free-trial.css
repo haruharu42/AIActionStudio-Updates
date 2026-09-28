@@ -23,8 +23,42 @@
 .free-trial-banner strong { color: #153e6d; font-size: 15px; }
 .free-trial-banner small { color: #71859c; font-size: 9px; line-height: 1.55; }
 .free-trial-badge { width: fit-content; border-radius: 999px; background: #eaf4ff; color: #2471c9; padding: 5px 8px; font-size: 8px; font-weight: 900; }
+.free-trial-summary,
+.free-trial-usage { min-width: 0; }
+.free-trial-summary-head,
+.free-trial-usage-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .free-trial-usage { border-left: 1px solid #e1eaf4; padding-left: 14px; }
-.free-trial-usage > span { color: #71859c; font-size: 9px; font-weight: 800; }
+.free-trial-usage-head > span { color: #71859c; font-size: 9px; font-weight: 800; }
+.free-trial-collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 30px;
+  border: 1px solid #d7e5f5;
+  border-radius: 999px;
+  background: #f6faff;
+  color: #58718e;
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.free-trial-collapse-toggle.compact {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+  font-size: 14px;
+}
+.free-trial-banner.is-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+  padding-block: 12px;
+}
+.free-trial-banner.is-collapsed .free-trial-usage {
+  border-left: 0;
+  padding-left: 0;
+}
 .free-trial-banner > a { border-radius: 11px; background: #176fd9; color: #fff; padding: 10px 12px; font-size: 9px; font-weight: 900; text-decoration: none; white-space: nowrap; }
 
 .free-limit-backdrop {
@@ -98,6 +132,7 @@
   .free-trial-global-shell { width: min(100% - 20px, 1180px); margin-top: 10px; }
   .free-trial-banner { grid-template-columns: 1fr; }
   .free-trial-usage { border-left: 0; border-top: 1px solid #e1eaf4; padding: 10px 0 0; }
+  .free-trial-banner.is-collapsed .free-trial-usage { border-top: 0; padding-top: 0; }
   .free-trial-banner > a { text-align: center; }
   .free-limit-dialog { padding: 24px 20px 20px; }
   .free-limit-actions { display: grid; grid-template-columns: 1fr; }
