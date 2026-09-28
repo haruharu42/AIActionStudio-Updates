@@ -265,6 +265,14 @@ test("sales center groups legal support, DB readiness, and explicit public appro
     assert.ok(preflight.includes(route), `missing pre-sale review route: ${route}`);
   }
 
+  assert.match(preflight, /実機・運用で完了確認する項目/);
+  assert.match(preflight, /実ブラウザの購入後導線/);
+  assert.match(preflight, /テスター実機通知/);
+  assert.match(preflight, /クローズド有料ベータ/);
+  assert.match(preflight, /最終RC・実機確認/);
+  assert.match(preflight, /Production公開承認/);
+  assert.match(preflight, /販売承認だけでProductionへ自動配布しません/);
+
   assert.match(readinessClient, /admin_get_sales_launch_readiness/);
   assert.match(readinessClient, /SALES_LAUNCH_STATE_EVENT/);
   assert.match(readinessClient, /notifySalesLaunchStateChanged/);
