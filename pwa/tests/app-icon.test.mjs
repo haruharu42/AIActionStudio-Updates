@@ -34,11 +34,12 @@ test("AAS generates high-resolution Axia icons for desktop, PWA, iPhone, and not
   assert.ok(icon512.byteLength > 2_000);
 
   assert.match(generator, /aas-axia-app-icon-v1\.svg/);
+  assert.match(generator, /data:image\\\/\(\?:webp\|jpeg\);base64/);
   assert.match(generator, /Buffer\.from\(embedded\[1\], "base64"\)/);
   assert.match(generator, /sharp\(sourceRaster\)/);
   assert.match(generator, /stats\.entropy < 3/);
   assert.match(sourceSvg, /xmlns:xlink="http:\/\/www\.w3\.org\/1999\/xlink"/);
-  assert.match(sourceSvg, /<image xlink:href="data:image\/jpeg;base64,/);
+  assert.match(sourceSvg, /<image xlink:href="data:image\/webp;base64,/);
 
   const manifest = JSON.parse(manifestRaw);
   assert.equal(manifest.name, "AI Action Studio");
