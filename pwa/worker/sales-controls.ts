@@ -3,7 +3,7 @@ export interface SalesControlEnv {
   AAS_SUPABASE_SERVICE_ROLE_KEY?: string;
 }
 
-type SalesSettings = {
+export type EffectiveSalesSettings = {
   externalSalesEnabled: boolean;
   accessCodeEnabled: boolean;
   externalSalesUrl: string;
@@ -19,7 +19,7 @@ type SalesLaunchRuntime = {
   stripeRouteReady: boolean;
 };
 
-const PLAN_FLAGS: Record<string, keyof Pick<SalesSettings, "pwa7DayEnabled" | "pwaMonthlyEnabled">> = {
+const PLAN_FLAGS: Record<string, keyof Pick<EffectiveSalesSettings, "pwa7DayEnabled" | "pwaMonthlyEnabled">> = {
   "AAS-PWA-7DAY": "pwa7DayEnabled",
   "AAS-PWA-MONTHLY": "pwaMonthlyEnabled",
 };
@@ -85,7 +85,7 @@ function jsonResponse(payload: unknown, status = 200): Response {
   });
 }
 
-async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | null> {
+export async function loadEffectiveSalesSettings(env: SalesControlEnv): Promise<EffectiveSalesSettings | null> {
   const baseUrl = clean(env.AAS_SUPABASE_URL).replace(/\/$/, "");
   const serviceKey = clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
   if (!baseUrl || !serviceKey) return null;
@@ -135,14 +135,14 @@ export async function handleSalesControlRequest(
   const url = new URL(request.url);
 
   if (url.pathname === "/api/sales/settings" && request.method === "GET") {
-    const settings = await loadSalesSettings(env);
+    const settings = await loadEffectiveSalesSettings(env);
     if (!settings) return jsonResponse({ error: "販売受付設定を確認できませんでした。" }, 503);
     return jsonResponse(settings);
   }
 
   if (url.pathname !== "/api/billing/checkout" || request.method !== "POST") return null;
 
-  const settings = await loadSalesSettings(env);
+  const settings = await loadEffectiveSalesSettings(env);
   if (!settings) return jsonResponse({ error: "販売受付設定を確認できないため、新規決済を停止しています。" }, 503);
   if (!settings.stripeCheckoutEnabled) {
     return jsonResponse({ error: "現在、Stripeでの新規購入受付は停止しています。" }, 503);
