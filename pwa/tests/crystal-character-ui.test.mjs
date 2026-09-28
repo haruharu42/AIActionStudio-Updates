@@ -22,7 +22,7 @@ test("Axia and Rumo are local presentation assets and the crystal theme loads la
   assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
   assert.match(css, /url\("\/aas-login-tile-1\.svg\?v=20260927-hq-v2"\)/);
   assert.match(css, /url\("\/aas-login-tile-4\.svg\?v=20260927-hq-v2"\)/);
-  assert.match(css, /\.auth-character-visual[\s\S]*?width:\s*min\(54%, 620px\)/);
+  assert.match(css, /\.auth-character-visual[\s\S]*?width:\s*min\(48%, 580px\)[\s\S]*?right:\s*0;/);
   assert.match(css, /\.auth-character-visual[\s\S]*?background-size:\s*51.5% 51.4%/);
   assert.match(css, /\.action-studio-hero::after[\s\S]*?background:\s*url\("\/aas-axia-rumo-hero\.svg"\) center right \/ contain no-repeat/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*?\.auth-character-visual[\s\S]*?width:\s*min\(94vw, 560px\)[\s\S]*?background-size:\s*51.5% 51.4%/);
