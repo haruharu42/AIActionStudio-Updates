@@ -3,12 +3,29 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const readAdminMembershipSource = () => [
+  read("components/admin-membership-page.tsx"),
+  read("components/admin-membership/admin-membership-static-sections.tsx"),
+].join("\n");
 const readRepo = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+
+test("membership presentation sections stay outside the mutation controller", () => {
+  const page = read("components/admin-membership-page.tsx");
+  const sections = read("components/admin-membership/admin-membership-static-sections.tsx");
+
+  assert.match(page, /MembershipStatusSection/);
+  assert.match(page, /MembershipAuditSection/);
+  assert.match(page, /MembershipRecommendationsSection/);
+  assert.match(sections, /export function MembershipStatusSection/);
+  assert.match(sections, /export function MembershipAuditSection/);
+  assert.match(sections, /export function MembershipRecommendationsSection/);
+  assert.doesNotMatch(sections, /getSupabaseClient|\.rpc\(|setCreatorMembershipPlan|clearCreatorMembershipPlan|updateMembershipPlan|setMembershipPlanFeature/);
+});
 
 test("membership admin route is registered in the grouped admin hub", () => {
   const registry = read("lib/admin-sections.ts");
   const route = read("app/admin/membership/page.tsx");
-  const page = read("components/admin-membership-page.tsx");
+  const page = readAdminMembershipSource();
 
   assert.match(registry, /id: "membership"/);
   assert.match(registry, /href: "\/admin\/membership"/);
@@ -18,7 +35,7 @@ test("membership admin route is registered in the grouped admin hub", () => {
 });
 
 test("membership admin exposes note URL, feature matrix and user grant/revoke workflow", () => {
-  const page = read("components/admin-membership-page.tsx");
+  const page = readAdminMembershipSource();
 
   for (const label of [
     "noteメンバーシップ基本設定",
@@ -84,7 +101,7 @@ test("membership feature management is server gated and ready for cloud image st
 
 test("membership operations expose active assignments, expiry watch and DB audit without weakening admin checks", () => {
   const migration = readRepo("supabase/migrations/20260924034934_membership_operations_and_public_features.sql");
-  const page = read("components/admin-membership-page.tsx");
+  const page = readAdminMembershipSource();
   const client = read("lib/admin-membership.ts");
 
   assert.match(migration, /creator_membership_admin_actions/);
@@ -128,7 +145,7 @@ test("user membership page shows admin-configured note URL and only enabled mana
 
 test("membership plan pricing is admin-editable and exposed to the user plan comparison", () => {
   const migration = readRepo("supabase/migrations/20260924034939_membership_plan_pricing_and_features.sql");
-  const adminPage = read("components/admin-membership-page.tsx");
+  const adminPage = readAdminMembershipSource();
   const adminClient = read("lib/admin-membership.ts");
   const creatorClient = read("lib/creator-system.ts");
   const userPage = read("app/membership/page.tsx");
