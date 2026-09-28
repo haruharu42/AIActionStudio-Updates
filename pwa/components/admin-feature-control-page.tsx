@@ -7,6 +7,7 @@ import { useSharedAccessState } from "@/components/access-state-provider";
 import {
   adminListAppFeatureControls,
   adminUpdateAppFeatureControl,
+  validateFeatureRolloutTransition,
   type AdminFeatureControl,
   type AdminFeatureSnapshot,
   type FeatureRolloutStage,
@@ -80,6 +81,15 @@ export function AdminFeatureControlPage() {
     const rolloutStage = next.rolloutStage ?? feature.rolloutStage;
     const maintenanceMode = next.maintenanceMode ?? feature.maintenanceMode;
     const maintenanceMessage = next.maintenanceMessage ?? maintenanceDrafts[feature.featureKey] ?? feature.maintenanceMessage;
+    const transitionError = validateFeatureRolloutTransition(
+      feature.rolloutStage,
+      rolloutStage,
+      snapshot?.testerCount ?? 0,
+    );
+    if (transitionError) {
+      setError(transitionError);
+      return;
+    }
 
     if (rolloutStage === "public" && feature.rolloutStage !== "public") {
       if (!window.confirm(feature.title + " を全一般ユーザーへ公開しますか？\nAAS-000002等のテストアカウントで動作確認済みか確認してください。")) return;
@@ -200,8 +210,24 @@ export function AdminFeatureControlPage() {
                       <>
                         <div className="feature-stage-actions" aria-label={feature.title + "の公開範囲"}>
                           <button type="button" className={feature.rolloutStage === "admin" ? "active" : ""} disabled={Boolean(busyKey)} onClick={() => void update(feature, { rolloutStage: "admin" })}>管理者のみ</button>
-                          <button type="button" className={feature.rolloutStage === "tester" ? "active" : ""} disabled={Boolean(busyKey)} onClick={() => void update(feature, { rolloutStage: "tester" })}>AAS-000002等でテスト</button>
-                          <button type="button" className={feature.rolloutStage === "public" ? "active" : ""} disabled={Boolean(busyKey)} onClick={() => void update(feature, { rolloutStage: "public" })}>全一般ユーザー</button>
+                          <button
+                            type="button"
+                            className={feature.rolloutStage === "tester" ? "active" : ""}
+                            disabled={Boolean(busyKey) || (feature.rolloutStage === "admin" && (snapshot?.testerCount ?? 0) < 1)}
+                            onClick={() => void update(feature, { rolloutStage: "tester" })}
+                            title={feature.rolloutStage === "admin" && (snapshot?.testerCount ?? 0) < 1 ? "先にactiveなテストユーザーを登録してください" : undefined}
+                          >
+                            AAS-000002等でテスト
+                          </button>
+                          <button
+                            type="button"
+                            className={feature.rolloutStage === "public" ? "active" : ""}
+                            disabled={Boolean(busyKey) || feature.rolloutStage === "admin" || (feature.rolloutStage === "tester" && (snapshot?.testerCount ?? 0) < 1)}
+                            onClick={() => void update(feature, { rolloutStage: "public" })}
+                            title={feature.rolloutStage === "admin" ? "先にテスト段階へ進めてください" : undefined}
+                          >
+                            全一般ユーザー
+                          </button>
                         </div>
 
                         <div className="feature-maintenance-controls">
