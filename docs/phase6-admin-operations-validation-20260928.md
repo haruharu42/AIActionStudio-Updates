@@ -63,3 +63,5 @@ This document records validation results only and does not change runtime behavi
 - Member status, membership audit history, and future-operation recommendations were extracted from `admin-membership-page.tsx` into `admin-membership/admin-membership-static-sections.tsx`.
 - Pricing updates, feature toggles, member assignment/revoke operations, Supabase/RPC calls, and confirmation guards remain in the controller page.
 - Regression coverage reads both modules together and explicitly keeps mutation/runtime APIs out of the extracted presentation module.
+
+- Follow-up: account-preset and shared-workspace-preset regression tests now inspect both the compatibility note operations module and the extracted prompt module after the split.
