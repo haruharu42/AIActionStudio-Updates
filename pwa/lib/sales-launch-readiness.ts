@@ -85,6 +85,9 @@ export async function setPublicSalesApproval(
   });
   if (error) {
     const message = String(error.message ?? "").toLowerCase();
+    if (message.includes("aal2 required for public sales approval")) {
+      throw new Error("公開販売の承認には、現在の管理者セッションでMFA認証（AAL2）が必要です。管理者MFAを完了してから再度承認してください。");
+    }
     if (message.includes("sales launch readiness requirements not met")) {
       throw new Error("販売前の自動確認が未完了のため、公開販売を承認できません。");
     }
