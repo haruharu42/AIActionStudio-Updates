@@ -235,7 +235,13 @@ export async function adminSetAppReleaseTester(
 
 export async function adminPublishAppRelease(client: SupabaseClient, releaseId: string): Promise<AdminReleaseSnapshot> {
   const { data, error } = await client.rpc("admin_publish_app_release", { p_release_id: releaseId });
-  if (error) throw error;
+  if (error) {
+    const message = String(error.message ?? "").toLowerCase();
+    if (message.includes("aal2 required for public release publish")) {
+      throw new Error("全体公開には現在の管理者セッションでMFA認証（AAL2）が必要です。管理者MFA画面で再認証してください。");
+    }
+    throw error;
+  }
   return normalizeAdminSnapshot(data);
 }
 
