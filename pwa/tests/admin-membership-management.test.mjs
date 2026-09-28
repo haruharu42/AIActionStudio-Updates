@@ -47,7 +47,7 @@ test("membership admin exposes note URL, feature matrix and user grant/revoke wo
 });
 
 test("membership feature management is server gated and ready for cloud image storage", () => {
-  const migration = readRepo("supabase/migrations/20260923072000_membership_management_center.sql");
+  const migration = readRepo("supabase/migrations/20260924034928_membership_management_center.sql");
   const adminClient = read("lib/admin-membership.ts");
   const accessClient = read("lib/membership-access.ts");
 
@@ -83,7 +83,7 @@ test("membership feature management is server gated and ready for cloud image st
 });
 
 test("membership operations expose active assignments, expiry watch and DB audit without weakening admin checks", () => {
-  const migration = readRepo("supabase/migrations/20260923073500_membership_operations_and_public_features.sql");
+  const migration = readRepo("supabase/migrations/20260924034934_membership_operations_and_public_features.sql");
   const page = read("components/admin-membership-page.tsx");
   const client = read("lib/admin-membership.ts");
 
@@ -127,7 +127,7 @@ test("user membership page shows admin-configured note URL and only enabled mana
 });
 
 test("membership plan pricing is admin-editable and exposed to the user plan comparison", () => {
-  const migration = readRepo("supabase/migrations/20260923092500_membership_plan_pricing_and_features.sql");
+  const migration = readRepo("supabase/migrations/20260924034939_membership_plan_pricing_and_features.sql");
   const adminPage = read("components/admin-membership-page.tsx");
   const adminClient = read("lib/admin-membership.ts");
   const creatorClient = read("lib/creator-system.ts");
@@ -157,7 +157,7 @@ test("membership plan pricing is admin-editable and exposed to the user plan com
 });
 
 test("membership defaults make cloud image storage a member-only capability across active plans", () => {
-  const migration = readRepo("supabase/migrations/20260923072000_membership_management_center.sql");
+  const migration = readRepo("supabase/migrations/20260924034928_membership_management_center.sql");
 
   assert.match(migration, /'CREATOR_CLUB', 'cloud_image_storage', true/);
   assert.match(migration, /'CREATOR_CLUB_PLUS', 'cloud_image_storage', true/);
@@ -168,7 +168,7 @@ test("membership defaults make cloud image storage a member-only capability acro
 });
 
 test("membership management foreign keys have covering indexes", () => {
-  const migration = readRepo("supabase/migrations/20260924035200_membership_management_fk_indexes.sql");
+  const migration = readRepo("supabase/migrations/20260924035045_membership_management_fk_indexes.sql");
 
   assert.match(migration, /creator_membership_admin_actions_actor_idx/);
   assert.match(migration, /creator_membership_plan_features_feature_idx/);
