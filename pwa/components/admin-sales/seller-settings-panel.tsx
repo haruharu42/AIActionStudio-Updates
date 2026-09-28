@@ -99,7 +99,7 @@ export function SellerSettingsPanel() {
             </label>
 
             <label className="sales-url-field">
-              <span><strong>氏名・名称の開示方法</strong><small>個人販売では請求時開示を選べます。実際の法令・販売形態に合わせて確認してください。</small></span>
+              <span><strong>氏名・名称の開示方法</strong><small>AASでは公開または請求時開示を選択できます。適用条件は実際の販売形態・法令に合わせて公開前に確認してください。</small></span>
               <select value={settings.disclosureMode} onChange={(event) => set("disclosureMode", event.target.value === "public" ? "public" : "on_request")}>
                 <option value="on_request">請求があった場合に開示</option>
                 <option value="public">公開ページへ表示</option>
