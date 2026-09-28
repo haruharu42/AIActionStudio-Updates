@@ -19,6 +19,7 @@ const libraryController = await fs.readFile(`${root}/components/phase7-library.t
 const libraryListUi = await fs.readFile(`${root}/components/article-library/article-library-list.tsx`, 'utf8');
 const libraryDetailUi = await fs.readFile(`${root}/components/article-library/article-library-detail.tsx`, 'utf8');
 const notePostAssistantUi = await fs.readFile(`${root}/components/article-library/note-post-assistant.tsx`, 'utf8');
+const deviceLayoutCss = await fs.readFile(`${root}/app/phase35-device-layout.css`, 'utf8');
 const localArticleImagesSource = await fs.readFile(`${root}/lib/local-article-images.ts`, 'utf8');
 const imagePromptUi = await fs.readFile(`${root}/components/phase13-image-page.tsx`, 'utf8');
 const libraryEditorUi = await fs.readFile(`${root}/components/article-library/article-library-editor.tsx`, 'utf8');
@@ -103,6 +104,9 @@ test('note article detail exposes local image posting assistant without Supabase
   assert.match(notePostAssistantUi, /有料エリアの目印/);
   assert.match(notePostAssistantUi, /装飾付きコピー/);
   assert.match(notePostAssistantUi, /本文＋挿絵を一括コピー/);
+  assert.match(notePostAssistantUi, /note-post-batch-copy-desktop/);
+  assert.match(deviceLayoutCss, /@media \(max-width: 700px\)/);
+  assert.match(deviceLayoutCss, /\.note-post-batch-copy-desktop\s*\{[\s\S]*?display:\s*none\s*!important/);
   assert.match(notePostAssistantUi, /copyNotePostSequenceWithImages/);
   assert.ok(
     notePostAssistantUi.indexOf('aria-label="noteへ貼り付ける順番"')
