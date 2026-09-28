@@ -12,7 +12,7 @@ import {
 } from "@/lib/app-release";
 import { getSupabaseClient } from "@/lib/supabase";
 
-const ALWAYS_PUBLIC_PREVIEW_PATHS = ["/auth/callback", "/logout", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support"];
+const ALWAYS_PUBLIC_PREVIEW_PATHS = ["/auth/callback", "/logout", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support", "/plans"];
 
 function alwaysPublicPreviewPath(pathname: string): boolean {
   return ALWAYS_PUBLIC_PREVIEW_PATHS.some((path) => pathname === path || pathname.startsWith(path + "/"));
