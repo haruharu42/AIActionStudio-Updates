@@ -238,6 +238,37 @@ Deno.serve(async (request: Request) => {
       return json(request, { error: "method_not_allowed" }, 405);
     }
 
+    let body: JsonRecord = {};
+    try {
+      body = asRecord(await request.json()) ?? {};
+    } catch {
+      body = {};
+    }
+
+    const action = clean(body.action) || "start";
+    if (action === "status") {
+      const deployments = await listDeployments(request);
+      const tokenConfigured = Boolean(githubToken());
+      const requestId = clean(body.requestId);
+
+      if (tokenConfigured && requestId) {
+        const target = deployments.find((item) => clean(item.id) === requestId);
+        if (target) await refreshRequestFromGithub(request, target);
+      }
+
+      const refreshed = requestId && tokenConfigured ? await listDeployments(request) : deployments;
+      return json(request, {
+        configured: tokenConfigured,
+        previewBranch: PREVIEW_BRANCH,
+        publicUrl: PUBLIC_URL,
+        deployments: refreshed,
+      });
+    }
+
+    if (action !== "start") {
+      return json(request, { error: "invalid_action" }, 400);
+    }
+
     if (!githubToken()) {
       return json(request, {
         error: "github_release_token_missing",
@@ -245,10 +276,9 @@ Deno.serve(async (request: Request) => {
       }, 503);
     }
 
-    const payload = asRecord(await safeJson(request));
-    const releaseId = clean(payload?.releaseId);
-    const sourceSha = clean(payload?.sourceSha).toLowerCase();
-    const sourceBranch = clean(payload?.sourceBranch) || PREVIEW_BRANCH;
+    const releaseId = clean(body.releaseId);
+    const sourceSha = clean(body.sourceSha).toLowerCase();
+    const sourceBranch = clean(body.sourceBranch) || PREVIEW_BRANCH;
 
     if (!/^[0-9a-f-]{36}$/.test(releaseId)) {
       return json(request, { error: "invalid_release_id" }, 400);
