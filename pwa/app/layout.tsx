@@ -64,8 +64,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest?v=20260928-axia-v2",
   robots: { index: false, follow: false },
   other: {
-    "aas-phase": "17",
-    "aas-release-stage": "production-preview",
+    "aas-phase": "56",
+    "aas-release-stage": process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE ?? "development",
     "aas-build-sha": process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev",
   },
   icons: {

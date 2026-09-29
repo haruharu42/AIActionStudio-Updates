@@ -100,6 +100,8 @@ test("admin release control provides candidate publish and rollback flows", asyn
   assert.match(sections, /href: "\/admin\/releases"/);
   assert.match(layout, /ReleaseUpdateManager/);
   assert.match(layout, /phase37-release-management\.css/);
+  assert.match(layout, /"aas-phase": "56"/);
+  assert.match(layout, /"aas-release-stage": process\.env\.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE \?\? "development"/);
   assert.match(css, /\.release-required-backdrop/);
   assert.match(css, /\.release-admin-page/);
 });
