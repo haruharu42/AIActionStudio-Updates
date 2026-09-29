@@ -451,6 +451,16 @@ export function AdminMembershipPage() {
         </div>
       )}
 
+      <details className="membership-admin-collapsible">
+        <summary className="membership-admin-collapsible-summary">
+          <span>
+            <strong>メンバーシップ管理を開く</strong>
+            <small>基本設定・料金・記事保存数・特典機能・ユーザー付与を必要な時だけ表示します。</small>
+          </span>
+          <span className="membership-admin-collapsible-state" aria-hidden="true">開く ▼</span>
+        </summary>
+        <div className="membership-admin-collapsible-body">
+
       {operationsReady && (
         <MembershipStatusSection
           assignments={assignments}
@@ -800,6 +810,8 @@ export function AdminMembershipPage() {
       {operationsReady && <MembershipAuditSection auditActions={auditActions} />}
 
       <MembershipRecommendationsSection />
+        </div>
+      </details>
 
       {message && state !== "error" && (
         <div className="route-notice" role="status" aria-live="polite">{message}</div>
