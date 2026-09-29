@@ -410,6 +410,9 @@ export function AdminPromotionChannelBuilder({
                     channel={channel as PromotionScreenshotChannel}
                     onAnalysisChange={setScreenshotAnalysis}
                   />
+                  {screenshotAnalysis && (
+                    <p className="route-notice" role="status">解析済みスクショをStep 8の専用プロンプトへ反映しています。</p>
+                  )}
                 </div>
 
                 <details className="admin-promo-direct-screenshot">
