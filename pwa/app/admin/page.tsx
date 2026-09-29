@@ -27,11 +27,20 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <section className="admin-quick-guide" aria-label="管理ツールの使い方">
-        <article><span>STEP 1</span><strong>まず「日常の管理」を確認</strong><p>問い合わせ、承認待ち、無料枠など、対応が必要な項目から確認します。</p></article>
-        <article><span>STEP 2</span><strong>設定変更は目的別に開く</strong><p>販売・告知・制作支援を分けています。必要な場所だけ変更できます。</p></article>
-        <article><span>STEP 3</span><strong>最後にシステム状態を確認</strong><p>アップデート、認証、監査・容量を確認し、安全な状態を保ちます。</p></article>
-      </section>
+      <details className="admin-dashboard-collapsible">
+        <summary className="admin-dashboard-collapsible-summary">
+          <span>
+            <strong>管理ツールの使い方</strong>
+            <small>日常の管理 → 設定変更 → システム状態の順で確認します。</small>
+          </span>
+          <span className="admin-dashboard-collapsible-state" aria-hidden="true">開く ▼</span>
+        </summary>
+        <section className="admin-quick-guide" aria-label="管理ツールの使い方">
+          <article><span>STEP 1</span><strong>まず「日常の管理」を確認</strong><p>問い合わせ、承認待ち、無料枠など、対応が必要な項目から確認します。</p></article>
+          <article><span>STEP 2</span><strong>設定変更は目的別に開く</strong><p>販売・告知・制作支援を分けています。必要な場所だけ変更できます。</p></article>
+          <article><span>STEP 3</span><strong>最後にシステム状態を確認</strong><p>アップデート、認証、監査・容量を確認し、安全な状態を保ちます。</p></article>
+        </section>
+      </details>
 
       <section className="admin-only-tools-section admin-management-hub" aria-labelledby="admin-management-title">
         <div className="admin-only-tools-heading">
@@ -43,22 +52,31 @@ export default function AdminPage() {
         </div>
         <div className="admin-section-groups">
           {ADMIN_SECTION_GROUPS.map((group) => (
-            <section className="admin-section-group" key={group.id}>
-              <div className="admin-section-group-head">
-                <div><p className="eyebrow">{group.eyebrow}</p><h2>{group.title}</h2></div>
-                <p>{group.description}</p>
-              </div>
-              <div className="admin-section-group-grid">
-                {ADMIN_SECTIONS.filter((section) => section.group === group.id).map((section) => (
-                  <Link key={section.id} className="admin-only-tool-card" href={section.href}>
-                    <span>{section.eyebrow}</span>
-                    <h3>{section.title}</h3>
-                    <p>{section.description}</p>
-                    <strong>この機能を開く →</strong>
-                  </Link>
-                ))}
-              </div>
-            </section>
+            <details className="admin-dashboard-collapsible admin-dashboard-group" key={group.id}>
+              <summary className="admin-dashboard-collapsible-summary">
+                <span>
+                  <strong>{group.title}</strong>
+                  <small>{group.description}</small>
+                </span>
+                <span className="admin-dashboard-collapsible-state" aria-hidden="true">開く ▼</span>
+              </summary>
+              <section className="admin-section-group">
+                <div className="admin-section-group-head">
+                  <div><p className="eyebrow">{group.eyebrow}</p><h2>{group.title}</h2></div>
+                  <p>{group.description}</p>
+                </div>
+                <div className="admin-section-group-grid">
+                  {ADMIN_SECTIONS.filter((section) => section.group === group.id).map((section) => (
+                    <Link key={section.id} className="admin-only-tool-card" href={section.href}>
+                      <span>{section.eyebrow}</span>
+                      <h3>{section.title}</h3>
+                      <p>{section.description}</p>
+                      <strong>この機能を開く →</strong>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            </details>
           ))}
         </div>
       </section>
