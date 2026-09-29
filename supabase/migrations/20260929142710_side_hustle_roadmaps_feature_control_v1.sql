@@ -1,0 +1,33 @@
+insert into public.app_feature_controls(
+  feature_key,
+  category,
+  title,
+  description,
+  route_prefix,
+  exact_match,
+  rollout_stage,
+  maintenance_mode,
+  admin_only,
+  sort_order
+)
+values(
+  'sidejob-roadmaps',
+  '副業',
+  '全副業ロードマップ',
+  '副業ごとの準備・実行・改善・収益化までを段階的に進めるロードマップ。',
+  '/side-hustle-roadmaps',
+  true,
+  'public',
+  false,
+  false,
+  240
+)
+on conflict(feature_key) do update set
+  category=excluded.category,
+  title=excluded.title,
+  description=excluded.description,
+  route_prefix=excluded.route_prefix,
+  exact_match=excluded.exact_match,
+  admin_only=excluded.admin_only,
+  sort_order=excluded.sort_order,
+  updated_at=now();

@@ -49,6 +49,17 @@ test("feature registry covers current user features, all 12 side hustles, and ad
   }
 });
 
+test("side-hustle roadmap hub is registered in feature control without changing current public availability", async () => {
+  const migration = await readRepo("supabase/migrations/20260929142710_side_hustle_roadmaps_feature_control_v1.sql");
+
+  assert.match(migration, /'sidejob-roadmaps'/);
+  assert.match(migration, /'\/side-hustle-roadmaps'/);
+  assert.match(migration, /'public'/);
+  assert.match(migration, /on conflict\(feature_key\) do update/);
+  assert.doesNotMatch(migration, /rollout_stage=excluded\.rollout_stage/);
+  assert.doesNotMatch(migration, /maintenance_mode=excluded\.maintenance_mode/);
+});
+
 test("feature control client normalizes server state and resolves the most specific route", async () => {
   const client = await read("lib/feature-control.ts");
 
