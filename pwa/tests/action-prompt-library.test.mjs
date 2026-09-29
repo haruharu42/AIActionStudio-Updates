@@ -20,6 +20,7 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     route,
     nav,
     layout,
+    promptCss,
   ] = await Promise.all([
     read("lib/action-prompt-catalog.ts"),
     read("components/action-prompt-library-page.tsx"),
@@ -32,6 +33,7 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     read("app/prompts/page.tsx"),
     read("lib/mobile-nav-preference.ts"),
     read("app/layout.tsx"),
+    read("app/phase49-prompt-library.css"),
   ]);
 
   for (const category of [
@@ -76,6 +78,11 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
   assert.match(featureBoundary, /action-prompt-routing/);
   assert.match(featureBoundary, /action-prompt-service/);
   assert.match(page, /最近使った/);
+  assert.match(page, /filtered\.some\(\(template\) => template\.id === selectedId\)/);
+  assert.match(page, /const next = filtered\[0\]/);
+  assert.match(page, /setSelectedId\(next\.id\)/);
+  assert.match(promptCss, /@media \(min-width: 900px\)[\s\S]*\.action-prompt-editor \{[\s\S]*max-height: calc\(100dvh - 40px\);[\s\S]*overflow-y: auto;/);
+  assert.match(promptCss, /\.action-prompt-output textarea \{[\s\S]*height: 310px;[\s\S]*overflow-y: auto;/);
   assert.match(route, /Phase15MemberGate/);
   assert.match(nav, /key: "prompts"/);
   assert.match(layout, /phase49-prompt-library\.css/);
