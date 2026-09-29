@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   PromptOutput,
@@ -34,6 +34,7 @@ import { launchAiApp } from "@/lib/ai-app-links";
 import { copyNoteRichText } from "@/lib/note-rich-text";
 import {
   DEFAULT_ADMIN_SOCIAL_WRITING_STYLE,
+  normalizeAdminSocialWritingStyle,
   type AdminSocialWritingStyle,
 } from "@/lib/social-writing-style";
 
@@ -57,14 +58,46 @@ const PROMOTION_WIZARD_STEPS = [
   "内容確認・生成",
 ] as const;
 
+const PROMOTION_WIZARD_STORAGE_PREFIX = "aas-admin-promotion-channel-wizard-v1";
+
+type StoredPromotionWizard = {
+  channel?: AdminPromotionChannel;
+  phase?: string;
+  purpose?: string;
+  audience?: string;
+  focus?: string;
+  cta?: string;
+  variants?: number;
+  lengthPresetId?: string;
+  targetChars?: number;
+  socialStyle?: Partial<AdminSocialWritingStyle>;
+  step?: number;
+  generatedContent?: string;
+};
+
+function promotionWizardStorageKey(userId: string): string {
+  return `${PROMOTION_WIZARD_STORAGE_PREFIX}:${userId}`;
+}
+
+function isPromotionChannel(value: unknown): value is AdminPromotionChannel {
+  return typeof value === "string" && CHANNEL_ORDER.includes(value as AdminPromotionChannel);
+}
+
+function boundedWizardStep(value: unknown): number {
+  const step = typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : 0;
+  return Math.max(0, Math.min(PROMOTION_WIZARD_STEPS.length - 1, step));
+}
+
 export function AdminPromotionChannelBuilder({
   facts,
   featureOptions,
   onCopy,
+  userId,
 }: {
   facts: AdminProductFacts;
   featureOptions: readonly string[];
   onCopy(prompt: string): void;
+  userId: string;
 }) {
   const [channel, setChannel] = useState<AdminPromotionChannel>("note");
   const [phase, setPhase] = useState("実運用テスト中（販売前）");
@@ -81,6 +114,101 @@ export function AdminPromotionChannelBuilder({
   const [step, setStep] = useState(0);
   const [generatedContent, setGeneratedContent] = useState("");
   const [resultMessage, setResultMessage] = useState("");
+  const restoredUserIdRef = useRef("");
+
+  const persistWizardProgress = useCallback(() => {
+    if (!userId || restoredUserIdRef.current !== userId) return;
+    const payload: StoredPromotionWizard = {
+      channel,
+      phase,
+      purpose,
+      audience,
+      focus,
+      cta,
+      variants,
+      lengthPresetId,
+      targetChars,
+      socialStyle,
+      step,
+      generatedContent,
+    };
+    try {
+      window.localStorage.setItem(promotionWizardStorageKey(userId), JSON.stringify(payload));
+    } catch {
+      // Keep the current in-memory workflow usable when storage is unavailable.
+    }
+  }, [
+    audience,
+    channel,
+    cta,
+    focus,
+    generatedContent,
+    lengthPresetId,
+    phase,
+    purpose,
+    socialStyle,
+    step,
+    targetChars,
+    userId,
+    variants,
+  ]);
+
+  useEffect(() => {
+    restoredUserIdRef.current = "";
+    if (!userId) return;
+    let active = true;
+    let saved: StoredPromotionWizard | null = null;
+    try {
+      const raw = window.localStorage.getItem(promotionWizardStorageKey(userId));
+      if (raw) saved = JSON.parse(raw) as StoredPromotionWizard;
+    } catch {
+      saved = null;
+    }
+
+    queueMicrotask(() => {
+      if (!active) return;
+      if (saved) {
+        const restoredChannel = isPromotionChannel(saved.channel) ? saved.channel : "note";
+        setChannel(restoredChannel);
+        if (typeof saved.phase === "string") setPhase(saved.phase);
+        if (typeof saved.purpose === "string") setPurpose(saved.purpose);
+        if (typeof saved.audience === "string") setAudience(saved.audience);
+        if (typeof saved.focus === "string") setFocus(saved.focus);
+        if (typeof saved.cta === "string") setCta(saved.cta);
+        if (typeof saved.variants === "number") setVariants(Math.max(1, Math.min(5, Math.trunc(saved.variants))));
+        if (typeof saved.lengthPresetId === "string") setLengthPresetId(saved.lengthPresetId);
+        if (typeof saved.targetChars === "number") setTargetChars(sanitizeSocialTargetChars(saved.targetChars));
+        setSocialStyle(normalizeAdminSocialWritingStyle(saved.socialStyle));
+        setStep(boundedWizardStep(saved.step));
+        if (typeof saved.generatedContent === "string") setGeneratedContent(saved.generatedContent);
+        setResultMessage("前回のプロモーション作業を復元しました。");
+      }
+      restoredUserIdRef.current = userId;
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    persistWizardProgress();
+  }, [persistWizardProgress]);
+
+  useEffect(() => {
+    const persistBeforeLeave = () => persistWizardProgress();
+    const persistWhenHidden = () => {
+      if (document.visibilityState === "hidden") persistWizardProgress();
+    };
+    window.addEventListener("pagehide", persistBeforeLeave);
+    window.addEventListener("beforeunload", persistBeforeLeave);
+    document.addEventListener("visibilitychange", persistWhenHidden);
+    return () => {
+      window.removeEventListener("pagehide", persistBeforeLeave);
+      window.removeEventListener("beforeunload", persistBeforeLeave);
+      document.removeEventListener("visibilitychange", persistWhenHidden);
+    };
+  }, [persistWizardProgress]);
 
   const meta = ADMIN_PROMOTION_CHANNELS[channel];
   const socialPlatform = meta.socialPlatform;
@@ -432,7 +560,7 @@ export function AdminPromotionChannelBuilder({
                       <button type="button" className="primary-action" onClick={() => onCopy(directScreenshotPrompt)}>
                         ChatGPT直接添付用プロンプトをコピー
                       </button>
-                      <button type="button" className="secondary-action" onClick={() => launchAiApp("chatgpt")}>
+                      <button type="button" className="secondary-action" onClick={() => { persistWizardProgress(); launchAiApp("chatgpt"); }}>
                         ChatGPTを開く
                       </button>
                     </div>

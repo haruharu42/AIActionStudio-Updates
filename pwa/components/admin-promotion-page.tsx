@@ -226,6 +226,7 @@ export function AdminPromotionPage() {
         facts={facts}
         featureOptions={featureOptions}
         onCopy={(prompt) => void copyPrompt(prompt)}
+        userId={state.profile.id}
       />
 
       <details className="admin-promo-advanced">

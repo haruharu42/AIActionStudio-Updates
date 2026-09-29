@@ -228,3 +228,25 @@ test("eight-step promotion workflow stays responsive and keeps screenshot plus p
   assert.match(css, /\.admin-promo-cta-safety/);
   assert.match(css, /@media \(max-width: 560px\)/);
 });
+
+
+test("eight-step promotion wizard restores user-scoped progress across reloads and external AI handoff", async () => {
+  const pageSource = await readFile(
+    new URL("../components/admin-promotion-page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(builderSource, /PROMOTION_WIZARD_STORAGE_PREFIX/);
+  assert.match(builderSource, /promotionWizardStorageKey\(userId\)/);
+  assert.match(builderSource, /restoredUserIdRef/);
+  assert.match(builderSource, /window\.localStorage\.getItem/);
+  assert.match(builderSource, /window\.localStorage\.setItem/);
+  assert.match(builderSource, /前回のプロモーション作業を復元しました/);
+  assert.match(builderSource, /generatedContent/);
+  assert.match(builderSource, /normalizeAdminSocialWritingStyle/);
+  assert.match(builderSource, /window\.addEventListener\("pagehide"/);
+  assert.match(builderSource, /window\.addEventListener\("beforeunload"/);
+  assert.match(builderSource, /document\.addEventListener\("visibilitychange"/);
+  assert.match(builderSource, /persistWizardProgress\(\); launchAiApp\("chatgpt"\)/);
+  assert.match(pageSource, /userId=\{state\.profile\.id\}/);
+});
