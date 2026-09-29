@@ -875,3 +875,13 @@ test("membership cockpit restores every planning workspace per account and persi
   assert.match(cockpit, /window\.addEventListener\("beforeunload"/);
   assert.match(cockpit, /document\.addEventListener\("visibilitychange"/);
 });
+
+
+test("membership knowledge records the 2026-09-30 official billing recheck and legacy-membership exception", async () => {
+  const source = await read("lib/note-membership-advisor.ts");
+  assert.match(source, /checkedAt: "2026-09-30"/);
+  assert.match(source, /2026年8月3日以降の新規加入では入会日基準の1か月ごとの請求/);
+  assert.match(source, /2026年8月2日以前に開設されたメンバーシップ/);
+  assert.match(source, /開設時期と現在設定を確認/);
+  assert.match(source, /新方式を一律適用しない/);
+});
