@@ -33,9 +33,11 @@ import {
   buildCompatibleWorkspacePatch,
   deleteCloudArticle,
   getCloudArticleDetail,
+  getMyArticleStockSummary,
   updateCloudArticle,
   type ArticleDetail,
   type ArticlePatch,
+  type ArticleStockSummary,
 } from "@/lib/phase7-articles";
 
 export function Phase7Library({
@@ -56,6 +58,7 @@ export function Phase7Library({
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
   const [totalCount, setTotalCount] = useState(0);
+  const [stockSummary, setStockSummary] = useState<ArticleStockSummary | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -118,8 +121,13 @@ export function Phase7Library({
   }, [client, filters, ownerId]);
 
   const reload = useCallback(async () => {
-    await fetchPage(0, false);
-  }, [fetchPage]);
+    await Promise.all([
+      fetchPage(0, false),
+      getMyArticleStockSummary(client, ownerId)
+        .then((summary) => setStockSummary(summary))
+        .catch(() => setStockSummary(null)),
+    ]);
+  }, [client, fetchPage, ownerId]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => void reload(), 250);
@@ -328,6 +336,7 @@ export function Phase7Library({
         <ArticleLibraryListView
           articles={articles}
           totalCount={totalCount}
+          stockSummary={stockSummary}
           hasMore={hasMore}
           loading={loading}
           loadingMore={loadingMore}
