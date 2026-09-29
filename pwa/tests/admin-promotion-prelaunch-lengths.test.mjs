@@ -145,7 +145,7 @@ test("promotion UI is channel-first and keeps advanced settings collapsed", asyn
   assert.doesNotMatch(page, /QUICK_PRESETS/);
   assert.doesNotMatch(css, /admin-promo-quick-(?:start|head|grid|note)/);
   assert.doesNotMatch(page, /AdminPromotionThreeStep/);
-  assert.match(channelBuilder, /3ステップでプロモーション素材を作る/);
+  assert.match(channelBuilder, /8ステップで販売・プロモーション素材を作成/);
   assert.match(channelBuilder, /どこでプロモーションしますか？/);
   assert.match(channelBuilder, /note/);
   assert.match(channelBuilder, /brain/);
@@ -267,18 +267,17 @@ test("channel-specific promotion prompts are isolated by publication", async () 
 });
 
 
-test("channel-first promotion keeps beginner flow primary and advanced controls collapsed", async () => {
+test("promotion keeps the eight-step creator primary and advanced controls collapsed", async () => {
   const [page, builder] = await Promise.all([
     read("components/admin-promotion-page.tsx"),
     read("components/admin-promotion/admin-promotion-channel-builder.tsx"),
   ]);
 
-  assert.match(builder, /3ステップでプロモーション素材を作る/);
-  assert.match(builder, /どこでプロモーションしますか？/);
-  assert.match(builder, /迷った場合は初期設定のままでも作れます/);
-  assert.match(builder, /媒体ごとに専用設計/);
-  assert.match(builder, /②の追加設定です/);
-  assert.match(builder, /<span>③<\/span><strong>プロンプトをコピーしてAIへ渡す<\/strong>/);
+  assert.match(builder, /8ステップで販売・プロモーション素材を作成/);
+  assert.match(builder, /通常の記事作成と同じ流れ/);
+  assert.match(builder, /note・Brain・Tipsに加えてX・Threads・Instagram/);
+  assert.match(builder, /PROMOTION_CREATE_STEPS/);
+  assert.match(builder, /AdminPromotionContentWorkspace/);
   assert.match(page, /<details className="admin-promo-advanced">/);
   assert.match(page, /詳細設定・キャンペーン・製品情報/);
   assert.doesNotMatch(page, /<details className="admin-promo-advanced" open/);
