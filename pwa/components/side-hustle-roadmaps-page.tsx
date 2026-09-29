@@ -37,6 +37,16 @@ function percent(done: number, total: number): number {
   return total > 0 ? Math.round((done / total) * 100) : 0;
 }
 
+function filterSideHustleRoadmaps(category: string, query: string): SideHustleRoadmapDefinition[] {
+  const needle = query.trim().toLocaleLowerCase("ja-JP");
+  return SIDE_HUSTLE_ROADMAPS.filter((roadmap) => {
+    const categoryMatch = category === "すべて" || roadmap.category === category;
+    const queryMatch = !needle || [roadmap.title, roadmap.category, roadmap.summary]
+      .some((value) => value.toLocaleLowerCase("ja-JP").includes(needle));
+    return categoryMatch && queryMatch;
+  });
+}
+
 export function SideHustleRoadmapsPage() {
   const { state } = useSharedAccessState();
   const userId = state.kind === "ready" ? state.profile.id : "guest";
@@ -89,15 +99,10 @@ export function SideHustleRoadmapsPage() {
     }
   }, [completed, hydrated, selectedSlug, storageKey]);
 
-  const filteredRoadmaps = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase("ja-JP");
-    return SIDE_HUSTLE_ROADMAPS.filter((roadmap) => {
-      const categoryMatch = category === "すべて" || roadmap.category === category;
-      const queryMatch = !needle || [roadmap.title, roadmap.category, roadmap.summary]
-        .some((value) => value.toLocaleLowerCase("ja-JP").includes(needle));
-      return categoryMatch && queryMatch;
-    });
-  }, [category, query]);
+  const filteredRoadmaps = useMemo(
+    () => filterSideHustleRoadmaps(category, query),
+    [category, query],
+  );
 
   const selected = getSideHustleRoadmap(selectedSlug) ?? SIDE_HUSTLE_ROADMAPS[0];
   if (!selected) return null;
@@ -120,6 +125,28 @@ export function SideHustleRoadmapsPage() {
     (total, roadmap) => total + roadmapCompletedCount(roadmap, completed),
     0,
   );
+
+  const keepSelectionInFilter = (nextRoadmaps: readonly SideHustleRoadmapDefinition[]) => {
+    if (!nextRoadmaps.length || nextRoadmaps.some((roadmap) => roadmap.slug === selectedSlug)) return;
+    setSelectedSlug(nextRoadmaps[0].slug);
+    setMessage("");
+  };
+
+  const changeCategory = (nextCategory: string) => {
+    setCategory(nextCategory);
+    keepSelectionInFilter(filterSideHustleRoadmaps(nextCategory, query));
+  };
+
+  const changeQuery = (nextQuery: string) => {
+    setQuery(nextQuery);
+    keepSelectionInFilter(filterSideHustleRoadmaps(category, nextQuery));
+  };
+
+  const clearFilters = () => {
+    setCategory("すべて");
+    setQuery("");
+    setMessage("");
+  };
 
   const toggleTask = (key: string) => {
     setCompleted((current) => {
@@ -219,7 +246,7 @@ export function SideHustleRoadmapsPage() {
         <div className="side-hustle-roadmap-filters">
           <label>
             <span>カテゴリ</span>
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select value={category} onChange={(event) => changeCategory(event.target.value)}>
               {SIDE_HUSTLE_ROADMAP_CATEGORIES.map((value) => (
                 <option key={value} value={value}>{value}</option>
               ))}
@@ -229,7 +256,7 @@ export function SideHustleRoadmapsPage() {
             <span>検索</span>
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => changeQuery(event.target.value)}
               placeholder="例：アフィリエイト、動画、受託、note"
               type="search"
             />
@@ -261,6 +288,12 @@ export function SideHustleRoadmapsPage() {
               </button>
             );
           })}
+          {!filteredRoadmaps.length && (
+            <div className="route-notice side-hustle-roadmap-empty" role="status">
+              <span>条件に一致する副業ロードマップがありません。</span>
+              <button className="secondary-action" type="button" onClick={clearFilters}>条件をクリア</button>
+            </div>
+          )}
         </div>
       </section>
 

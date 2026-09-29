@@ -107,3 +107,20 @@ test("roadmap surfaces the next three incomplete actions and lets users complete
   assert.match(styles, /\.side-hustle-roadmap-focus-list/);
   assert.match(styles, /@media \(max-width: 760px\)/);
 });
+
+
+test("roadmap filters keep the visible cards and selected detail in sync and provide an empty-state recovery", async () => {
+  const page = await read("components/side-hustle-roadmaps-page.tsx");
+
+  assert.match(page, /function filterSideHustleRoadmaps\(category: string, query: string\)/);
+  assert.match(page, /const keepSelectionInFilter = \(nextRoadmaps:/);
+  assert.match(page, /nextRoadmaps\.some\(\(roadmap\) => roadmap\.slug === selectedSlug\)/);
+  assert.match(page, /setSelectedSlug\(nextRoadmaps\[0\]\.slug\)/);
+  assert.match(page, /const changeCategory = \(nextCategory: string\)/);
+  assert.match(page, /filterSideHustleRoadmaps\(nextCategory, query\)/);
+  assert.match(page, /const changeQuery = \(nextQuery: string\)/);
+  assert.match(page, /filterSideHustleRoadmaps\(category, nextQuery\)/);
+  assert.match(page, /条件に一致する副業ロードマップがありません/);
+  assert.match(page, /条件をクリア/);
+  assert.match(page, /const clearFilters = \(\)/);
+});
