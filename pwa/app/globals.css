@@ -860,3 +860,57 @@ button:disabled { cursor: not-allowed; }
     font-size: 9px;
   }
 }
+
+
+/* Shared per-section collapse control for dense function/admin screens. */
+.aas-collapsible-panel > .aas-section-collapse-header {
+  position: relative;
+  cursor: pointer;
+  padding-right: 76px;
+}
+
+.aas-collapsible-panel > .aas-section-collapse-header::after {
+  content: attr(data-aas-collapse-label);
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  min-height: 28px;
+  border: 1px solid rgb(148 163 184 / 36%);
+  border-radius: 999px;
+  background: rgb(248 250 252 / 88%);
+  color: #475569;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.aas-collapsible-panel > .aas-section-collapse-header:focus-visible {
+  outline: 3px solid rgb(96 165 250 / 45%);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+.aas-collapsible-panel.aas-section-collapsed > :not(.aas-section-collapse-header) {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .aas-collapsible-panel > .aas-section-collapse-header {
+    padding-right: 68px;
+  }
+
+  .aas-collapsible-panel > .aas-section-collapse-header::after {
+    right: 8px;
+    min-width: 50px;
+    min-height: 26px;
+    padding-inline: 7px;
+    font-size: 8px;
+  }
+}
