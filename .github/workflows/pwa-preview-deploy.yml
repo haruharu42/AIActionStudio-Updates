@@ -40,6 +40,7 @@ jobs:
       NEXT_PUBLIC_AAS_PRIVACY_URL: /privacy
       NEXT_PUBLIC_AAS_AI_TERMS_URL: /ai-terms
       NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: preview
+      NEXT_PUBLIC_AAS_SOURCE_BRANCH: ${{ github.ref_name }}
       AAS_CLOUDFLARE_WORKER_NAME: ai-article-studio-pwa-preview
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
