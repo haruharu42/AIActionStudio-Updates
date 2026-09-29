@@ -17,7 +17,9 @@ import {
   NOTE_MEMBERSHIP_WORKLOADS,
   buildNoteMembershipAdvisorPrompt,
   readNoteMembershipAdvisorInput,
+  readNoteMembershipAdvisorResult,
   writeNoteMembershipAdvisorInput,
+  writeNoteMembershipAdvisorResult,
   type NoteMembershipAdvisorInput,
   type NoteMembershipAudienceStage,
   type NoteMembershipBenefit,
@@ -70,12 +72,16 @@ export function NoteMembershipAdvisor({
   onMessage(message: string): void;
 }) {
   const [form, setForm] = useState<NoteMembershipAdvisorInput>({ ...DEFAULT_NOTE_MEMBERSHIP_ADVISOR_INPUT });
+  const [resultText, setResultText] = useState("");
 
   useEffect(() => {
     let active = true;
     const restored = readNoteMembershipAdvisorInput(userId);
+    const restoredResult = readNoteMembershipAdvisorResult(userId);
     queueMicrotask(() => {
-      if (active) setForm(restored);
+      if (!active) return;
+      setForm(restored);
+      setResultText(restoredResult);
     });
     return () => { active = false; };
   }, [userId]);
@@ -109,8 +115,47 @@ export function NoteMembershipAdvisor({
 
   const copyAndOpenAi = async () => {
     writeNoteMembershipAdvisorInput(userId, form);
+    writeNoteMembershipAdvisorResult(userId, resultText);
     const copied = await copyPrompt();
     if (copied) launchAiApp(selectedAi);
+  };
+
+  const updateResult = (value: string) => {
+    const next = value.slice(0, 120000);
+    setResultText(next);
+    writeNoteMembershipAdvisorResult(userId, next);
+  };
+
+  const pasteResult = async () => {
+    try {
+      if (!navigator.clipboard?.readText) throw new Error("clipboard-read-unavailable");
+      const value = await navigator.clipboard.readText();
+      if (!value.trim()) {
+        onMessage("クリップボードに貼り付けられるAI回答がありません。");
+        return;
+      }
+      updateResult(value);
+      onMessage("noteメンバーシップ相談のAI回答をAASへ貼り付けました。");
+    } catch {
+      onMessage("AI回答を自動貼付できませんでした。下の欄へ手動で貼り付けてください。");
+    }
+  };
+
+  const copyResult = async () => {
+    if (!resultText.trim()) return;
+    try {
+      await navigator.clipboard.writeText(resultText);
+      onMessage("保存している相談結果をコピーしました。");
+    } catch {
+      onMessage("相談結果をコピーできませんでした。結果欄から手動でコピーしてください。");
+    }
+  };
+
+  const clearResult = () => {
+    if (!resultText) return;
+    if (!window.confirm("保存しているnoteメンバーシップ相談のAI回答をクリアしますか？")) return;
+    updateResult("");
+    onMessage("保存している相談結果をクリアしました。");
   };
 
   return (
@@ -256,6 +301,34 @@ export function NoteMembershipAdvisor({
           <span>運営負荷チェック</span>
         </div>
       </div>
+
+      <section className="note-membership-result-workspace" aria-label="noteメンバーシップ相談 AI回答">
+        <div className="note-membership-result-head">
+          <div>
+            <span>AI RESULT</span>
+            <strong>相談結果をAASへ戻す</strong>
+            <small>外部AIの回答を貼り付けると、このアカウント専用に保存して後から続きから確認できます。</small>
+          </div>
+          <button type="button" className="secondary-action" onClick={() => void pasteResult()}>
+            クリップボードから貼付
+          </button>
+        </div>
+        <textarea
+          value={resultText}
+          onChange={(event) => updateResult(event.target.value)}
+          rows={14}
+          placeholder="ChatGPT / Gemini / Claude が作成したメンバーシップ相談結果をここへ貼り付けてください。"
+        />
+        <div className="note-membership-result-actions">
+          <button type="button" className="secondary-action" disabled={!resultText.trim()} onClick={() => void copyResult()}>
+            保存結果をコピー
+          </button>
+          <button type="button" className="secondary-action" disabled={!resultText} onClick={clearResult}>
+            結果だけクリア
+          </button>
+          <small>{resultText.length.toLocaleString()}文字</small>
+        </div>
+      </section>
 
       <details className="note-membership-prompt">
         <summary>生成される相談プロンプトを確認</summary>

@@ -192,9 +192,14 @@ function labelOf<T extends string>(options: readonly Option<T>[], value: T): str
 }
 
 const NOTE_MEMBERSHIP_ADVISOR_STORAGE_PREFIX = "aas.note.membership.advisor.v1";
+const NOTE_MEMBERSHIP_ADVISOR_RESULT_STORAGE_PREFIX = "aas.note.membership.advisor.result.v1";
 
 function advisorStorageKey(userId: string): string {
   return NOTE_MEMBERSHIP_ADVISOR_STORAGE_PREFIX + ":" + userId;
+}
+
+function advisorResultStorageKey(userId: string): string {
+  return NOTE_MEMBERSHIP_ADVISOR_RESULT_STORAGE_PREFIX + ":" + userId;
 }
 
 function validOption<T extends string>(options: readonly Option<T>[], value: unknown, fallback: T): T {
@@ -244,6 +249,25 @@ export function writeNoteMembershipAdvisorInput(
       planCount: Math.max(1, Math.min(5, Math.trunc(input.planCount))),
       note: input.note.slice(0, 2000),
     }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function readNoteMembershipAdvisorResult(userId: string): string {
+  if (typeof window === "undefined" || !userId) return "";
+  try {
+    return (window.localStorage.getItem(advisorResultStorageKey(userId)) ?? "").slice(0, 120000);
+  } catch {
+    return "";
+  }
+}
+
+export function writeNoteMembershipAdvisorResult(userId: string, value: string): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  try {
+    window.localStorage.setItem(advisorResultStorageKey(userId), value.slice(0, 120000));
     return true;
   } catch {
     return false;

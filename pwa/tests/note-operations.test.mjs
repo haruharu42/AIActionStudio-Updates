@@ -953,3 +953,24 @@ test("membership planning tabs can paste back and persist separate AI results pe
   assert.match(styles, /\.note-membership-result-workspace/);
   assert.match(styles, /\.note-membership-result-actions/);
 });
+
+
+test("membership advisor can round-trip and persist AI consultation results per account", async () => {
+  const [advisor, lib] = await Promise.all([
+    readPwa("components/note-operations/note-membership-advisor.tsx"),
+    readPwa("lib/note-membership-advisor.ts"),
+  ]);
+
+  assert.match(lib, /NOTE_MEMBERSHIP_ADVISOR_RESULT_STORAGE_PREFIX/);
+  assert.match(lib, /readNoteMembershipAdvisorResult/);
+  assert.match(lib, /writeNoteMembershipAdvisorResult/);
+  assert.match(lib, /value\.slice\(0, 120000\)/);
+
+  assert.match(advisor, /const \[resultText, setResultText\] = useState\(""\)/);
+  assert.match(advisor, /readNoteMembershipAdvisorResult\(userId\)/);
+  assert.match(advisor, /writeNoteMembershipAdvisorResult\(userId, resultText\)/);
+  assert.match(advisor, /navigator\.clipboard\?\.readText/);
+  assert.match(advisor, /相談結果をAASへ戻す/);
+  assert.match(advisor, /保存しているnoteメンバーシップ相談のAI回答をクリアしますか/);
+  assert.match(advisor, /updateResult\(event\.target\.value\)/);
+});
