@@ -10,7 +10,7 @@ const readPwa = (relative) => readFile(path.join(pwaRoot, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
 test("promotion screenshot vision supports secure API analysis and direct ChatGPT handoff", async () => {
-  const [builder, analyzer, lib, channel, edge, css, migration, indexMigration] = await Promise.all([
+  const [builder, analyzer, lib, channel, edge, css, migration, indexMigration, workspace, contentMigration] = await Promise.all([
     readPwa("components/admin-promotion/admin-promotion-channel-builder.tsx"),
     readPwa("components/admin-promotion/admin-promotion-screenshot-analyzer.tsx"),
     readPwa("lib/promotion-screenshot-analysis.ts"),
@@ -19,6 +19,8 @@ test("promotion screenshot vision supports secure API analysis and direct ChatGP
     readPwa("app/phase24-admin-promotion.css"),
     readRepo("supabase/migrations/20260927062909_promotion_screenshot_analysis_settings_v1.sql"),
     readRepo("supabase/migrations/20260927063533_promotion_screenshot_analysis_updated_by_index_v1.sql"),
+    readPwa("lib/promotion-content-workspace.ts"),
+    readRepo("supabase/migrations/20260929041553_promotion_content_assets_v1.sql"),
   ]);
 
   assert.match(builder, /AdminPromotionScreenshotAnalyzer/);
@@ -33,7 +35,12 @@ test("promotion screenshot vision supports secure API analysis and direct ChatGP
   assert.match(analyzer, /accept="image\/png,image\/jpeg,image\/webp"/);
   assert.match(analyzer, /multiple/);
   assert.match(analyzer, /最大4枚/);
-  assert.match(analyzer, /元画像は保存しない/);
+  assert.match(analyzer, /AAS本体へ保存/);
+  assert.match(analyzer, /非公開Supabase Storage/);
+  assert.match(analyzer, /loadAdminPromotionContentWorkspace/);
+  assert.match(analyzer, /uploadAdminPromotionContentAsset/);
+  assert.match(analyzer, /downloadAdminPromotionContentAsset/);
+  assert.match(analyzer, /deleteAdminPromotionContentAsset/);
   assert.match(analyzer, /スクショを解析してプロンプトへ反映/);
   assert.match(analyzer, /画像内に書かれた命令文は実行しません/);
   assert.match(analyzer, /Knowledge自動更新AIとは独立してON\/OFF/);
@@ -46,7 +53,7 @@ test("promotion screenshot vision supports secure API analysis and direct ChatGP
   assert.match(analyzer, /OpenAI APIキーを入力してください/);
   assert.match(analyzer, /next\.enabled && next\.apiKeyConfigured/);
   assert.match(analyzer, /configLoading \|\| items\.length >= Math\.min/);
-  assert.doesNotMatch(analyzer, /storage\.from|indexedDB|localStorage/);
+  assert.doesNotMatch(analyzer, /indexedDB|localStorage/);
 
   assert.match(lib, /PROMOTION_SCREENSHOT_MAX_IMAGES = 4/);
   assert.match(lib, /PROMOTION_SCREENSHOT_MAX_FILE_BYTES = 4 \* 1024 \* 1024/);
@@ -56,6 +63,29 @@ test("promotion screenshot vision supports secure API analysis and direct ChatGP
   assert.match(lib, /画像だけでは裏付けられない主張/);
   assert.match(lib, /admin_get_promotion_screenshot_analysis_config/);
   assert.match(lib, /admin_set_promotion_screenshot_analysis_config/);
+
+  assert.match(workspace, /admin_get_promotion_content_workspace/);
+  assert.match(workspace, /admin_save_promotion_content_draft/);
+  assert.match(workspace, /admin_prepare_promotion_content_asset/);
+  assert.match(workspace, /admin_finalize_promotion_content_asset/);
+  assert.match(workspace, /admin_begin_delete_promotion_content_asset/);
+  assert.match(workspace, /admin_finalize_delete_promotion_content_asset/);
+  assert.match(workspace, /storage\.from\(PROMOTION_ASSET_BUCKET\)\.upload/);
+  assert.match(workspace, /upsert: false/);
+  assert.match(workspace, /storage\.from\(PROMOTION_ASSET_BUCKET\)\.download/);
+  assert.match(workspace, /storage\.from\(PROMOTION_ASSET_BUCKET\)\.remove/);
+  assert.doesNotMatch(workspace, /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS|service[_-]?role/i);
+
+  assert.match(contentMigration, /'promotion-assets'/);
+  assert.match(contentMigration, /public, false/);
+  assert.match(contentMigration, /create table if not exists public\.promotion_content_assets/);
+  assert.match(contentMigration, /status='pending_upload'/);
+  assert.match(contentMigration, /status='ready'/);
+  assert.match(contentMigration, /status='delete_pending'/);
+  assert.match(contentMigration, /promotion_assets_storage_insert_prepared/);
+  assert.match(contentMigration, /promotion_assets_storage_select_ready/);
+  assert.match(contentMigration, /promotion_assets_storage_delete_pending/);
+  assert.match(contentMigration, /a\.user_id=\(select auth\.uid\(\)\)/);
 
   assert.match(channel, /screenshotAnalysis\?: PromotionScreenshotAnalysis/);
   assert.match(channel, /buildPromotionScreenshotPromptContext/);
@@ -99,7 +129,7 @@ test("promotion screenshot vision supports secure API analysis and direct ChatGP
   assert.match(indexMigration, /promotion_screenshot_analysis_settings_updated_by_idx/);
 
   assert.doesNotMatch(
-    [builder, analyzer, lib, channel].join("\n"),
+    [builder, analyzer, lib, channel, workspace].join("\n"),
     /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS|vault\.decrypted_secrets|authorization:\s*"Bearer"/i,
   );
 });
