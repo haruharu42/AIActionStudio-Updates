@@ -23,6 +23,7 @@ const {
   buildCompatibleWorkspacePatch,
   deleteCloudArticle,
   getCloudArticleDetail,
+  getMyArticleStockSummary,
   listCloudArticles,
   updateCloudArticle,
 } = await vite.ssrLoadModule("/lib/phase7-articles.ts");
@@ -141,6 +142,17 @@ function fakeClient({ articles, assets = [], revisionRow, rpc = {} } = {}) {
     async rpc(name, parameters) {
       calls.push(["rpc", name, structuredClone(parameters)]);
       if (name === "can_access_product") return { data: true, error: null };
+      if (name === "get_my_article_stock_summary") return {
+        data: [{
+          current_articles: 3,
+          max_articles: 5,
+          remaining_articles: 2,
+          is_unlimited: false,
+          publication_counts: {},
+          status_counts: {},
+        }],
+        error: null,
+      };
       const configured = rpc[name];
       if (typeof configured === "function") return configured(parameters, calls);
       if (configured) return configured;
@@ -197,6 +209,22 @@ function readyAsset(overrides = {}) {
     ...overrides,
   };
 }
+
+test("loads the current article library save quota", async () => {
+  const client = fakeClient();
+  const summary = await getMyArticleStockSummary(client, OWNER);
+  assert.deepEqual(summary, {
+    currentArticles: 3,
+    maxArticles: 5,
+    remainingArticles: 2,
+    isUnlimited: false,
+  });
+  assert.deepEqual(client.calls.slice(0, 3), [
+    ["auth.getUser"],
+    ["rpc", "can_access_product", { p_product_code: "AAS-PWA-BETA" }],
+    ["rpc", "get_my_article_stock_summary", undefined],
+  ]);
+});
 
 test("lists only summary columns after authoritative access checks", async () => {
   const client = fakeClient();
