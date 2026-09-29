@@ -169,7 +169,7 @@ jobs:
         run: npm test
 
       - name: Dependency audit
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=moderate
 
       - name: Validate PWA assets and auth cache exclusions
         shell: bash

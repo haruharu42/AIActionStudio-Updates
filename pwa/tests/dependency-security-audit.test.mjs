@@ -19,3 +19,17 @@ test("Cloudflare tooling resolves undici to the patched 7.29.1 release", async (
     "sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==",
   );
 });
+
+
+test("all PWA deployment paths block moderate dependency advisories", async () => {
+  const repoRoot = path.resolve(pwaRoot, "..");
+  for (const relative of [
+    ".github/workflows/pwa-preview-deploy.yml",
+    ".github/workflows/pwa-member-beta-deploy.yml",
+    ".github/workflows/pwa-admin-public-release.yml",
+  ]) {
+    const workflow = await readFile(path.join(repoRoot, relative), "utf8");
+    assert.match(workflow, /npm audit --audit-level=moderate/);
+    assert.doesNotMatch(workflow, /npm audit --audit-level=high/);
+  }
+});
