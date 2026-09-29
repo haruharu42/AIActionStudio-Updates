@@ -358,7 +358,9 @@ test("admin public deployment pipeline keeps Preview and public release coupled 
   assert.match(workflow, /git push origin "\$SOURCE_SHA:refs\/heads\/main"/);
   assert.match(workflow, /Admin public release Cloudflare contract: PASS/);
   assert.match(workflow, /Deploy general-public PWA Worker/);
-  assert.match(previewWorkflow, /- preview\/current/);
+  assert.doesNotMatch(previewWorkflow, /\n\s*- preview\/current\s*\n/);
+  assert.match(previewWorkflow, /workflow_dispatch:/);
+  assert.match(previewWorkflow, /DEPLOY_PREVIEW/);
   assert.match(previewWorkflow, /NEXT_PUBLIC_AAS_SOURCE_BRANCH: \$\{\{ github\.ref_name \}\}/);
   assert.match(edgeFunction, /ALLOWED_PREVIEW_BRANCHES/);
   assert.match(edgeFunction, /\["main", "preview\/current"\]/);
