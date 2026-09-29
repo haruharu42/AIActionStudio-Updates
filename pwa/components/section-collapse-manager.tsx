@@ -77,13 +77,6 @@ function headingLabel(panel: HTMLElement, header: HTMLElement): string {
   ).trim();
 }
 
-function adminLike(pathname: string, panel: HTMLElement): boolean {
-  return pathname.startsWith("/admin")
-    || panel.matches(
-      ".admin-panel,.release-admin-panel,.knowledge-admin-panel,.admin-promo-panel,.prompt-admin-panel,.admin-dev-prompt-panel,.admin-card,.admin-action-card,.knowledge-automation-panel",
-    );
-}
-
 export function SectionCollapseManager() {
   const pathname = usePathname();
 
@@ -112,7 +105,7 @@ export function SectionCollapseManager() {
         keyCounts.set(baseKey, count);
         const storageKey = `aas:section-collapse:${baseKey}:${count}`;
 
-        let collapsed = adminLike(pathname, panel);
+        let collapsed = true;
         try {
           const saved = window.localStorage.getItem(storageKey);
           if (saved === "1") collapsed = true;
