@@ -194,10 +194,11 @@ function fallbackRichCopy(html: string): boolean {
   return copied;
 }
 
-export async function copyNoteRichText(markdown: string): Promise<"rich" | "fallback"> {
-  const html = markdownToNoteHtml(markdown);
-  const plain = markdownToPlainText(markdown);
-  if (!html) throw new Error("コピーする本文がありません。");
+export async function copyRichHtmlContent(
+  html: string,
+  plain: string,
+): Promise<"rich" | "fallback"> {
+  if (!html.trim()) throw new Error("コピーする本文がありません。");
 
   if (typeof navigator !== "undefined" && navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
     try {
@@ -215,4 +216,10 @@ export async function copyNoteRichText(markdown: string): Promise<"rich" | "fall
 
   if (fallbackRichCopy(html)) return "fallback";
   throw new Error("装飾付きコピーに失敗しました。ブラウザーのクリップボード許可を確認して、もう一度お試しください。");
+}
+
+export async function copyNoteRichText(markdown: string): Promise<"rich" | "fallback"> {
+  const html = markdownToNoteHtml(markdown);
+  const plain = markdownToPlainText(markdown);
+  return copyRichHtmlContent(html, plain);
 }
