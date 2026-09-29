@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - preview/current
       - feat/note-easy-import-manual-contrast-20260920
   workflow_dispatch:
     inputs:
@@ -27,7 +26,7 @@ concurrency:
 
 jobs:
   preview-upload:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/preview/current' || contains(github.event.head_commit.message, '[preview]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[preview]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -79,8 +78,6 @@ jobs:
             fi
 
             if [ "$EVENT_REF" = "refs/heads/main" ]; then
-              :
-            elif [ "$EVENT_REF" = "refs/heads/preview/current" ]; then
               :
             elif [ "$EVENT_REF" = "refs/heads/feat/note-easy-import-manual-contrast-20260920" ]; then
               :
