@@ -1460,13 +1460,20 @@
     padding: 12px;
   }
 
-  .note-membership-actions {
+  .note-membership-actions,
+  .note-membership-result-actions {
     display: grid;
     grid-template-columns: 1fr;
   }
 
-  .note-membership-actions button {
+  .note-membership-actions button,
+  .note-membership-result-actions button,
+  .note-membership-result-head > button {
     width: 100%;
+  }
+
+  .note-membership-result-actions small {
+    margin-left: 0;
   }
 }
 
@@ -1627,6 +1634,73 @@
   color: #76899e;
   font-size: 8px;
   line-height: 1.7;
+}
+
+
+.note-membership-result-workspace {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #cfe0ef;
+  border-radius: 13px;
+  background: #f7fbff;
+  padding: 12px;
+}
+
+.note-membership-result-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.note-membership-result-head > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  flex: 1 1 300px;
+}
+
+.note-membership-result-head span {
+  color: #2476ce;
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: .1em;
+}
+
+.note-membership-result-head strong {
+  color: #294f73;
+  font-size: 10px;
+}
+
+.note-membership-result-head small,
+.note-membership-result-actions small {
+  color: #7b8fa5;
+  font-size: 7.5px;
+  line-height: 1.6;
+}
+
+.note-membership-result-workspace textarea {
+  width: 100%;
+  min-height: 240px;
+  border: 1px solid #ccddec;
+  border-radius: 10px;
+  background: #fff;
+  color: #213f5d;
+  padding: 10px;
+  resize: vertical;
+  font: 9px/1.65 "Yu Gothic UI", Meiryo, sans-serif;
+}
+
+.note-membership-result-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.note-membership-result-actions small {
+  margin-left: auto;
 }
 
 .note-membership-progress {

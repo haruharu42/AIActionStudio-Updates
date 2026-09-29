@@ -922,3 +922,34 @@ test("note membership cockpit remounts per account so another account never sees
   const page = await readPwa("components/note-operations-page.tsx");
   assert.match(page, /<NoteMembershipCockpit[\s\S]*?key=\{gate\.userId\}[\s\S]*?userId=\{gate\.userId\}/);
 });
+
+
+test("membership planning tabs can paste back and persist separate AI results per account", async () => {
+  const [cockpit, lib, styles] = await Promise.all([
+    readPwa("components/note-operations/note-membership-cockpit.tsx"),
+    readPwa("lib/note-membership-cockpit.ts"),
+    readPwa("app/phase38-note-operations.css"),
+  ]);
+
+  assert.match(lib, /type MembershipWorkspaceResultKey = Exclude<NoteMembershipCockpitTab/);
+  assert.match(lib, /DEFAULT_MEMBERSHIP_WORKSPACE_RESULTS/);
+  assert.match(lib, /results: MembershipWorkspaceResults/);
+  assert.match(lib, /pricing: typeof results\.pricing === "string"/);
+  assert.match(lib, /promotion: typeof results\.promotion === "string"/);
+  assert.match(lib, /progress\.results\.improve\.slice\(0, 120000\)/);
+
+  assert.match(cockpit, /function MembershipAiResultWorkspace/);
+  assert.match(cockpit, /navigator\.clipboard\?\.readText/);
+  assert.match(cockpit, /保存済みAI回答をクリアしますか/);
+  assert.match(cockpit, /setWorkspaceResults\(restored\.results\)/);
+  assert.match(cockpit, /results: workspaceResults/);
+  assert.match(cockpit, /const updateWorkspaceResult = \(key: MembershipWorkspaceResultKey/);
+  for (const key of ["pricing", "page", "promotion", "calendar", "improve"]) {
+    assert.match(cockpit, new RegExp('value=\\{workspaceResults\\.' + key + '\\}'));
+    assert.match(cockpit, new RegExp('updateWorkspaceResult\\("' + key + '"'));
+  }
+  assert.match(cockpit, /onBeforeExternalLaunch=\{persistWorkspace\}/);
+  assert.match(cockpit, /onBeforeExternalLaunch\(\);[\s\S]*?launchAiApp\(selectedAi\)/);
+  assert.match(styles, /\.note-membership-result-workspace/);
+  assert.match(styles, /\.note-membership-result-actions/);
+});

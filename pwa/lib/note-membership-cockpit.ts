@@ -88,6 +88,18 @@ export const DEFAULT_MEMBERSHIP_IMPROVE_INPUT: MembershipImproveInput = {
   changeRange: "small",
 };
 
+export type MembershipWorkspaceResultKey = Exclude<NoteMembershipCockpitTab, "consult" | "launch">;
+
+export type MembershipWorkspaceResults = Record<MembershipWorkspaceResultKey, string>;
+
+export const DEFAULT_MEMBERSHIP_WORKSPACE_RESULTS: MembershipWorkspaceResults = {
+  pricing: "",
+  page: "",
+  promotion: "",
+  calendar: "",
+  improve: "",
+};
+
 export type NoteMembershipCockpitProgress = {
   tab: NoteMembershipCockpitTab;
   pricing: MembershipPricingInput;
@@ -96,6 +108,7 @@ export type NoteMembershipCockpitProgress = {
   calendar: MembershipCalendarInput;
   improve: MembershipImproveInput;
   articleTheme: string;
+  results: MembershipWorkspaceResults;
 };
 
 export const NOTE_MEMBERSHIP_LAUNCH_CHECKLIST = [
@@ -142,6 +155,7 @@ export function readMembershipCockpitProgress(userId: string): NoteMembershipCoc
     calendar: { ...DEFAULT_MEMBERSHIP_CALENDAR_INPUT },
     improve: { ...DEFAULT_MEMBERSHIP_IMPROVE_INPUT },
     articleTheme: "",
+    results: { ...DEFAULT_MEMBERSHIP_WORKSPACE_RESULTS },
   };
   if (typeof window === "undefined" || !userId) return fallback;
 
@@ -154,6 +168,7 @@ export function readMembershipCockpitProgress(userId: string): NoteMembershipCoc
     const promotion = recordValue(parsed.promotion);
     const calendar = recordValue(parsed.calendar);
     const improve = recordValue(parsed.improve);
+    const results = recordValue(parsed.results);
 
     return {
       tab: pickAllowed(parsed.tab, ["consult", "pricing", "launch", "page", "promotion", "calendar", "improve"] as const, "consult"),
@@ -189,6 +204,13 @@ export function readMembershipCockpitProgress(userId: string): NoteMembershipCoc
         changeRange: pickAllowed(improve.changeRange, ["small", "medium", "large"] as const, fallback.improve.changeRange),
       },
       articleTheme: typeof parsed.articleTheme === "string" ? parsed.articleTheme.slice(0, 300) : "",
+      results: {
+        pricing: typeof results.pricing === "string" ? results.pricing.slice(0, 120000) : "",
+        page: typeof results.page === "string" ? results.page.slice(0, 120000) : "",
+        promotion: typeof results.promotion === "string" ? results.promotion.slice(0, 120000) : "",
+        calendar: typeof results.calendar === "string" ? results.calendar.slice(0, 120000) : "",
+        improve: typeof results.improve === "string" ? results.improve.slice(0, 120000) : "",
+      },
     };
   } catch {
     return fallback;
@@ -203,7 +225,17 @@ export function writeMembershipCockpitProgress(
   try {
     window.localStorage.setItem(
       membershipCockpitStorageKey(userId),
-      JSON.stringify({ ...progress, articleTheme: progress.articleTheme.slice(0, 300) }),
+      JSON.stringify({
+        ...progress,
+        articleTheme: progress.articleTheme.slice(0, 300),
+        results: {
+          pricing: progress.results.pricing.slice(0, 120000),
+          page: progress.results.page.slice(0, 120000),
+          promotion: progress.results.promotion.slice(0, 120000),
+          calendar: progress.results.calendar.slice(0, 120000),
+          improve: progress.results.improve.slice(0, 120000),
+        },
+      }),
     );
     return true;
   } catch {

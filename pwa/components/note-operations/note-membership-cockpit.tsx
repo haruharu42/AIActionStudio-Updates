@@ -8,6 +8,7 @@ import { NoteMembershipMetricsPanel } from "@/components/note-operations/note-me
 import {
   DEFAULT_MEMBERSHIP_CALENDAR_INPUT,
   DEFAULT_MEMBERSHIP_IMPROVE_INPUT,
+  DEFAULT_MEMBERSHIP_WORKSPACE_RESULTS,
   DEFAULT_MEMBERSHIP_PAGE_INPUT,
   DEFAULT_MEMBERSHIP_PRICING_INPUT,
   DEFAULT_MEMBERSHIP_PROMOTION_INPUT,
@@ -27,6 +28,7 @@ import {
   type MembershipPageInput,
   type MembershipPricingInput,
   type MembershipPromotionInput,
+  type MembershipWorkspaceResultKey,
   type NoteMembershipCockpitTab,
 } from "@/lib/note-membership-cockpit";
 import { launchAiApp } from "@/lib/ai-app-links";
@@ -51,10 +53,12 @@ function CopyActions({
   prompt,
   selectedAi,
   onMessage,
+  onBeforeExternalLaunch,
 }: {
   prompt: string;
   selectedAi: AiProvider;
   onMessage(message: string): void;
+  onBeforeExternalLaunch(): void;
 }) {
   const copy = async () => {
     try {
@@ -75,7 +79,9 @@ function CopyActions({
           className="primary-action"
           onClick={() => void (async () => {
             const copied = await copy();
-            if (copied) launchAiApp(selectedAi);
+            if (!copied) return;
+            onBeforeExternalLaunch();
+            launchAiApp(selectedAi);
           })()}
         >
           プロンプトをコピーして{AI_PROVIDER_LABELS[selectedAi]}を開く
@@ -114,6 +120,80 @@ function Field({
   );
 }
 
+function MembershipAiResultWorkspace({
+  label,
+  value,
+  onChange,
+  onMessage,
+}: {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+  onMessage(message: string): void;
+}) {
+  const paste = async () => {
+    try {
+      if (!navigator.clipboard?.readText) throw new Error("clipboard-read-unavailable");
+      const next = await navigator.clipboard.readText();
+      if (!next.trim()) {
+        onMessage("クリップボードに貼り付けられるAI回答がありません。");
+        return;
+      }
+      onChange(next.slice(0, 120000));
+      onMessage(label + "のAI回答をAASへ貼り付けました。");
+    } catch {
+      onMessage("AI回答を自動貼付できませんでした。下の欄へ手動で貼り付けてください。");
+    }
+  };
+
+  const copy = async () => {
+    if (!value.trim()) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      onMessage(label + "の保存結果をコピーしました。");
+    } catch {
+      onMessage("保存結果をコピーできませんでした。結果欄から手動でコピーしてください。");
+    }
+  };
+
+  const clear = () => {
+    if (!value) return;
+    if (!window.confirm(label + "の保存済みAI回答をクリアしますか？")) return;
+    onChange("");
+    onMessage(label + "の保存済みAI回答をクリアしました。");
+  };
+
+  return (
+    <section className="note-membership-result-workspace" aria-label={label + " AI回答"}>
+      <div className="note-membership-result-head">
+        <div>
+          <span>AI RESULT</span>
+          <strong>{label}のAI回答をAASへ戻す</strong>
+          <small>タブを切り替えても、再読み込みしてもアカウント別に保存されます。</small>
+        </div>
+        <button type="button" className="secondary-action" onClick={() => void paste()}>
+          クリップボードから貼付
+        </button>
+      </div>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value.slice(0, 120000))}
+        rows={14}
+        placeholder="ChatGPT / Gemini / Claude の回答をここへ貼り付けて保存できます。"
+      />
+      <div className="note-membership-result-actions">
+        <button type="button" className="secondary-action" disabled={!value.trim()} onClick={() => void copy()}>
+          保存結果をコピー
+        </button>
+        <button type="button" className="secondary-action" disabled={!value} onClick={clear}>
+          結果だけクリア
+        </button>
+        <small>{value.length.toLocaleString()}文字</small>
+      </div>
+    </section>
+  );
+}
+
 export function NoteMembershipCockpit({
   userId,
   profile,
@@ -136,6 +216,7 @@ export function NoteMembershipCockpit({
   const [calendar, setCalendar] = useState<MembershipCalendarInput>({ ...DEFAULT_MEMBERSHIP_CALENDAR_INPUT });
   const [improve, setImprove] = useState<MembershipImproveInput>({ ...DEFAULT_MEMBERSHIP_IMPROVE_INPUT });
   const [articleTheme, setArticleTheme] = useState("");
+  const [workspaceResults, setWorkspaceResults] = useState({ ...DEFAULT_MEMBERSHIP_WORKSPACE_RESULTS });
   const [metricsEntries, setMetricsEntries] = useState<NoteMembershipMetricsEntry[]>([]);
   const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
   const workspaceOwnerRef = useRef("");
@@ -153,6 +234,7 @@ export function NoteMembershipCockpit({
       setCalendar(restored.calendar);
       setImprove(restored.improve);
       setArticleTheme(restored.articleTheme);
+      setWorkspaceResults(restored.results);
       workspaceOwnerRef.current = userId;
       setWorkspaceHydrated(true);
     });
@@ -169,8 +251,9 @@ export function NoteMembershipCockpit({
       calendar,
       improve,
       articleTheme,
+      results: workspaceResults,
     });
-  }, [articleTheme, calendar, improve, pageInput, pricing, promotion, tab, userId, workspaceHydrated]);
+  }, [articleTheme, calendar, improve, pageInput, pricing, promotion, tab, userId, workspaceHydrated, workspaceResults]);
 
   useEffect(() => {
     persistWorkspace();
@@ -230,6 +313,10 @@ export function NoteMembershipCockpit({
   );
 
   const progress = Math.round((checked.length / NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.length) * 100);
+
+  const updateWorkspaceResult = (key: MembershipWorkspaceResultKey, value: string) => {
+    setWorkspaceResults((current) => ({ ...current, [key]: value.slice(0, 120000) }));
+  };
 
   return (
     <section className="note-membership-cockpit" aria-labelledby="note-membership-cockpit-title">
@@ -294,7 +381,13 @@ export function NoteMembershipCockpit({
               <option value="easy_join">参加ハードルを低く</option><option value="balance">価格と価値のバランス</option><option value="premium">少人数・高付加価値</option><option value="ai">AIに判断してもらう</option>
             </Field>
           </div>
-          <CopyActions prompt={pricingPrompt} selectedAi={selectedAi} onMessage={onMessage} />
+          <CopyActions prompt={pricingPrompt} selectedAi={selectedAi} onMessage={onMessage} onBeforeExternalLaunch={persistWorkspace} />
+          <MembershipAiResultWorkspace
+            label="料金・特典診断"
+            value={workspaceResults.pricing}
+            onChange={(value) => updateWorkspaceResult("pricing", value)}
+            onMessage={onMessage}
+          />
         </section>
       )}
 
@@ -350,7 +443,13 @@ export function NoteMembershipCockpit({
               <option value="yes">入れる</option><option value="no">入れない</option>
             </Field>
           </div>
-          <CopyActions prompt={pagePrompt} selectedAi={selectedAi} onMessage={onMessage} />
+          <CopyActions prompt={pagePrompt} selectedAi={selectedAi} onMessage={onMessage} onBeforeExternalLaunch={persistWorkspace} />
+          <MembershipAiResultWorkspace
+            label="紹介ページ"
+            value={workspaceResults.page}
+            onChange={(value) => updateWorkspaceResult("page", value)}
+            onMessage={onMessage}
+          />
         </section>
       )}
 
@@ -374,7 +473,13 @@ export function NoteMembershipCockpit({
               <option value="ai">必要性をAIが判断</option><option value="yes">使う</option><option value="no">使わない</option>
             </Field>
           </div>
-          <CopyActions prompt={promotionPrompt} selectedAi={selectedAi} onMessage={onMessage} />
+          <CopyActions prompt={promotionPrompt} selectedAi={selectedAi} onMessage={onMessage} onBeforeExternalLaunch={persistWorkspace} />
+          <MembershipAiResultWorkspace
+            label="告知・集客"
+            value={workspaceResults.promotion}
+            onChange={(value) => updateWorkspaceResult("promotion", value)}
+            onMessage={onMessage}
+          />
         </section>
       )}
 
@@ -395,7 +500,13 @@ export function NoteMembershipCockpit({
               <option value="habit">無理なく継続</option><option value="value">会員価値を明確に</option><option value="conversation">交流を増やす</option><option value="retention">継続体験を整える</option>
             </Field>
           </div>
-          <CopyActions prompt={calendarPrompt} selectedAi={selectedAi} onMessage={onMessage} />
+          <CopyActions prompt={calendarPrompt} selectedAi={selectedAi} onMessage={onMessage} onBeforeExternalLaunch={persistWorkspace} />
+          <MembershipAiResultWorkspace
+            label="月間運営"
+            value={workspaceResults.calendar}
+            onChange={(value) => updateWorkspaceResult("calendar", value)}
+            onMessage={onMessage}
+          />
           <div className="note-membership-article-links">
             <label>
               <span>記事へ引き継ぐテーマ（任意）</span>
@@ -435,7 +546,13 @@ export function NoteMembershipCockpit({
             onEntriesChange={setMetricsEntries}
             onMessage={onMessage}
           />
-          <CopyActions prompt={improvePrompt} selectedAi={selectedAi} onMessage={onMessage} />
+          <CopyActions prompt={improvePrompt} selectedAi={selectedAi} onMessage={onMessage} onBeforeExternalLaunch={persistWorkspace} />
+          <MembershipAiResultWorkspace
+            label="改善相談"
+            value={workspaceResults.improve}
+            onChange={(value) => updateWorkspaceResult("improve", value)}
+            onMessage={onMessage}
+          />
         </section>
       )}
     </section>
