@@ -23,10 +23,10 @@ test("promotion screenshot vision supports secure API analysis and direct ChatGP
 
   assert.match(builder, /AdminPromotionScreenshotAnalyzer/);
   assert.match(builder, /screenshotAnalysis/);
-  assert.match(builder, /紹介したいスクショを追加/);
-  assert.match(builder, /解析済みスクショ/);
+  assert.match(builder, /STEP 3 · 画像・スクショ/);
+  assert.match(builder, /スクリーンショットを使用する/);
   assert.match(builder, /ChatGPTへスクショを直接渡す/);
-  assert.match(builder, /ChatGPT直接添付用プロンプトをコピー/);
+  assert.match(builder, /直接添付用プロンプトをコピー/);
   assert.match(builder, /launchAiApp\("chatgpt"\)/);
   assert.match(builder, /AAS側の画像解析APIを使わない方法/);
 
