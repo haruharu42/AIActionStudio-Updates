@@ -386,3 +386,26 @@ test("thin prompt categories are expanded into production-ready dedicated workfl
   assert.ok(categoryCount("顧客対応・営業") >= 4);
 });
 
+
+
+test("prompt library keeps a separate in-progress draft for every template and restores it when switching back", async () => {
+  const [page, preferences] = await Promise.all([
+    read("components/action-prompt-library-page.tsx"),
+    read("lib/action-prompt-preferences.ts"),
+  ]);
+
+  assert.match(preferences, /type StoredActionPromptDraft/);
+  assert.match(preferences, /drafts\?: Record<string, StoredActionPromptDraft>/);
+  assert.match(preferences, /function parseStoredDrafts/);
+  assert.match(preferences, /const previous = readActionPromptProgress\(userId\)/);
+  assert.match(preferences, /drafts\[progress\.selectedId\]/);
+  assert.match(preferences, /JSON\.stringify\(\{ \.\.\.progress, drafts \}\)/);
+
+  assert.match(page, /stored\?\.drafts\?\.\[template\.id\]\?\.values/);
+  assert.match(page, /function selectedAiForTemplate/);
+  assert.match(page, /stored\?\.drafts\?\.\[template\.id\]\?\.selectedAi/);
+  assert.match(page, /if \(selected && userId\) \{[\s\S]*?writeActionPromptProgress/);
+  assert.match(page, /const stored = readActionPromptProgress\(userId\)/);
+  assert.match(page, /setValues\(valuesForTemplate\(template, stored\)\)/);
+  assert.match(page, /setSelectedAi\(selectedAiForTemplate\(template, stored\)\)/);
+});

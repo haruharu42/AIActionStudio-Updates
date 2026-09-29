@@ -35,10 +35,21 @@ function valuesForTemplate(
   template: ActionPromptTemplate,
   stored: ReturnType<typeof readActionPromptProgress>,
 ): Record<string, string> {
-  if (!stored || stored.selectedId !== template.id) return initialActionPromptValues(template);
+  const source = stored?.drafts?.[template.id]?.values
+    ?? (stored?.selectedId === template.id ? stored.values : undefined);
+  if (!source) return initialActionPromptValues(template);
   return Object.fromEntries(
-    template.fields.map((field) => [field.key, stored.values[field.key] ?? ""]),
+    template.fields.map((field) => [field.key, source[field.key] ?? ""]),
   );
+}
+
+function selectedAiForTemplate(
+  template: ActionPromptTemplate,
+  stored: ReturnType<typeof readActionPromptProgress>,
+): AiAppKey {
+  return stored?.drafts?.[template.id]?.selectedAi
+    ?? (stored?.selectedId === template.id ? stored.selectedAi : undefined)
+    ?? recommendedActionPromptAi(template);
 }
 
 function filterActionPromptTemplates(
@@ -100,11 +111,7 @@ export function ActionPromptLibraryPage() {
       if (restored) {
         setSelectedId(restored.id);
         setValues(valuesForTemplate(restored, stored));
-        setSelectedAi(
-          stored?.selectedId === restored.id && stored.selectedAi
-            ? stored.selectedAi
-            : recommendedActionPromptAi(restored),
-        );
+        setSelectedAi(selectedAiForTemplate(restored, stored));
       }
       setProgressReady(true);
     });
@@ -134,11 +141,7 @@ export function ActionPromptLibraryPage() {
         if (next) {
           setSelectedId(next.id);
           setValues(valuesForTemplate(next, stored));
-          setSelectedAi(
-            stored?.selectedId === next.id && stored.selectedAi
-              ? stored.selectedAi
-              : recommendedActionPromptAi(next),
-          );
+          setSelectedAi(selectedAiForTemplate(next, stored));
         }
       },
       () => {
@@ -183,9 +186,17 @@ export function ActionPromptLibraryPage() {
   );
 
   const selectTemplate = (template: ActionPromptTemplate, openPrompt = true) => {
+    if (selected && userId) {
+      writeActionPromptProgress(userId, {
+        selectedId: selected.id,
+        values,
+        selectedAi,
+      });
+    }
+    const stored = readActionPromptProgress(userId);
     setSelectedId(template.id);
-    setSelectedAi(recommendedActionPromptAi(template));
-    setValues(initialActionPromptValues(template));
+    setSelectedAi(selectedAiForTemplate(template, stored));
+    setValues(valuesForTemplate(template, stored));
     setMessage("");
     if (openPrompt) setViewMode("prompt");
   };
