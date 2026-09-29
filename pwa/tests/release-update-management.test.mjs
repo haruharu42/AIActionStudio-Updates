@@ -231,7 +231,7 @@ test("account switching stays available on prerelease denial and clears cached r
 
   assert.match(gate, /ログアウトして別のアカウントでログイン/);
   assert.match(gate, /href="\/logout"/);
-  assert.match(gate, /ALWAYS_PUBLIC_PREVIEW_PATHS = \\["\\/auth\\/callback", "\\/login", "\\/logout"/);
+  assert.ok(gate.includes('const ALWAYS_PUBLIC_PREVIEW_PATHS = ["/auth/callback", "/login", "/logout"'));
   assert.match(gate, /auth\.getSession\(\)/);
   assert.match(gate, /sessionError \|\| !session/);
   assert.match(gate, /clearEffectiveRelease\(\)/);
