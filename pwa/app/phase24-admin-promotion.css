@@ -1838,3 +1838,78 @@
     min-height: 300px;
   }
 }
+
+
+/* Promotion creator step cards: keep all 8 steps aligned on mobile instead of leaving STEP 8 alone. */
+.admin-promo-wizard-steps {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.admin-promo-wizard-steps > li {
+  min-width: 0;
+  height: 100%;
+}
+
+.admin-promo-wizard-steps > li > button {
+  min-height: 72px;
+  height: 100%;
+  padding: 8px 5px;
+}
+
+.admin-promo-wizard-steps > li > button small {
+  display: grid;
+  place-items: center;
+  min-height: 2.7em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .admin-promo-wizard-steps {
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    overflow-x: visible;
+    padding: 0;
+  }
+
+  .admin-promo-wizard-steps > li {
+    width: auto;
+    min-width: 0;
+    border-radius: 11px;
+  }
+
+  .admin-promo-wizard-steps > li > button {
+    min-height: 82px;
+    padding: 9px 4px;
+    gap: 6px;
+  }
+
+  .admin-promo-wizard-steps > li > button span {
+    width: 27px;
+    height: 27px;
+    font-size: 10px;
+  }
+
+  .admin-promo-wizard-steps > li > button small {
+    min-height: 2.7em;
+    font-size: 9px;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-promo-wizard-steps {
+    gap: 6px;
+  }
+
+  .admin-promo-wizard-steps > li > button {
+    min-height: 78px;
+    padding-inline: 3px;
+  }
+
+  .admin-promo-wizard-steps > li > button small {
+    font-size: 8px;
+  }
+}
