@@ -56,16 +56,23 @@ export function PersistentMobileNav() {
 
   const hiddenRoute = HIDDEN_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
   const referenceShellRoute = REFERENCE_SHELL_ROUTES.has(pathname);
-  const visible = signedIn && !hiddenRoute && !referenceShellRoute && (alwaysShow || pathname === "/settings");
+  const desktopNavActive = signedIn && !hiddenRoute;
+  const mobileNavVisible = alwaysShow || pathname === "/settings";
+  const renderGlobalNav = desktopNavActive && !referenceShellRoute;
 
-  if (!visible) return null;
+  useEffect(() => {
+    document.body.classList.toggle("aas-desktop-nav-active", desktopNavActive);
+    return () => document.body.classList.remove("aas-desktop-nav-active");
+  }, [desktopNavActive]);
+
+  if (!renderGlobalNav) return null;
 
   const activeKey = activeKeyForPathname(pathname);
 
   return (
     <>
-      <div className="persistent-mobile-nav-spacer" aria-hidden="true" />
-      <AasReferenceBottomNav active={activeKey} />
+      {mobileNavVisible ? <div className="persistent-mobile-nav-spacer" aria-hidden="true" /> : null}
+      <AasReferenceBottomNav active={activeKey} showMobile={mobileNavVisible} />
     </>
   );
 }
