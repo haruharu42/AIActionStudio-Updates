@@ -1258,9 +1258,14 @@
   color: #9a6216;
 }
 
+.knowledge-source-list article > header > span.disabled {
+  background: #edf1f4;
+  color: #687a87;
+}
+
 .knowledge-source-health-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
 }
 
@@ -1276,6 +1281,11 @@
 .knowledge-source-health-stats article.warning {
   border-color: #efd3a5;
   background: #fffaf2;
+}
+
+.knowledge-source-health-stats article.disabled {
+  border-color: #d7dfe5;
+  background: #f6f8fa;
 }
 
 .knowledge-source-health-stats span {
@@ -1371,6 +1381,12 @@
 .knowledge-source-list article.warning {
   border-color: #efd0a0;
   background: #fffbf4;
+}
+
+.knowledge-source-list article.disabled {
+  border-color: #d8e0e5;
+  background: #f6f8fa;
+  opacity: .82;
 }
 
 .knowledge-source-list article > header {

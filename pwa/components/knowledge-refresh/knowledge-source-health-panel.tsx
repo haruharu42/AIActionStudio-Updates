@@ -28,6 +28,24 @@ export function KnowledgeSourceHealthPanel({
     ),
     [enabledSources],
   );
+  const disabledSources = useMemo(
+    () => sources.filter((source) => !source.enabled),
+    [sources],
+  );
+  const orderedSources = useMemo(
+    () => [...sources].sort((a, b) => {
+      const rank = (source: KnowledgeAutomationSource) => {
+        if (!source.enabled) return 2;
+        if (source.consecutiveFailures > 0 || (source.lastHttpStatus !== null && source.lastHttpStatus >= 400)) return 0;
+        return 1;
+      };
+      const rankDiff = rank(a) - rank(b);
+      if (rankDiff !== 0) return rankDiff;
+      if (a.consecutiveFailures !== b.consecutiveFailures) return b.consecutiveFailures - a.consecutiveFailures;
+      return knowledgeSourceHost(a.sourceUrl).localeCompare(knowledgeSourceHost(b.sourceUrl), "ja");
+    }),
+    [sources],
+  );
   const coverage = useMemo(
     () => SIDE_HUSTLE_COVERAGE_TASKS.map(([task, label]) => ({
       task,
@@ -54,6 +72,7 @@ export function KnowledgeSourceHealthPanel({
       <div className="knowledge-source-health-stats">
         <article><span>有効URL</span><strong>{enabledSources.length}</strong></article>
         <article className={failingSources.length > 0 ? "warning" : ""}><span>取得失敗</span><strong>{failingSources.length}</strong></article>
+        <article className={disabledSources.length > 0 ? "disabled" : ""}><span>停止中</span><strong>{disabledSources.length}</strong></article>
         <article><span>次回対象</span><strong>{dueSources ?? "-"}</strong></article>
       </div>
 
@@ -75,13 +94,17 @@ export function KnowledgeSourceHealthPanel({
       <details className="knowledge-source-list" open={failingSources.length > 0}>
         <summary>監視URL一覧（{sources.length}件）</summary>
         <div>
-          {sources.map((source) => {
-            const isFailing = source.consecutiveFailures > 0
-              || (source.lastHttpStatus !== null && source.lastHttpStatus >= 400);
+          {orderedSources.map((source) => {
+            const isFailing = source.enabled && (
+              source.consecutiveFailures > 0
+              || (source.lastHttpStatus !== null && source.lastHttpStatus >= 400)
+            );
+            const statusClass = !source.enabled ? "disabled" : isFailing ? "warning" : "healthy";
+            const statusLabel = !source.enabled ? "停止中" : isFailing ? "要確認" : "正常";
             return (
-              <article key={source.id} className={isFailing ? "warning" : ""}>
+              <article key={source.id} className={!source.enabled ? "disabled" : isFailing ? "warning" : ""}>
                 <header>
-                  <span className={isFailing ? "warning" : "healthy"}>{isFailing ? "要確認" : "正常"}</span>
+                  <span className={statusClass}>{statusLabel}</span>
                   <strong>{knowledgeSourceHost(source.sourceUrl)}</strong>
                   <small>{knowledgeSourceKindLabel(source.sourceKind)}</small>
                 </header>
