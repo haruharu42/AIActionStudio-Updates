@@ -489,3 +489,16 @@ test("knowledge source health puts failing URLs first and never labels disabled 
   assert.match(css, /\.knowledge-source-list article\.disabled/);
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
 });
+
+
+test("redundant OpenAI Help source is retired from scheduling after repeated 403s without deleting history", async () => {
+  const migration = await readRepo("supabase/migrations/20260929235427_disable_redundant_openai_help_source_v1.sql");
+  const worker = await readRepo("supabase/functions/knowledge-research-worker/index.ts");
+
+  assert.match(migration, /help\.openai\.com\/en\/articles\/10032626-prompt-engineering-best-practices-for-chatgpt/);
+  assert.match(migration, /enabled=false/);
+  assert.match(migration, /last_http_status=403/);
+  assert.match(migration, /consecutive_failures>=3/);
+  assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
+  assert.match(worker, /function failureBackoffHours\(failures: number\)/);
+});
