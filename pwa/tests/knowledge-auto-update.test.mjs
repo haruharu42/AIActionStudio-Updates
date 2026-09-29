@@ -235,6 +235,11 @@ test("official-source automation detects changes but never auto-publishes Knowle
   assert.match(worker, /\.select\("id"\)/);
   assert.doesNotMatch(worker, /knowledge_automation_candidates"\)\.insert/);
   assert.match(worker, /404 \|\| res\.status === 410/);
+  assert.match(worker, /function failureBackoffHours\(failures: number\)/);
+  assert.match(worker, /if \(failures <= 6\) return 48/);
+  assert.match(worker, /return 168/);
+  assert.equal((worker.match(/nextCheck\(failureBackoffHours\(failures\)\)/g) ?? []).length, 3);
+  assert.doesNotMatch(worker, /nextCheck\(12\).*consecutive_failures/);
   assert.doesNotMatch(worker, /admin_publish_knowledge_refresh_bundle/);
   assert.doesNotMatch(worker, /knowledge_catalog"\)\.insert|knowledge_catalog"\)\.update/);
 

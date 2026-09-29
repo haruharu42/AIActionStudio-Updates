@@ -47,6 +47,14 @@ function nextCheck(hours: number) {
   return new Date(Date.now() + Math.max(1, hours) * 3600000).toISOString();
 }
 
+function failureBackoffHours(failures: number) {
+  if (failures <= 2) return 12;
+  if (failures <= 4) return 24;
+  if (failures <= 6) return 48;
+  if (failures <= 8) return 72;
+  return 168;
+}
+
 const genericTerms = [
   "help","guide","policy","rules","terms","update","release","changelog","analytics",
   "creator","support","faq","advertising","ヘルプ","ガイド","規約","ルール","更新","変更",
@@ -502,14 +510,15 @@ async function inspectSource(source: any, settings: any, runId: number, items: a
     if (res.status === 404 || res.status === 410) {
       let made = 0;
       for (const item of mapped) made += await candidate(runId,source,"retire",source.source_url,item.label,"",source.last_content_hash ?? "",res.status,item.tasks.length ? item.tasks : source.tasks,item,92,"公式ソースがHTTP " + res.status + "を返しました。移転先と継続要否を確認してください。");
-      await db.from("knowledge_automation_sources").update({ last_checked_at:now,next_check_at:nextCheck(12),last_http_status:res.status,consecutive_failures:(source.consecutive_failures ?? 0)+1,last_error:"HTTP "+res.status,updated_at:now }).eq("id",source.id);
+      const failures = (source.consecutive_failures ?? 0)+1;
+      await db.from("knowledge_automation_sources").update({ last_checked_at:now,next_check_at:nextCheck(failureBackoffHours(failures)),last_http_status:res.status,consecutive_failures:failures,last_error:"HTTP "+res.status,updated_at:now }).eq("id",source.id);
       return { checked:1,candidates:made,changed:1,discovered:0 };
     }
     if (!res.ok) {
       const failures = (source.consecutive_failures ?? 0)+1;
       let made = 0;
       if (failures >= 3) made += await candidate(runId,source,"recheck",source.source_url,"","",source.last_content_hash ?? "",res.status,source.tasks,null,65,"公式ソース取得が" + failures + "回連続で失敗しています。");
-      await db.from("knowledge_automation_sources").update({ last_checked_at:now,next_check_at:nextCheck(12),last_http_status:res.status,consecutive_failures:failures,last_error:"HTTP "+res.status,updated_at:now }).eq("id",source.id);
+      await db.from("knowledge_automation_sources").update({ last_checked_at:now,next_check_at:nextCheck(failureBackoffHours(failures)),last_http_status:res.status,consecutive_failures:failures,last_error:"HTTP "+res.status,updated_at:now }).eq("id",source.id);
       return { checked:1,candidates:made,changed:0,discovered:0 };
     }
     const raw = (await res.text()).slice(0,900000);
@@ -551,7 +560,7 @@ async function inspectSource(source: any, settings: any, runId: number, items: a
     const message = error instanceof Error ? error.message : (() => { try { return JSON.stringify(error); } catch { return String(error); } })();
     let made = 0;
     if (failures >= 3) made += await candidate(runId,source,"recheck",source.source_url,"","",source.last_content_hash ?? "",null,source.tasks,null,60,"公式ソース取得が" + failures + "回連続で失敗: " + message.slice(0,500));
-    await db.from("knowledge_automation_sources").update({ last_checked_at:new Date().toISOString(),next_check_at:nextCheck(12),consecutive_failures:failures,last_error:message.slice(0,1000),updated_at:new Date().toISOString() }).eq("id",source.id);
+    await db.from("knowledge_automation_sources").update({ last_checked_at:new Date().toISOString(),next_check_at:nextCheck(failureBackoffHours(failures)),consecutive_failures:failures,last_error:message.slice(0,1000),updated_at:new Date().toISOString() }).eq("id",source.id);
     return { checked:1,candidates:made,changed:0,discovered:0 };
   } finally { clearTimeout(timer); }
 }
