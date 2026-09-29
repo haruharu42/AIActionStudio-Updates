@@ -179,3 +179,45 @@ test("every prompt receives shared accuracy rules plus category-specific reinfor
   assert.match(catalog, /提供範囲、納品物、必要素材、修正範囲/);
 });
 
+test("all 13 prompt categories use full dedicated prompt profiles", async () => {
+  const [catalog, guidance] = await Promise.all([
+    read("lib/action-prompt-catalog.ts"),
+    read("lib/action-prompt-category-guidance.ts"),
+  ]);
+
+  assert.match(catalog, /actionPromptCategoryGuidance/);
+  assert.match(catalog, /category: template\.category, title: template\.title, sideHustle: template\.sideHustle/);
+  assert.match(guidance, /CATEGORY_PROMPT_PROFILES/);
+  assert.match(guidance, /【専門ロール】/);
+  assert.match(guidance, /【入力の解釈】/);
+  assert.match(guidance, /【必須の出力設計】/);
+  assert.match(guidance, /【専門品質基準】/);
+  assert.match(guidance, /【カテゴリ専用の最終検証】/);
+
+  for (const category of [
+    "記事・コンテンツ",
+    "SNS",
+    "動画・YouTube",
+    "画像・デザイン",
+    "漫画・コミック",
+    "アフィリエイト",
+    "物販・販売",
+    "クラウドソーシング",
+    "スキル販売",
+    "デジタル商品",
+    "顧客対応・営業",
+    "リサーチ",
+    "業務効率化",
+  ]) {
+    assert.match(guidance, new RegExp(`"${category}": \\\{`));
+  }
+
+  assert.match(guidance, /people-first/);
+  assert.match(guidance, /最初の30秒/);
+  assert.match(guidance, /Hook→Body→Close/);
+  assert.match(guidance, /固定設定ブロック/);
+  assert.match(guidance, /一次情報、公式資料、原典/);
+  assert.match(guidance, /プロジェクト、コンペ、タスク/);
+  assert.match(guidance, /購入前に必要な素材、対象外、修正範囲/);
+});
+
