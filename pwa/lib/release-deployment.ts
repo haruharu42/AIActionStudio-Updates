@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const AAS_PREVIEW_RELEASE_BRANCH = "preview/current";
+const AAS_BUILD_SOURCE_BRANCH = (process.env.NEXT_PUBLIC_AAS_SOURCE_BRANCH ?? "").trim();
+
+export const AAS_PREVIEW_RELEASE_BRANCH =
+  AAS_BUILD_SOURCE_BRANCH === "preview/current" ? "preview/current" : "main";
 export const AAS_PUBLIC_PWA_URL = "https://ai-article-studio-pwa.ai-article-studio.workers.dev/";
 
 export type PublicDeploymentStatus =
