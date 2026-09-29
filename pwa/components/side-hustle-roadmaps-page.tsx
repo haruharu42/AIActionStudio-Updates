@@ -10,148 +10,147 @@ import {
   SIDE_HUSTLE_ROADMAPS,
   getSideHustleRoadmap,
   roadmapTaskKey,
+  type SideHustleRoadmapDefinition,
 } from "@/features/side-hustle-roadmaps/catalog";
-
-type RoadmapProgress = Record<string, string[]>;
 
 const STORAGE_PREFIX = "aas-side-hustle-roadmaps-v1";
 
-function storageKey(userId: string): string {
-  return STORAGE_PREFIX + ":" + (userId || "guest");
+type SavedRoadmapProgress = {
+  selectedSlug?: string;
+  completed?: string[];
+};
+
+function roadmapTaskCount(roadmap: SideHustleRoadmapDefinition): number {
+  return roadmap.phases.reduce((total, phase) => total + phase.tasks.length, 0);
 }
 
-function readProgress(userId: string): RoadmapProgress {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(storageKey(userId));
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-    const safe: RoadmapProgress = {};
-    for (const [slug, value] of Object.entries(parsed as Record<string, unknown>)) {
-      if (!Array.isArray(value)) continue;
-      safe[slug] = value.filter((item): item is string => typeof item === "string").slice(0, 500);
-    }
-    return safe;
-  } catch {
-    return {};
-  }
+function roadmapCompletedCount(roadmap: SideHustleRoadmapDefinition, completed: ReadonlySet<string>): number {
+  return roadmap.phases.reduce(
+    (total, phase) => total + phase.tasks.filter((_, taskIndex) =>
+      completed.has(roadmapTaskKey(roadmap.slug, phase.id, taskIndex)),
+    ).length,
+    0,
+  );
 }
 
-function writeProgress(userId: string, progress: RoadmapProgress): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    window.localStorage.setItem(storageKey(userId), JSON.stringify(progress));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function roadmapText(slug: string): string {
-  const roadmap = getSideHustleRoadmap(slug);
-  if (!roadmap) return "";
-  const lines = [
-    "# " + roadmap.title + " ロードマップ",
-    "",
-    roadmap.summary,
-    "",
-    "※期間は目安です。収益・案件獲得・成果を保証するものではありません。",
-    "",
-  ];
-  for (const phase of roadmap.phases) {
-    lines.push("## " + phase.window + "｜" + phase.title);
-    lines.push("完了状態: " + phase.outcome);
-    lines.push("");
-    lines.push("行動");
-    phase.tasks.forEach((task) => lines.push("- [ ] " + task));
-    lines.push("");
-    lines.push("確認");
-    phase.checks.forEach((check) => lines.push("- " + check));
-    lines.push("");
-    lines.push("見る指標");
-    phase.metrics.forEach((metric) => lines.push("- " + metric));
-    lines.push("");
-  }
-  lines.push("## 公式確認先");
-  roadmap.refs.forEach((key) => {
-    const ref = ROADMAP_REFERENCE_LINKS[key];
-    lines.push("- " + ref.label + ": " + ref.url);
-  });
-  return lines.join("\n");
+function percent(done: number, total: number): number {
+  return total > 0 ? Math.round((done / total) * 100) : 0;
 }
 
 export function SideHustleRoadmapsPage() {
   const { state } = useSharedAccessState();
-  const userId = state.kind === "ready" ? state.profile.id : "";
-  const [selectedSlug, setSelectedSlug] = useState("sidejob-planner");
-  const [category, setCategory] = useState("すべて");
+  const userId = state.kind === "ready" ? state.profile.id : "guest";
+  const storageKey = STORAGE_PREFIX + ":" + userId;
+
+  const [category, setCategory] = useState<string>("すべて");
   const [query, setQuery] = useState("");
-  const [progress, setProgress] = useState<RoadmapProgress>({});
+  const [selectedSlug, setSelectedSlug] = useState(SIDE_HUSTLE_ROADMAPS[0]?.slug ?? "");
+  const [completed, setCompleted] = useState<Set<string>>(() => new Set());
   const [hydrated, setHydrated] = useState(false);
   const [message, setMessage] = useState("");
-  const [storageError, setStorageError] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    queueMicrotask(() => {
-      if (!active) return;
-      setProgress(readProgress(userId));
-      setHydrated(true);
-    });
-    return () => { active = false; };
-  }, [userId]);
+    let nextSelected = SIDE_HUSTLE_ROADMAPS[0]?.slug ?? "";
+    let nextCompleted = new Set<string>();
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SavedRoadmapProgress;
+        if (parsed.selectedSlug && getSideHustleRoadmap(parsed.selectedSlug)) {
+          nextSelected = parsed.selectedSlug;
+        }
+        if (Array.isArray(parsed.completed)) {
+          nextCompleted = new Set(parsed.completed.filter((value): value is string => typeof value === "string"));
+        }
+      }
+    } catch {
+      // Keep safe defaults when stored progress is unavailable or corrupted.
+    }
+    setSelectedSlug(nextSelected);
+    setCompleted(nextCompleted);
+    setHydrated(true);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!hydrated) return;
-    const saved = writeProgress(userId, progress);
-    let active = true;
-    queueMicrotask(() => {
-      if (active) setStorageError(!saved);
-    });
-    return () => { active = false; };
-  }, [hydrated, progress, userId]);
+    try {
+      const payload: SavedRoadmapProgress = {
+        selectedSlug,
+        completed: Array.from(completed),
+      };
+      window.localStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch {
+      // Progress remains usable in memory when storage is unavailable.
+    }
+  }, [completed, hydrated, selectedSlug, storageKey]);
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+  const filteredRoadmaps = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase("ja-JP");
     return SIDE_HUSTLE_ROADMAPS.filter((roadmap) => {
-      if (category !== "すべて" && roadmap.category !== category) return false;
-      if (!normalized) return true;
-      return [roadmap.title, roadmap.category, roadmap.summary]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalized);
+      const categoryMatch = category === "すべて" || roadmap.category === category;
+      const queryMatch = !needle || [roadmap.title, roadmap.category, roadmap.summary]
+        .some((value) => value.toLocaleLowerCase("ja-JP").includes(needle));
+      return categoryMatch && queryMatch;
     });
   }, [category, query]);
 
   const selected = getSideHustleRoadmap(selectedSlug) ?? SIDE_HUSTLE_ROADMAPS[0];
-  const completed = new Set(progress[selected.slug] ?? []);
-  const taskKeys = selected.phases.flatMap((phase) =>
-    phase.tasks.map((_task, index) => roadmapTaskKey(selected.slug, phase.id, index)),
+  if (!selected) return null;
+
+  const selectedTotal = roadmapTaskCount(selected);
+  const selectedDone = roadmapCompletedCount(selected, completed);
+  const selectedPercent = percent(selectedDone, selectedTotal);
+
+  const allTotal = SIDE_HUSTLE_ROADMAPS.reduce((total, roadmap) => total + roadmapTaskCount(roadmap), 0);
+  const allDone = SIDE_HUSTLE_ROADMAPS.reduce(
+    (total, roadmap) => total + roadmapCompletedCount(roadmap, completed),
+    0,
   );
-  const completedCount = taskKeys.filter((key) => completed.has(key)).length;
-  const percent = taskKeys.length ? Math.round((completedCount / taskKeys.length) * 100) : 0;
 
   const toggleTask = (key: string) => {
-    setProgress((current) => {
-      const nextSet = new Set(current[selected.slug] ?? []);
-      if (nextSet.has(key)) nextSet.delete(key);
-      else nextSet.add(key);
-      return { ...current, [selected.slug]: [...nextSet] };
+    setCompleted((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
   };
 
   const resetSelected = () => {
-    setProgress((current) => ({ ...current, [selected.slug]: [] }));
+    if (!window.confirm("この副業ロードマップのチェックだけをリセットしますか？")) return;
+    setCompleted((current) => {
+      const next = new Set(current);
+      for (const phase of selected.phases) {
+        phase.tasks.forEach((_, taskIndex) => next.delete(roadmapTaskKey(selected.slug, phase.id, taskIndex)));
+      }
+      return next;
+    });
     setMessage(selected.title + " の進捗をリセットしました。");
   };
 
-  const copyCurrent = async () => {
+  const copyProgress = async () => {
+    const lines = [
+      "【AAS 副業ロードマップ進捗】",
+      "副業: " + selected.title,
+      "進捗: " + selectedDone + "/" + selectedTotal + " (" + selectedPercent + "%)",
+      "",
+      ...selected.phases.flatMap((phase) => {
+        const phaseDone = phase.tasks.filter((_, taskIndex) =>
+          completed.has(roadmapTaskKey(selected.slug, phase.id, taskIndex)),
+        ).length;
+        return [
+          "■ " + phase.window + "｜" + phase.title + " " + phaseDone + "/" + phase.tasks.length,
+          ...phase.tasks.map((task, taskIndex) =>
+            (completed.has(roadmapTaskKey(selected.slug, phase.id, taskIndex)) ? "☑ " : "☐ ") + task,
+          ),
+        ];
+      }),
+    ];
     try {
-      await navigator.clipboard.writeText(roadmapText(selected.slug));
-      setMessage(selected.title + " のロードマップをコピーしました。");
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setMessage("現在のロードマップ進捗をコピーしました。");
     } catch {
-      setMessage("自動コピーできませんでした。");
+      setMessage("進捗をコピーできませんでした。");
     }
   };
 
@@ -162,23 +161,22 @@ export function SideHustleRoadmapsPage() {
           <p className="eyebrow">SIDE-HUSTLE ROADMAPS</p>
           <h1>副業ロードマップ</h1>
           <p>
-            AAS内の副業を、準備 → 最初の成果物 → 公開・受注 → 改善 → 継続運用まで、
-            公式情報を確認しながら段階的に進めます。
+            AASの副業を、準備から最初の公開・受注・販売、改善、継続運用まで5フェーズで進めます。
+            収益保証ではなく、実際に確認できる行動・完了条件・指標を基準にしています。
           </p>
         </div>
         <div className="side-hustle-roadmaps-head-actions">
           <Link className="route-back" href="/tools">← 機能一覧</Link>
-          <button className="secondary-action" type="button" onClick={() => void copyCurrent()}>
-            ロードマップをコピー
-          </button>
+          <Link className="secondary-action" href="/side-hustles/sidejob-planner">AI副業プランナー</Link>
         </div>
       </header>
 
-      <section className="side-hustle-roadmap-notice">
-        <strong>ロードマップの使い方</strong>
+      <section className="side-hustle-roadmap-notice" aria-label="ロードマップ利用上の注意">
+        <strong>14副業・70フェーズ・210タスクを収録</strong>
         <p>
-          期間は固定期限ではなく目安です。収益・案件獲得・販売数を保証せず、
-          実測データと最新の公式ルールを確認して次フェーズへ進みます。
+          期間は目安です。売上・案件獲得・再生数などを保証するものではありません。
+          税務、契約、広告表示、媒体規約、価格・手数料など更新される情報は、各ロードマップの公式ページを確認してください。
+          全体進捗: {allDone}/{allTotal}（{percent(allDone, allTotal)}%）
         </p>
       </section>
 
@@ -187,8 +185,8 @@ export function SideHustleRoadmapsPage() {
           <label>
             <span>カテゴリ</span>
             <select value={category} onChange={(event) => setCategory(event.target.value)}>
-              {SIDE_HUSTLE_ROADMAP_CATEGORIES.map((item) => (
-                <option key={item} value={item}>{item}</option>
+              {SIDE_HUSTLE_ROADMAP_CATEGORIES.map((value) => (
+                <option key={value} value={value}>{value}</option>
               ))}
             </select>
           </label>
@@ -197,21 +195,22 @@ export function SideHustleRoadmapsPage() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="例：YouTube、物販、営業"
+              placeholder="例：アフィリエイト、動画、受託、note"
+              type="search"
             />
           </label>
         </div>
 
         <div className="side-hustle-roadmap-card-grid">
-          {filtered.map((roadmap) => {
-            const done = new Set(progress[roadmap.slug] ?? []);
-            const total = roadmap.phases.reduce((sum, phase) => sum + phase.tasks.length, 0);
-            const pct = total ? Math.round((done.size / total) * 100) : 0;
+          {filteredRoadmaps.map((roadmap) => {
+            const total = roadmapTaskCount(roadmap);
+            const done = roadmapCompletedCount(roadmap, completed);
+            const progress = percent(done, total);
             return (
               <button
                 key={roadmap.slug}
                 type="button"
-                className={"side-hustle-roadmap-card" + (selected.slug === roadmap.slug ? " active" : "")}
+                className={"side-hustle-roadmap-card " + (roadmap.slug === selected.slug ? "active" : "")}
                 onClick={() => {
                   setSelectedSlug(roadmap.slug);
                   setMessage("");
@@ -220,44 +219,44 @@ export function SideHustleRoadmapsPage() {
                 <span>{roadmap.category}</span>
                 <strong>{roadmap.title}</strong>
                 <small>{roadmap.summary}</small>
-                <div className="side-hustle-roadmap-mini-progress" aria-label={"進捗 " + pct + "%"}>
-                  <i style={{ width: pct + "%" }} />
+                <div className="side-hustle-roadmap-mini-progress" aria-label={roadmap.title + " 進捗 " + progress + "%"}>
+                  <i style={{ width: progress + "%" }} />
                 </div>
-                <b>{pct}%</b>
+                <b>{done}/{total} · {progress}%</b>
               </button>
             );
           })}
-          {!filtered.length ? <p className="route-notice">該当するロードマップがありません。</p> : null}
         </div>
       </section>
 
-      <section className="side-hustle-roadmap-selected">
+      <section className="side-hustle-roadmap-selected" aria-labelledby="selected-roadmap-title">
         <div className="side-hustle-roadmap-selected-head">
           <div>
             <span>{selected.category}</span>
-            <h2>{selected.title}</h2>
+            <h2 id="selected-roadmap-title">{selected.title}</h2>
             <p>{selected.summary}</p>
           </div>
           <div className="side-hustle-roadmap-progress-card">
-            <small>進捗</small>
-            <strong>{percent}%</strong>
-            <span>{completedCount} / {taskKeys.length} タスク</span>
-            <div><i style={{ width: percent + "%" }} /></div>
+            <small>現在の進捗</small>
+            <strong>{selectedPercent}%</strong>
+            <span>{selectedDone}/{selectedTotal} タスク完了</span>
+            <div><i style={{ width: selectedPercent + "%" }} /></div>
           </div>
         </div>
 
         <div className="side-hustle-roadmap-actions">
           <Link className="primary-action" href={selected.actionHref}>この副業の専用機能を開く →</Link>
-          <button className="secondary-action" type="button" onClick={() => void copyCurrent()}>コピー</button>
-          <button className="secondary-action" type="button" onClick={resetSelected}>進捗をリセット</button>
+          <button className="secondary-action" type="button" onClick={() => void copyProgress()}>進捗をコピー</button>
+          <button className="secondary-action" type="button" onClick={resetSelected}>この副業だけリセット</button>
         </div>
 
         <div className="side-hustle-roadmap-phases">
-          {selected.phases.map((phase) => {
-            const phaseKeys = phase.tasks.map((_task, index) => roadmapTaskKey(selected.slug, phase.id, index));
-            const phaseDone = phaseKeys.filter((key) => completed.has(key)).length;
+          {selected.phases.map((phase, phaseIndex) => {
+            const phaseDone = phase.tasks.filter((_, taskIndex) =>
+              completed.has(roadmapTaskKey(selected.slug, phase.id, taskIndex)),
+            ).length;
             return (
-              <details key={selected.slug + ":" + phase.id} className="side-hustle-roadmap-phase">
+              <details className="side-hustle-roadmap-phase" key={phase.id} open={phaseIndex === 0 && phaseDone < phase.tasks.length}>
                 <summary>
                   <span>{phase.window}</span>
                   <div>
@@ -266,55 +265,53 @@ export function SideHustleRoadmapsPage() {
                   </div>
                   <b>{phaseDone}/{phase.tasks.length}</b>
                 </summary>
-
                 <div className="side-hustle-roadmap-phase-body">
-                  <section>
-                    <h3>行動</h3>
+                  <div>
+                    <h3>実行タスク</h3>
                     <div className="side-hustle-roadmap-task-list">
-                      {phase.tasks.map((task, index) => {
-                        const key = roadmapTaskKey(selected.slug, phase.id, index);
+                      {phase.tasks.map((task, taskIndex) => {
+                        const key = roadmapTaskKey(selected.slug, phase.id, taskIndex);
+                        const done = completed.has(key);
                         return (
-                          <label key={key} className={completed.has(key) ? "done" : ""}>
-                            <input
-                              type="checkbox"
-                              checked={completed.has(key)}
-                              onChange={() => toggleTask(key)}
-                            />
+                          <label key={key} className={done ? "done" : ""}>
+                            <input type="checkbox" checked={done} onChange={() => toggleTask(key)} />
                             <span>{task}</span>
                           </label>
                         );
                       })}
                     </div>
-                  </section>
+                  </div>
 
-                  <section className="side-hustle-roadmap-phase-columns">
+                  <div className="side-hustle-roadmap-phase-columns">
                     <div>
-                      <h3>確認</h3>
-                      <ul>{phase.checks.map((item) => <li key={item}>{item}</li>)}</ul>
+                      <h3>完了前チェック</h3>
+                      <ul>{phase.checks.map((check) => <li key={check}>{check}</li>)}</ul>
                     </div>
                     <div>
                       <h3>見る指標</h3>
-                      <ul>{phase.metrics.map((item) => <li key={item}>{item}</li>)}</ul>
+                      <ul>{phase.metrics.map((metric) => <li key={metric}>{metric}</li>)}</ul>
                     </div>
-                  </section>
+                  </div>
                 </div>
               </details>
             );
           })}
         </div>
+
+        {message && <div className="route-notice" role="status">{message}</div>}
       </section>
 
-      <section className="side-hustle-roadmap-official">
+      <section className="side-hustle-roadmap-official" aria-labelledby="roadmap-official-title">
         <div>
-          <p className="eyebrow">OFFICIAL CHECKS</p>
-          <h2>このロードマップで確認する公式情報</h2>
-          <p>仕様・規約・税務・広告表示は変更されるため、公開・契約・申告前に最新版を確認してください。</p>
+          <p className="eyebrow">OFFICIAL CHECK</p>
+          <h2 id="roadmap-official-title">公式ページを確認</h2>
+          <p>この副業で変わりやすい条件・規約・法律・媒体仕様は、公開・契約・販売前に公式情報で再確認してください。</p>
         </div>
         <div className="side-hustle-roadmap-reference-grid">
-          {selected.refs.map((key) => {
-            const reference = ROADMAP_REFERENCE_LINKS[key];
+          {selected.refs.map((referenceKey) => {
+            const reference = ROADMAP_REFERENCE_LINKS[referenceKey];
             return (
-              <a key={key} href={reference.url} target="_blank" rel="noreferrer">
+              <a key={referenceKey} href={reference.url} target="_blank" rel="noreferrer">
                 <strong>{reference.label}</strong>
                 <span>{reference.note}</span>
                 <b>公式ページを確認 ↗</b>
@@ -324,34 +321,16 @@ export function SideHustleRoadmapsPage() {
         </div>
       </section>
 
-      <section className="side-hustle-roadmap-global-checks">
-        <h2>全副業共通の運用チェック</h2>
+      <section className="side-hustle-roadmap-global-checks" aria-labelledby="roadmap-global-title">
+        <p className="eyebrow">COMMON OPERATIONS</p>
+        <h2 id="roadmap-global-title">全副業共通の運用チェック</h2>
         <div>
-          <article>
-            <strong>記録</strong>
-            <p>収入・必要経費・領収書・契約・確認日を後から追える形で残します。</p>
-          </article>
-          <article>
-            <strong>契約</strong>
-            <p>受託では成果物、納期、報酬、支払期日、修正、権利、検収条件を曖昧にしません。</p>
-          </article>
-          <article>
-            <strong>表示</strong>
-            <p>広告・PR・アフィリエイトでは、一般消費者に広告であることが明瞭に伝わる表示を確認します。</p>
-          </article>
-          <article>
-            <strong>更新</strong>
-            <p>価格・規約・アルゴリズム・税務・法令は固定情報として扱わず、必要な時点で公式情報を再確認します。</p>
-          </article>
+          <article><strong>最新情報</strong><p>価格、手数料、規約、アルゴリズム、法令を固定値として扱わず、重要な実行前に公式確認します。</p></article>
+          <article><strong>記録</strong><p>売上だけでなく、経費、作業時間、公開日、契約条件、確認日、変更履歴も残します。</p></article>
+          <article><strong>事実と実績</strong><p>未確認の体験、売上、レビュー、案件数、成功率を作らず、例や仮定は明確に分けます。</p></article>
+          <article><strong>継続判断</strong><p>短期結果だけでなく、再現性、負荷、学び、資産化、安全性を月次で確認します。</p></article>
         </div>
       </section>
-
-      {message ? <div className="route-notice" role="status">{message}</div> : null}
-      {storageError ? (
-        <div className="route-notice" role="alert">
-          進捗を端末へ保存できません。必要に応じてロードマップをコピーして保管してください。
-        </div>
-      ) : null}
     </main>
   );
 }

@@ -1,104 +1,81 @@
-export type SideHustleRoadmapReference = {
-  label: string;
-  url: string;
-  note: string;
-};
-
-export type SideHustleRoadmapPhase = {
-  id: string;
-  window: string;
-  title: string;
-  outcome: string;
-  tasks: readonly string[];
-  checks: readonly string[];
-  metrics: readonly string[];
-};
-
-export type SideHustleRoadmapDefinition = {
-  slug: string;
-  title: string;
-  category: string;
-  actionHref: string;
-  summary: string;
-  refs: readonly (keyof typeof ROADMAP_REFERENCE_LINKS)[];
-  phases: readonly SideHustleRoadmapPhase[];
-};
+export type SideHustleRoadmapReference = { label: string; url: string; note: string };
+export type SideHustleRoadmapPhase = { id: string; window: string; title: string; outcome: string; tasks: readonly string[]; checks: readonly string[]; metrics: readonly string[] };
+export type SideHustleRoadmapDefinition = { slug: string; title: string; category: string; actionHref: string; summary: string; refs: readonly (keyof typeof ROADMAP_REFERENCE_LINKS)[]; phases: readonly SideHustleRoadmapPhase[] };
 
 export const ROADMAP_REFERENCE_LINKS = {
   "googlePeopleFirst": {
-    "label": "Google Search Central — helpful, reliable, people-first content",
-    "url": "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
-    "note": "記事・SEOは検索順位だけでなく、読者が目的を達成できる独自で信頼できる内容を優先する。"
+    "label": "Google Search Central — people-first content",
+    "url": "https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja",
+    "note": "検索順位だけでなく、読者が目的を達成できる有用・信頼できる内容を優先。"
   },
   "notePaid": {
     "label": "noteヘルプ — 有料記事 / 有料ライン",
     "url": "https://www.help-note.com/hc/ja/articles/360008882894-%E6%9C%89%E6%96%99%E8%A8%98%E4%BA%8B%E3%82%92%E6%9B%B8%E3%81%8F-%E6%9C%89%E6%96%99%E3%83%A9%E3%82%A4%E3%83%B3%E3%81%AE%E8%A8%AD%E5%AE%9A",
-    "note": "有料部分を公開前に確認し、無料部分と有料部分の境界を明確にする。"
+    "note": "無料・有料の境界と購入者からの見え方を公開前に確認。"
   },
   "youtubeRetention": {
     "label": "YouTube Help — 視聴者維持率",
     "url": "https://support.google.com/youtube/answer/9314415?hl=ja",
-    "note": "タイトル・サムネイルの期待を冒頭30秒で回収し、強い見せ場は必要に応じて前倒しする。"
+    "note": "タイトル・サムネイルの期待を冒頭で回収し、視聴維持データから改善。"
   },
   "tiktokCreative": {
     "label": "TikTok for Business — Creative Codes",
     "url": "https://ads.tiktok.com/business/en-US/creative-codes",
-    "note": "短尺はHook→Body→Close、縦型・モバイルUI・テロップ・音を前提に設計する。"
+    "note": "短尺はHook→Body→Close、縦型・モバイル前提で制作。"
   },
   "instagramBestPractices": {
     "label": "Meta — Instagram Best Practices",
     "url": "https://about.fb.com/news/2024/10/best-practices-education-hub-creators-instagram/",
-    "note": "Creation / Engagement / Reach / Monetization / Guidelinesとアカウント固有のインサイトを使って改善する。"
+    "note": "Creation / Engagement / Reach / Monetization / Guidelinesと実アカウントのインサイトで改善。"
   },
   "caaStealth": {
     "label": "消費者庁 — ステルスマーケティングQ&A",
     "url": "https://www.caa.go.jp/policies/policy/representation/fair_labeling/faq/stealth_marketing/",
-    "note": "広告・PR・アフィリエイトであることが、表示全体から一般消費者に明瞭に分かるようにする。"
+    "note": "広告・PR・アフィリエイトであることが表示全体から明瞭に分かるようにする。"
   },
   "crowdworksGuide": {
     "label": "CrowdWorks — 仕事の依頼形式ガイド",
     "url": "https://crowdworks.jp/pages/guides/employer/index",
-    "note": "プロジェクト・コンペ・タスクで契約、提案、納品の流れが異なるため案件形式を確認する。"
+    "note": "プロジェクト・コンペ・タスクで契約、提案、納品の流れが異なる。"
   },
   "freelancerLaw": {
     "label": "公正取引委員会 — フリーランス法特設サイト",
     "url": "https://www.jftc.go.jp/freelancelaw_2025/",
-    "note": "業務委託では取引条件の明示、報酬支払期日など最新の適用関係を確認する。"
+    "note": "業務委託では取引条件の明示や報酬支払期日など最新の適用関係を確認。"
   },
   "coconalaSell": {
     "label": "ココナラ — サービスを出品したい",
     "url": "https://coconala.com/pages/guide_sell",
-    "note": "カテゴリ、タイトル、キャッチ、サービス内容、購入前のお願い、成果物イメージを明確にする。"
+    "note": "タイトル、キャッチ、サービス内容、購入前のお願い、成果物イメージを明確にする。"
   },
   "mercariSell": {
     "label": "メルカリ — 出品までの流れ・売り方",
     "url": "https://help.jp.mercari.com/guide/articles/62/",
-    "note": "商品名・状態・説明を実物と一致させ、AI生成文も出品者自身で確認する。"
+    "note": "写真・商品名・状態・説明を実物と一致させ、AI生成文も本人が確認。"
   },
   "ntaSideIncome": {
     "label": "国税庁 — 雑所得",
     "url": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1500.htm",
-    "note": "副業収入の所得区分・必要経費・保存義務などは状況で異なるため、最新の国税庁案内を確認する。"
+    "note": "副業収入の所得区分・必要経費・記録は個別状況に応じて最新案内を確認。"
   },
   "ntaFiling": {
     "label": "国税庁 — 給与所得者で確定申告が必要な人",
     "url": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1900.htm",
-    "note": "給与所得者の確定申告要否には条件があるため、年間の所得状況に応じて最新要件を確認する。"
+    "note": "給与所得者の申告要否は年間の所得状況に応じて最新要件を確認。"
   },
   "xAdult": {
     "label": "X — 成人向けコンテンツに関するポリシー",
     "url": "https://help.x.com/ja/rules-and-policies/adult-content",
-    "note": "成人向けコンテンツは適切なラベル・表示場所・年齢制限等の最新ルールを確認する。"
+    "note": "成人向けコンテンツの内容警告・表示場所・年齢制限等の最新ルールを確認。"
   }
 } as const;
-
 export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
   {
     "slug": "note-operations",
     "title": "note運営",
     "category": "記事・コンテンツ",
     "actionHref": "/note-operations",
-    "summary": "発信軸づくりから無料記事、有料記事、継続運営、改善までを一つの流れで進めます。",
+    "summary": "発信軸から無料記事、有料記事、継続運営までを段階的に進めます。",
     "refs": [
       "googlePeopleFirst",
       "notePaid",
@@ -114,11 +91,11 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "tasks": [
           "対象読者と発信テーマを1つに絞る",
           "プロフィール・固定導線・広告/PR表示方針を整える",
-          "記事の事実確認ルールと収支記録の方法を決める"
+          "事実確認と収支記録の方法を決める"
         ],
         "checks": [
           "実績・体験は事実だけを使う",
-          "有料化前に無料で伝える範囲を決める"
+          "無料と有料の役割を先に分ける"
         ],
         "metrics": [
           "プロフィール完成",
@@ -127,18 +104,18 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         ]
       },
       {
-        "id": "first-content",
+        "id": "free",
         "window": "1〜2週",
         "title": "無料記事で需要を確認する",
-        "outcome": "読者が何に反応するかを公開データで確認できる状態。",
+        "outcome": "読者が何に反応するかを実測できる状態。",
         "tasks": [
           "読者の悩み別に無料記事を3本作る",
-          "各記事に1つの明確な読後行動を設定する",
-          "保存・反応・読了・プロフィール遷移を記録する"
+          "各記事に1つの読後行動を設定する",
+          "保存・反応・プロフィール遷移等を記録する"
         ],
         "checks": [
           "検索狙いだけの量産にしない",
-          "反応が弱い記事も削除せず学びを記録する"
+          "反応が弱い記事も学びを残す"
         ],
         "metrics": [
           "公開本数",
@@ -147,62 +124,62 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         ]
       },
       {
-        "id": "paid-offer",
+        "id": "paid",
         "window": "2〜4週",
         "title": "最初の有料価値を作る",
-        "outcome": "無料部分と有料部分の役割が重複せず、購入後に具体物が残る状態。",
+        "outcome": "購入後に具体的な成果物が残る状態。",
         "tasks": [
-          "無料記事の反応から有料テーマを1つ選ぶ",
-          "有料部分に手順・テンプレート・チェックリスト等を入れる",
+          "反応から有料テーマを1つ選ぶ",
+          "手順・テンプレート・チェックリストを入れる",
           "有料ライン前に対象者・内容・注意点を明記する"
         ],
         "checks": [
           "成果保証をしない",
-          "価格・販売条件は公開前に最新仕様を確認する"
+          "価格・販売条件を最新確認する"
         ],
         "metrics": [
           "有料記事完成",
           "付属物完成",
-          "公開前チェック完了"
+          "公開前チェック"
         ]
       },
       {
         "id": "distribution",
         "window": "1〜2か月",
         "title": "読者導線を整える",
-        "outcome": "記事単体ではなく、無料→関連→有料へ自然に回遊できる状態。",
+        "outcome": "無料→関連→有料へ自然に回遊できる状態。",
         "tasks": [
-          "関連記事同士を内部導線でつなぐ",
-          "SNS等では記事内容と一致する非誇張の告知を行う",
+          "関連記事をつなぐ",
+          "SNS告知と記事内容を一致させる",
           "更新が必要な情報に確認日を付ける"
         ],
         "checks": [
-          "広告/PR表示が必要な場合は明瞭にする",
-          "SNSの反応を記事価値の証明に見せかけない"
+          "広告/PR表示を必要に応じて明瞭にする",
+          "反応を実績に見せかけない"
         ],
         "metrics": [
-          "回遊率の変化",
+          "記事間遷移",
           "有料記事への遷移",
           "更新対象数"
         ]
       },
       {
-        "id": "systemize",
+        "id": "system",
         "window": "3か月〜",
         "title": "継続運営を仕組み化する",
-        "outcome": "毎週の企画・制作・公開・改善・記録を同じ手順で回せる状態。",
+        "outcome": "企画・制作・公開・改善を同じ手順で回せる状態。",
         "tasks": [
-          "月次コンテンツカレンダーを作る",
-          "売上だけでなく読者価値と更新負荷をレビューする",
-          "収入・経費・取引記録を定期整理する"
+          "月次カレンダーを作る",
+          "読者価値と更新負荷をレビューする",
+          "収入・経費・取引記録を整理する"
         ],
         "checks": [
-          "伸びた記事の模倣量産ではなく理由を分析する",
-          "税務・規約は年次/変更時に公式確認する"
+          "伸びた記事の単純コピーを避ける",
+          "税務・規約は変更時に公式確認する"
         ],
         "metrics": [
           "月次更新率",
-          "再利用できる型の数",
+          "再利用できる型",
           "継続判断"
         ]
       }
@@ -213,7 +190,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "記事・ブログ・コンテンツ販売",
     "category": "記事・コンテンツ",
     "actionHref": "/side-hustles/content-sales",
-    "summary": "無料記事・有料記事・教材型コンテンツを、読者価値と再利用性から育てます。",
+    "summary": "無料記事・有料記事・教材型コンテンツを、読者価値から商品化します。",
     "refs": [
       "googlePeopleFirst",
       "notePaid",
@@ -229,15 +206,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "tasks": [
           "対象者と対象外を決める",
           "購入後にできることを1文で定義する",
-          "一次情報・自分の経験・例を分けるルールを作る"
+          "一次情報・自分の経験・例を分ける"
         ],
         "checks": [
           "文字数を価値にしない",
-          "架空の実績やレビューを使わない"
+          "架空実績を使わない"
         ],
         "metrics": [
-          "価値仮説1件",
-          "購入者像1件",
+          "価値仮説",
+          "購入者像",
           "証拠素材一覧"
         ]
       },
@@ -245,14 +222,14 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "prototype",
         "window": "1〜2週",
         "title": "小さな試作品を作る",
-        "outcome": "無料サンプルや短い教材で内容の理解度を確認できる状態。",
+        "outcome": "短い教材や無料サンプルで理解度を確認できる状態。",
         "tasks": [
-          "無料記事またはサンプルを1〜3本作る",
+          "サンプルを1〜3本作る",
           "チェックリスト/テンプレートを1つ作る",
-          "読者が迷う箇所を収集する"
+          "迷う箇所を収集する"
         ],
         "checks": [
-          "無料部分でも役立つ内容を残す",
+          "無料部分にも価値を残す",
           "商品化前に事実確認する"
         ],
         "metrics": [
@@ -265,15 +242,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "offer",
         "window": "2〜4週",
         "title": "最初の商品を完成する",
-        "outcome": "説明・本体・付属物・注意事項が一式そろった状態。",
+        "outcome": "説明・本体・付属物・注意事項がそろった状態。",
         "tasks": [
-          "章ごとに学ぶこと・やること・完成物を設定する",
-          "販売ページと実際の商品内容を一致させる",
-          "価格・返金・販売条件を最新仕様で確認する"
+          "章ごとに学ぶ/やる/完成物を設定する",
+          "販売ページと内容を一致させる",
+          "販売条件を最新確認する"
         ],
         "checks": [
-          "成果保証や偽の限定性を使わない",
-          "権利・引用・素材利用を確認する"
+          "成果保証をしない",
+          "権利・引用を確認する"
         ],
         "metrics": [
           "商品完成",
@@ -284,19 +261,19 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
       {
         "id": "launch",
         "window": "1〜2か月",
-        "title": "販売と改善を分離する",
-        "outcome": "販売数だけでなく、理解度・完了率・問い合わせ内容で改善できる状態。",
+        "title": "販売後の改善を回す",
+        "outcome": "問い合わせや利用状況から改善できる状態。",
         "tasks": [
-          "告知は広告/PR表示を必要に応じて明示する",
-          "購入者からの質問をFAQへ反映する",
-          "内容の更新日と変更履歴を残す"
+          "広告/PR表示を必要に応じて明示する",
+          "質問をFAQへ反映する",
+          "更新日と変更履歴を残す"
         ],
         "checks": [
-          "レビューを誘導・捏造しない",
-          "販売不振を誇張コピーだけで解決しない"
+          "レビューを捏造しない",
+          "煽りだけで売ろうとしない"
         ],
         "metrics": [
-          "問い合わせ分類",
+          "FAQ更新",
           "更新件数",
           "再利用率"
         ]
@@ -305,18 +282,18 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "portfolio",
         "window": "3か月〜",
         "title": "商品群を体系化する",
-        "outcome": "似た商品を量産せず、入口・本体・応用の役割を分けられる状態。",
+        "outcome": "入口・本体・応用の役割を分けられる状態。",
         "tasks": [
-          "既存商品を初心者/用途別に整理する",
-          "重複章を共通テンプレートへ統合する",
-          "収支と更新負荷で継続商品を判断する"
+          "既存商品を用途別に整理する",
+          "重複章を共通化する",
+          "収支と更新負荷で継続判断する"
         ],
         "checks": [
           "古い情報を放置しない",
-          "税務・規約変更を定期確認する"
+          "税務・規約変更を確認する"
         ],
         "metrics": [
-          "商品別更新負荷",
+          "更新負荷",
           "継続商品数",
           "再利用資産数"
         ]
@@ -328,7 +305,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "SNS運用・集客",
     "category": "SNS・動画・集客",
     "actionHref": "/side-hustles/sns-management",
-    "summary": "発信の柱、投稿習慣、検証指標、導線を媒体別に組み立てます。",
+    "summary": "媒体別の発信の柱、投稿習慣、検証指標、導線を作ります。",
     "refs": [
       "instagramBestPractices",
       "tiktokCreative",
@@ -339,15 +316,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "account",
         "window": "準備",
         "title": "アカウントの役割を固定する",
-        "outcome": "誰向けに何を発信し、何へつなぐかが明確な状態。",
+        "outcome": "誰向けに何を発信し何へつなぐか明確な状態。",
         "tasks": [
-          "対象読者・発信テーマ・主目的を1つずつ決める",
-          "プロフィールとリンク先を投稿内容と一致させる",
-          "媒体の最新ガイドラインを確認する"
+          "対象読者・発信テーマ・主目的を決める",
+          "プロフィールとリンク先を一致させる",
+          "最新ガイドラインを確認する"
         ],
         "checks": [
           "フォロワー数を成果保証に使わない",
-          "他媒体の文面をそのまま転用しない"
+          "他媒体文面を機械転用しない"
         ],
         "metrics": [
           "プロフィール完成",
@@ -359,19 +336,19 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "baseline",
         "window": "1〜2週",
         "title": "投稿の基準値を作る",
-        "outcome": "複数の投稿型を試し、自分のアカウントの反応を比較できる状態。",
+        "outcome": "複数の投稿型を比較できる状態。",
         "tasks": [
-          "投稿の柱ごとに2〜3本試す",
-          "冒頭・本文・CTAを1投稿1目的で作る",
-          "保存・返信・共有・プロフィール遷移等を記録する"
+          "柱ごとに2〜3本試す",
+          "1投稿1目的で作る",
+          "保存・返信・共有・遷移を記録する"
         ],
         "checks": [
-          "アルゴリズムの噂を固定ルールにしない",
-          "投稿ごとの条件を記録する"
+          "アルゴリズムの噂を断定しない",
+          "投稿条件を記録する"
         ],
         "metrics": [
           "投稿本数",
-          "反応率の差",
+          "反応差",
           "勝ち筋候補"
         ]
       },
@@ -379,35 +356,35 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "series",
         "window": "2〜4週",
         "title": "継続シリーズを作る",
-        "outcome": "単発ネタ切れではなく、同じ価値を違う角度で届けられる状態。",
+        "outcome": "同じ価値を違う角度で届けられる状態。",
         "tasks": [
           "反応のよい柱をシリーズ化する",
           "画像/動画と本文の役割を分ける",
           "4週間の投稿配分を決める"
         ],
         "checks": [
-          "同じフックの連発を避ける",
-          "広告投稿は表示を明瞭にする"
+          "同じフックを連発しない",
+          "広告投稿は明瞭表示する"
         ],
         "metrics": [
           "シリーズ数",
-          "保存/返信の傾向",
-          "投稿準備時間"
+          "保存/返信",
+          "準備時間"
         ]
       },
       {
         "id": "funnel",
         "window": "1〜2か月",
         "title": "集客導線を整える",
-        "outcome": "投稿→プロフィール→記事/商品/相談の流れを測定できる状態。",
+        "outcome": "投稿→プロフィール→記事/商品/相談を測定できる状態。",
         "tasks": [
-          "CTAを主目的に合わせ1つに絞る",
-          "遷移先の内容を投稿の約束と一致させる",
-          "媒体ごとのインサイトで改善する"
+          "CTAを1つに絞る",
+          "遷移先と投稿の約束を一致させる",
+          "インサイトで改善する"
         ],
         "checks": [
-          "誇張でクリック率だけを上げない",
-          "年齢/広告/センシティブ規約を確認する"
+          "誇張でクリックだけを上げない",
+          "媒体規約を確認する"
         ],
         "metrics": [
           "プロフィール遷移",
@@ -419,15 +396,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "operation",
         "window": "3か月〜",
         "title": "運用を仕組み化する",
-        "outcome": "企画・制作・投稿・分析を定例化し、疲弊せず続けられる状態。",
+        "outcome": "企画・制作・投稿・分析を定例化できる状態。",
         "tasks": [
           "月次で投稿柱を見直す",
-          "再利用できるテンプレートを作る",
-          "成果と制作負荷の両方で継続判断する"
+          "再利用テンプレートを作る",
+          "成果と負荷で継続判断する"
         ],
         "checks": [
           "伸びた投稿のコピー量産を避ける",
-          "媒体仕様変更時に見直す"
+          "仕様変更時に見直す"
         ],
         "metrics": [
           "制作時間",
@@ -442,7 +419,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "YouTube・ショート動画",
     "category": "SNS・動画・集客",
     "actionHref": "/side-hustles/youtube-video",
-    "summary": "企画、冒頭、タイトル/サムネイル、台本、編集、公開後の視聴維持まで段階化します。",
+    "summary": "企画から公開後の視聴維持分析まで段階化します。",
     "refs": [
       "youtubeRetention",
       "tiktokCreative",
@@ -452,16 +429,16 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
       {
         "id": "concept",
         "window": "準備",
-        "title": "チャンネルと動画の約束を決める",
+        "title": "動画の約束を決める",
         "outcome": "誰が何のために見る動画かを一文で説明できる状態。",
         "tasks": [
           "対象視聴者と動画の役割を決める",
           "長尺/ショートで制作型を分ける",
-          "タイトル・サムネイルで約束する範囲を決める"
+          "タイトル・サムネイルの約束範囲を決める"
         ],
         "checks": [
           "本編にない内容を訴求しない",
-          "未確認の仕様・ゲーム情報を断定しない"
+          "未確認情報を断定しない"
         ],
         "metrics": [
           "企画候補10件",
@@ -472,10 +449,10 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
       {
         "id": "pilot",
         "window": "1〜2週",
-        "title": "小さく動画を公開する",
-        "outcome": "制作時間と視聴維持の基準値を把握できる状態。",
+        "title": "小さく公開して基準値を作る",
+        "outcome": "制作時間と離脱点を把握できる状態。",
         "tasks": [
-          "3本程度の試作で構成を変えて検証する",
+          "3本程度試作する",
           "長尺は冒頭30秒、短尺はHook→Body→Closeを設計する",
           "制作時間・離脱点・コメントを記録する"
         ],
@@ -492,20 +469,20 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
       {
         "id": "format",
         "window": "2〜4週",
-        "title": "再現できる動画フォーマットを作る",
+        "title": "再現できる動画型を作る",
         "outcome": "企画→台本→素材→編集→公開を同じ手順で回せる状態。",
         "tasks": [
-          "タイトル/サムネイル/冒頭を一本の約束で接続する",
-          "Bロール・テロップ・画面変化の型を作る",
-          "公開後にトップモーメントやスパイクを確認する"
+          "タイトル/サムネ/冒頭を一本の約束で接続する",
+          "Bロール・テロップの型を作る",
+          "トップモーメント等を確認する"
         ],
         "checks": [
-          "強い見せ場を不必要に後半へ隠さない",
+          "見せ場を不必要に後半へ隠さない",
           "CTAを詰め込みすぎない"
         ],
         "metrics": [
           "型の再現回数",
-          "視聴維持改善",
+          "維持改善",
           "制作時間改善"
         ]
       },
@@ -513,15 +490,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "library",
         "window": "1〜2か月",
         "title": "動画群で回遊を作る",
-        "outcome": "単発動画から関連動画・再生リストへ自然につなげられる状態。",
+        "outcome": "単発動画から関連動画へつなげられる状態。",
         "tasks": [
-          "テーマ別のシリーズ/再生リストを作る",
+          "テーマ別シリーズを作る",
           "反応のよい場面を次企画へ展開する",
           "ショートと長尺の役割を分ける"
         ],
         "checks": [
           "関連性の低い誘導をしない",
-          "スポンサー/広告表示を必要に応じて明示する"
+          "スポンサー表示を確認する"
         ],
         "metrics": [
           "次動画遷移",
@@ -533,20 +510,20 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "system",
         "window": "3か月〜",
         "title": "制作と分析を継続運用にする",
-        "outcome": "毎月、企画・制作負荷・視聴データから次の改善を決められる状態。",
+        "outcome": "月次で次の改善を決められる状態。",
         "tasks": [
-          "月次レビューで残す型/捨てる型を決める",
-          "テンプレートと素材管理を整える",
-          "収益化条件・規約は公式情報で更新確認する"
+          "残す型/捨てる型を決める",
+          "素材管理を整える",
+          "収益化条件・規約を公式確認する"
         ],
         "checks": [
           "アルゴリズムを断定しない",
-          "制作負荷が高すぎる型を惰性で続けない"
+          "高負荷な型を惰性で続けない"
         ],
         "metrics": [
           "月次公開率",
           "再利用率",
-          "改善仮説実行数"
+          "改善仮説数"
         ]
       }
     ]
@@ -556,7 +533,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "アフィリエイト",
     "category": "販売・収益化",
     "actionHref": "/side-hustles/affiliate",
-    "summary": "読者課題、案件調査、比較軸、記事/投稿、広告表示、更新管理までを段階化します。",
+    "summary": "読者課題、案件調査、比較、広告表示、更新管理まで進めます。",
     "refs": [
       "googlePeopleFirst",
       "caaStealth",
@@ -567,19 +544,19 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "niche",
         "window": "準備",
         "title": "読者と紹介領域を絞る",
-        "outcome": "誰のどの判断を助けるサイト/発信かが明確な状態。",
+        "outcome": "誰のどの判断を助けるか明確な状態。",
         "tasks": [
           "読者の悩みと検討段階を整理する",
-          "紹介ジャンルの公式情報源を洗い出す",
-          "広告/PR表示のルールを決める"
+          "公式情報源を洗い出す",
+          "広告/PR表示ルールを決める"
         ],
         "checks": [
-          "報酬単価だけで案件を選ばない",
-          "使っていない商品を使ったと書かない"
+          "報酬単価だけで選ばない",
+          "未使用商品を使用済みと書かない"
         ],
         "metrics": [
           "読者課題一覧",
-          "一次情報源一覧",
+          "一次情報源",
           "開示方針"
         ]
       },
@@ -589,37 +566,37 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "title": "比較基準を作る",
         "outcome": "全候補を同じ軸で比較できる状態。",
         "tasks": [
-          "公式仕様・料金・条件・更新日を収集する",
-          "共通比較軸を5〜10項目に固定する",
-          "事実/自分の経験/第三者意見を分ける"
+          "公式仕様・料金・条件・更新日を集める",
+          "共通比較軸を固定する",
+          "事実/経験/第三者意見を分ける"
         ],
         "checks": [
-          "価格・在庫・キャンペーンは確認日を残す",
+          "価格等に確認日を残す",
           "レビューを一般化しない"
         ],
         "metrics": [
-          "比較軸完成",
+          "比較軸",
           "一次情報取得率",
-          "要確認項目数"
+          "要確認数"
         ]
       },
       {
         "id": "content",
         "window": "2〜4週",
         "title": "判断支援コンテンツを公開する",
-        "outcome": "読者が自分に合う候補を選べる記事/投稿がそろった状態。",
+        "outcome": "読者が候補を選べる記事/投稿がそろった状態。",
         "tasks": [
-          "比較記事・個別記事・選び方記事を役割分担する",
-          "people-firstで独自の整理・検証を入れる",
-          "CTAは公式条件確認など自然な次行動にする"
+          "比較/個別/選び方記事を分ける",
+          "people-firstで独自整理を入れる",
+          "CTAを自然な次行動にする"
         ],
         "checks": [
           "ランキングを根拠なく作らない",
-          "広告表示を本文全体で明瞭にする"
+          "広告表示を明瞭にする"
         ],
         "metrics": [
           "公開本数",
-          "比較表完成",
+          "比較表",
           "CTA遷移"
         ]
       },
@@ -627,38 +604,38 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "optimize",
         "window": "1〜2か月",
         "title": "流入と成約の間を改善する",
-        "outcome": "どこで離脱・迷いが起きているか仮説検証できる状態。",
+        "outcome": "離脱・迷いを仮説検証できる状態。",
         "tasks": [
-          "検索意図と記事内容のズレを確認する",
-          "CTA・比較表・導線をA/B的に小さく改善する",
-          "案件条件の変更を定期確認する"
+          "検索意図とのズレを確認する",
+          "CTA・比較表・導線を小さく改善する",
+          "案件条件を定期確認する"
         ],
         "checks": [
           "煽りでCTRだけを上げない",
-          "古い価格情報を放置しない"
+          "古い価格を放置しない"
         ],
         "metrics": [
           "更新件数",
-          "導線別CTR",
-          "要確認情報の解消"
+          "導線CTR",
+          "要確認解消"
         ]
       },
       {
         "id": "portfolio",
         "window": "3か月〜",
         "title": "案件依存を減らす",
-        "outcome": "複数案件・複数記事を更新可能な資産として管理できる状態。",
+        "outcome": "複数案件・記事を更新可能な資産として管理できる状態。",
         "tasks": [
           "案件終了時の代替導線を用意する",
-          "記事ごとに最終確認日を管理する",
-          "収支と更新負荷で継続領域を判断する"
+          "最終確認日を管理する",
+          "収支と更新負荷で継続判断する"
         ],
         "checks": [
-          "案件提供元の規約変更を定期確認する",
+          "提供元規約を定期確認する",
           "税務記録を整理する"
         ],
         "metrics": [
-          "更新 SLA",
+          "更新期限",
           "案件分散",
           "収支記録"
         ]
@@ -669,8 +646,8 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "slug": "adult-affiliate",
     "title": "アダアフィ",
     "category": "販売・収益化",
-    "actionHref": "/prompts?category=アダアフィ",
-    "summary": "18歳以上・広告表示・媒体規約順守を前提に、案件調査、SEO/SNS、導線、改善まで進めます。",
+    "actionHref": "/prompts?category=%E3%82%A2%E3%83%80%E3%82%A2%E3%83%95%E3%82%A3",
+    "summary": "18歳以上・広告表示・媒体規約順守を前提に運用します。",
     "refs": [
       "xAdult",
       "caaStealth",
@@ -681,36 +658,36 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
       {
         "id": "compliance",
         "window": "準備",
-        "title": "運用可能範囲を先に決める",
-        "outcome": "18歳以上・非露骨・規約順守の運用境界が明確な状態。",
+        "title": "運用可能範囲を決める",
+        "outcome": "18歳以上・非露骨・規約順守の境界が明確な状態。",
         "tasks": [
-          "扱う案件・媒体の最新成人向けポリシーを公式確認する",
-          "広告/PR表示と年齢配慮のルールを決める",
+          "案件・媒体の成人向けポリシーを確認する",
+          "広告/PR表示と年齢配慮を決める",
           "扱わないテーマ・表現・掲載場所を明文化する"
         ],
         "checks": [
           "未成年・非同意・違法内容を扱わない",
-          "規約回避やBAN回避を前提にしない"
+          "規約回避を前提にしない"
         ],
         "metrics": [
           "規約確認日",
           "禁止事項一覧",
-          "広告表示方針"
+          "開示方針"
         ]
       },
       {
-        "id": "offer-research",
+        "id": "offer",
         "window": "1〜2週",
         "title": "案件と媒体の適合を確認する",
-        "outcome": "報酬だけでなく案件条件・媒体可否・更新頻度で比較できる状態。",
+        "outcome": "案件条件・媒体可否・更新頻度で比較できる状態。",
         "tasks": [
-          "案件・ASPを同じ比較軸で整理する",
-          "承認条件・掲載可否・公式情報を確認する",
-          "要確認の数値は推測せず残す"
+          "案件・ASPを同じ軸で整理する",
+          "承認条件・掲載可否を公式確認する",
+          "不明数値は要確認として残す"
         ],
         "checks": [
-          "架空のEPC/CVR/承認率を作らない",
-          "規約上使えない媒体へ誘導しない"
+          "架空EPC/CVR等を作らない",
+          "使えない媒体へ誘導しない"
         ],
         "metrics": [
           "比較案件数",
@@ -722,19 +699,19 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "content",
         "window": "2〜4週",
         "title": "非露骨な価値コンテンツを作る",
-        "outcome": "比較・選び方・料金/条件確認など、成人読者に役立つ情報が公開できる状態。",
+        "outcome": "成人読者に役立つ比較・選び方情報を公開できる状態。",
         "tasks": [
           "SEO記事またはX投稿の柱を作る",
-          "内容警告・表示位置等の媒体要件を確認する",
-          "記事とCTAの広告表示を明瞭にする"
+          "内容警告・表示位置を確認する",
+          "CTAの広告表示を明瞭にする"
         ],
         "checks": [
           "露骨な性的描写を集客手段にしない",
-          "プロフィール/ヘッダー等の禁止場所を確認する"
+          "禁止場所を確認する"
         ],
         "metrics": [
           "公開本数",
-          "規約チェック完了率",
+          "規約チェック率",
           "導線遷移"
         ]
       },
@@ -742,14 +719,14 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "funnel",
         "window": "1〜2か月",
         "title": "導線を測定可能にする",
-        "outcome": "流入→記事/投稿→公式情報の各段階を分けて改善できる状態。",
+        "outcome": "流入→記事/投稿→公式情報を分けて改善できる状態。",
         "tasks": [
-          "ファーストビュー・比較表・CTAを役割分担する",
+          "比較表・CTAを役割分担する",
           "実測データからボトルネック仮説を作る",
-          "規約・年齢配慮を壊さないテストだけ行う"
+          "規約を壊さないテストだけ行う"
         ],
         "checks": [
-          "警告や広告表示を弱めるテストをしない",
+          "警告や広告表示を弱めない",
           "誇張でクリックだけを増やさない"
         ],
         "metrics": [
@@ -766,11 +743,11 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "tasks": [
           "月次で案件条件と媒体規約を確認する",
           "古い記事・リンク・料金を更新する",
-          "収支・経費・確認履歴を整理する"
+          "収支・確認履歴を整理する"
         ],
         "checks": [
           "古いポリシーを固定ルールにしない",
-          "対象年齢・表示ルールを継続確認する"
+          "年齢・表示ルールを継続確認する"
         ],
         "metrics": [
           "確認期限超過ゼロ",
@@ -785,7 +762,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "物販・フリマ販売",
     "category": "販売・収益化",
     "actionHref": "/side-hustles/resale",
-    "summary": "商品確認、写真、出品、梱包・発送、収支、再現可能な出品手順まで進めます。",
+    "summary": "商品確認、撮影、出品、発送、収支、SOP化まで進めます。",
     "refs": [
       "mercariSell",
       "ntaSideIncome"
@@ -795,15 +772,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "inventory",
         "window": "準備",
         "title": "売る物と状態を正確に把握する",
-        "outcome": "商品ごとに状態・付属品・動作・欠点を説明できる状態。",
+        "outcome": "状態・付属品・動作・欠点を説明できる状態。",
         "tasks": [
           "商品をカテゴリ別に整理する",
-          "状態・傷・付属品・動作を現物確認する",
-          "仕入れがある場合は原価・送料・手数料の記録項目を決める"
+          "現物を確認する",
+          "原価・送料・手数料の記録項目を決める"
         ],
         "checks": [
-          "未確認の定価・購入時期・動作を作らない",
-          "禁止商品・出品規約を確認する"
+          "未確認の定価・購入時期を作らない",
+          "禁止商品を確認する"
         ],
         "metrics": [
           "確認済み商品数",
@@ -815,15 +792,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "listing",
         "window": "1週",
         "title": "正確な出品ページを作る",
-        "outcome": "写真と説明が一致し、購入前の主要疑問を減らせる状態。",
+        "outcome": "写真と説明が一致する状態。",
         "tasks": [
-          "検索される商品名・型番・色等を正確に入れる",
-          "傷・欠品・状態が分かる写真を撮る",
-          "AI生成のタイトル/説明は必ず現物と照合する"
+          "型番・色等を正確に入れる",
+          "傷・欠品が分かる写真を撮る",
+          "AI生成文を現物と照合する"
         ],
         "checks": [
           "欠点を隠さない",
-          "他人の画像・説明を無断利用しない"
+          "他人の画像を無断利用しない"
         ],
         "metrics": [
           "出品数",
@@ -839,27 +816,27 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "tasks": [
           "カテゴリ別の梱包手順を作る",
           "発送前チェックを標準化する",
-          "取引メッセージのテンプレートを作る"
+          "取引メッセージをテンプレ化する"
         ],
         "checks": [
-          "個人情報を必要以上に保存しない",
-          "破損リスクに合わない梱包をしない"
+          "個人情報を過剰保存しない",
+          "不適切な梱包をしない"
         ],
         "metrics": [
           "発送ミス",
           "梱包時間",
-          "問い合わせ件数"
+          "問い合わせ"
         ]
       },
       {
         "id": "economics",
         "window": "1〜2か月",
         "title": "利益と手間を見える化する",
-        "outcome": "売上ではなく、手数料・送料・原価・作業時間込みで判断できる状態。",
+        "outcome": "送料・手数料・原価・時間込みで判断できる状態。",
         "tasks": [
-          "商品別に実収支を記録する",
-          "売れ残り期間と値下げ履歴を記録する",
-          "カテゴリ別の作業時間を比較する"
+          "商品別実収支を記録する",
+          "売れ残り期間と値下げ履歴を残す",
+          "カテゴリ別作業時間を比較する"
         ],
         "checks": [
           "売上=利益とみなさない",
@@ -872,18 +849,18 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         ]
       },
       {
-        "id": "systemize",
+        "id": "system",
         "window": "3か月〜",
         "title": "出品をSOP化する",
-        "outcome": "仕入れ/確認/撮影/出品/発送/記録を再現できる状態。",
+        "outcome": "確認/撮影/出品/発送/記録を再現できる状態。",
         "tasks": [
-          "チェックリストと撮影パターンを作る",
+          "チェックリストを作る",
           "低効率カテゴリを見直す",
-          "税務・在庫・証憑を定期整理する"
+          "税務・在庫・証憑を整理する"
         ],
         "checks": [
-          "プラットフォーム規約変更を確認する",
-          "過剰在庫を抱えない判断基準を作る"
+          "規約変更を確認する",
+          "過剰在庫を避ける"
         ],
         "metrics": [
           "再出品時間",
@@ -898,7 +875,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "スキル販売",
     "category": "販売・収益化",
     "actionHref": "/side-hustles/skill-sales",
-    "summary": "提供範囲、サンプル、販売ページ、取引フロー、リピート可能なサービス化まで進めます。",
+    "summary": "提供範囲、販売ページ、納品フロー、サービス化まで進めます。",
     "refs": [
       "coconalaSell",
       "freelancerLaw",
@@ -909,40 +886,40 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "service",
         "window": "準備",
         "title": "売るスキルをサービスに変える",
-        "outcome": "購入者が何を受け取り、何を用意するか説明できる状態。",
+        "outcome": "購入者が何を受け取り何を用意するか説明できる状態。",
         "tasks": [
           "提供内容・対象者・対象外を決める",
           "納品物・修正範囲・必要素材を決める",
-          "実績が少ない場合はサンプル制作を計画する"
+          "サンプル制作を計画する"
         ],
         "checks": [
-          "資格・経験年数を盛らない",
+          "資格・経験を盛らない",
           "成果保証をしない"
         ],
         "metrics": [
-          "サービス仕様1件",
+          "サービス仕様",
           "対象外一覧",
-          "サンプル計画"
+          "サンプル"
         ]
       },
       {
         "id": "listing",
         "window": "1〜2週",
         "title": "販売ページを完成する",
-        "outcome": "タイトル・キャッチ・内容・購入前のお願いが一致する状態。",
+        "outcome": "タイトル・内容・購入前のお願いが一致する状態。",
         "tasks": [
-          "提供内容が一目で分かるタイトルを作る",
+          "内容が分かるタイトルを作る",
           "サンプル画像/成果物を用意する",
           "購入後の流れとFAQを作る"
         ],
         "checks": [
-          "価格・手数料は最新仕様を確認する",
+          "価格・手数料を最新確認する",
           "サンプルを実績と誤認させない"
         ],
         "metrics": [
-          "販売ページ完成",
+          "販売ページ",
           "FAQ件数",
-          "購入前確認項目"
+          "確認項目"
         ]
       },
       {
@@ -952,11 +929,11 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "outcome": "ヒアリングから納品までの認識違いを減らせる状態。",
         "tasks": [
           "受付フォームを作る",
-          "初回確認・中間確認・納品の区切りを決める",
+          "確認ポイントを決める",
           "取引条件を記録可能な形で確認する"
         ],
         "checks": [
-          "無制限修正を安易に約束しない",
+          "無制限修正を約束しない",
           "権利・利用範囲を確認する"
         ],
         "metrics": [
@@ -969,15 +946,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "improve",
         "window": "1〜2か月",
         "title": "サービス品質を改善する",
-        "outcome": "質問・修正理由から説明や提供範囲を改善できる状態。",
+        "outcome": "質問・修正理由から説明や範囲を改善できる状態。",
         "tasks": [
           "問い合わせをFAQへ反映する",
-          "修正が多い工程をテンプレート化する",
-          "実際の作業時間と価格を比較する"
+          "修正が多い工程をテンプレ化する",
+          "実作業時間と価格を比較する"
         ],
         "checks": [
           "レビューを操作しない",
-          "価格変更時に既存説明と矛盾させない"
+          "価格変更時に矛盾させない"
         ],
         "metrics": [
           "作業時間",
@@ -989,19 +966,19 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "productize",
         "window": "3か月〜",
         "title": "再現可能なサービス群にする",
-        "outcome": "単発作業から、明確な範囲の複数サービスへ展開できる状態。",
+        "outcome": "本体・オプション等を明確に分けられる状態。",
         "tasks": [
-          "本体/オプション/上位サービスを分ける",
+          "本体/オプションを分ける",
           "再利用テンプレートを整備する",
-          "取引・収支・税務記録を定期整理する"
+          "取引・収支記録を整理する"
         ],
         "checks": [
           "対応範囲を広げすぎない",
-          "契約・プラットフォームルールを更新確認する"
+          "契約・規約を更新確認する"
         ],
         "metrics": [
           "リピート率",
-          "テンプレート利用率",
+          "テンプレ利用率",
           "利益/時間"
         ]
       }
@@ -1012,7 +989,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "デジタル商品・教材販売",
     "category": "販売・収益化",
     "actionHref": "/side-hustles/digital-product",
-    "summary": "購入者の到達状態から逆算して教材・テンプレートを作り、販売後の更新まで設計します。",
+    "summary": "購入者の到達状態から逆算して教材を作り、更新まで設計します。",
     "refs": [
       "notePaid",
       "googlePeopleFirst",
@@ -1024,19 +1001,19 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "outcome",
         "window": "準備",
         "title": "購入後の完成物を定義する",
-        "outcome": "購入者が何をできるようになるか具体的に説明できる状態。",
+        "outcome": "購入者が何をできるようになるか説明できる状態。",
         "tasks": [
           "開始地点と到達地点を決める",
-          "対象者・対象外・必要前提を決める",
-          "商品形式を成果物に合わせて選ぶ"
+          "対象者・対象外・前提を決める",
+          "商品形式を成果物に合わせる"
         ],
         "checks": [
           "情報量だけを価値にしない",
           "成果保証をしない"
         ],
         "metrics": [
-          "到達状態1件",
-          "前提条件一覧",
+          "到達状態",
+          "前提条件",
           "形式決定"
         ]
       },
@@ -1047,11 +1024,11 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "outcome": "1つの成果物を完成できる試作品がある状態。",
         "tasks": [
           "章ごとに学ぶ/やる/完成するを設定する",
-          "テンプレートまたはワークを作る",
-          "第三者が迷う箇所を確認する"
+          "テンプレ/ワークを作る",
+          "迷う箇所を確認する"
         ],
         "checks": [
-          "架空の受講者実績を作らない",
+          "架空実績を作らない",
           "引用・素材権利を確認する"
         ],
         "metrics": [
@@ -1067,16 +1044,16 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "outcome": "本体・サンプル・販売ページ・注意事項がそろった状態。",
         "tasks": [
           "無料/有料の境界を整理する",
-          "販売ページの約束と商品内容を照合する",
+          "販売ページと商品内容を照合する",
           "広告表示と販売条件を確認する"
         ],
         "checks": [
           "偽の限定性を使わない",
-          "価格/返金等は最新仕様で確認する"
+          "価格等を最新確認する"
         ],
         "metrics": [
           "商品完成",
-          "販売ページ完成",
+          "販売ページ",
           "公開前チェック"
         ]
       },
@@ -1084,15 +1061,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "feedback",
         "window": "1〜2か月",
         "title": "質問を商品改善へ戻す",
-        "outcome": "問い合わせ・離脱・未完了理由から教材を改善できる状態。",
+        "outcome": "問い合わせから教材を改善できる状態。",
         "tasks": [
-          "質問をFAQや補足へ反映する",
-          "更新が必要な章に確認日を付ける",
-          "購入者が止まりやすい工程を簡略化する"
+          "質問をFAQへ反映する",
+          "更新章に確認日を付ける",
+          "止まりやすい工程を簡略化する"
         ],
         "checks": [
           "販売数だけで品質判断しない",
-          "個別サポート範囲を曖昧にしない"
+          "サポート範囲を曖昧にしない"
         ],
         "metrics": [
           "FAQ更新",
@@ -1106,8 +1083,8 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "title": "商品体系を作る",
         "outcome": "入口・本体・応用を重複なく設計できる状態。",
         "tasks": [
-          "重複内容を共通素材へ統合する",
-          "更新頻度と販売実績で維持商品を判断する",
+          "重複内容を共通化する",
+          "更新頻度で維持商品を判断する",
           "収支・証憑を整理する"
         ],
         "checks": [
@@ -1127,7 +1104,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "クラウドソーシング",
     "category": "受託・案件獲得",
     "actionHref": "/side-hustles/crowdsourcing",
-    "summary": "案件選定、応募、契約条件、制作、検収、実績化までの受託フローを作ります。",
+    "summary": "案件選定、応募、条件確認、納品、継続まで進めます。",
     "refs": [
       "crowdworksGuide",
       "freelancerLaw",
@@ -1138,30 +1115,30 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "profile",
         "window": "準備",
         "title": "応募できる土台を作る",
-        "outcome": "経験を盛らず、対応可能範囲と成果物を示せる状態。",
+        "outcome": "経験を盛らず対応範囲と成果物を示せる状態。",
         "tasks": [
-          "対応できる案件種別を1〜2個に絞る",
+          "案件種別を1〜2個に絞る",
           "サンプル/ポートフォリオを用意する",
-          "契約条件で必ず確認する項目を決める"
+          "契約条件の確認項目を決める"
         ],
         "checks": [
           "未経験を経験済みと書かない",
-          "公開できない実績を勝手に掲載しない"
+          "公開不可実績を掲載しない"
         ],
         "metrics": [
           "応募領域",
           "サンプル数",
-          "契約チェック項目"
+          "契約チェック"
         ]
       },
       {
         "id": "applications",
         "window": "1〜2週",
         "title": "応募の基準値を作る",
-        "outcome": "案件要件と自分の能力を対応づけて応募できる状態。",
+        "outcome": "案件要件と能力を対応づけて応募できる状態。",
         "tasks": [
-          "案件文を必須/歓迎/納期/成果物/報酬に分解する",
-          "プロジェクト/コンペ/タスク等の形式を確認する",
+          "案件文を要件ごとに分解する",
+          "プロジェクト/コンペ/タスク形式を確認する",
           "案件固有の応募文を作る"
         ],
         "checks": [
@@ -1170,7 +1147,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         ],
         "metrics": [
           "応募数",
-          "要件適合率",
+          "適合率",
           "返信/質問"
         ]
       },
@@ -1178,19 +1155,19 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "contract",
         "window": "受注時",
         "title": "取引条件を明確にする",
-        "outcome": "作業開始前に成果物・期日・報酬・修正等を確認できる状態。",
+        "outcome": "作業開始前に成果物・期日・報酬等を確認できる状態。",
         "tasks": [
           "取引条件を記録可能な形で確認する",
-          "初稿/確認/修正/納品の区切りを決める",
-          "権利・公開可否・検収条件を確認する"
+          "初稿/確認/修正/納品を区切る",
+          "権利・検収条件を確認する"
         ],
         "checks": [
-          "口頭だけで曖昧に進めない",
+          "口頭だけで進めない",
           "無料追加作業を無制限に受けない"
         ],
         "metrics": [
-          "条件確認完了",
-          "未定事項数",
+          "条件確認",
+          "未定事項",
           "変更履歴"
         ]
       },
@@ -1205,8 +1182,8 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
           "納品後に学びと実績可否を整理する"
         ],
         "checks": [
-          "個人情報/機密を再利用しない",
-          "納品後の無断公開をしない"
+          "機密を再利用しない",
+          "無断公開しない"
         ],
         "metrics": [
           "納期遵守",
@@ -1218,15 +1195,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "repeat",
         "window": "3か月〜",
         "title": "継続案件を選別する",
-        "outcome": "単価だけでなく相性・負荷・再現性で案件を選べる状態。",
+        "outcome": "単価だけでなく負荷・再現性で案件を選べる状態。",
         "tasks": [
-          "案件別の実作業時間と収支を記録する",
-          "継続提案できる作業を標準化する",
+          "案件別の時間と収支を記録する",
+          "継続提案を標準化する",
           "契約・税務記録を整理する"
         ],
         "checks": [
           "収益保証を前提にしない",
-          "不採算案件の継続基準を見直す"
+          "不採算案件を見直す"
         ],
         "metrics": [
           "利益/時間",
@@ -1241,7 +1218,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "営業・案件獲得",
     "category": "受託・案件獲得",
     "actionHref": "/side-hustles/outreach",
-    "summary": "ターゲット選定、事前調査、初回連絡、ヒアリング、契約、継続提案までを整えます。",
+    "summary": "ターゲット選定、事前調査、初回連絡、条件確認、継続提案まで整えます。",
     "refs": [
       "freelancerLaw",
       "ntaSideIncome"
@@ -1251,14 +1228,14 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "offer",
         "window": "準備",
         "title": "提案内容を1つに絞る",
-        "outcome": "誰に何を提供し、何を次の一歩にするか明確な状態。",
+        "outcome": "誰に何を提供し何を次の一歩にするか明確な状態。",
         "tasks": [
           "提供内容・対象者・対象外を決める",
-          "サンプルまたは説明資料を用意する",
-          "最初のお願いを返信/短い打合せ等に絞る"
+          "サンプル/説明資料を用意する",
+          "最初のお願いを小さく設定する"
         ],
         "checks": [
-          "存在しない実績・紹介者を作らない",
+          "存在しない実績を作らない",
           "相手の課題を決めつけない"
         ],
         "metrics": [
@@ -1273,9 +1250,9 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "title": "連絡先リストを作る",
         "outcome": "相手ごとに連絡理由を説明できる状態。",
         "tasks": [
-          "公開情報から相手の事業・発信・既存施策を確認する",
+          "公開情報から相手を確認する",
           "提案との接点を1つ記録する",
-          "連絡してよい窓口・方法を確認する"
+          "連絡可能な窓口を確認する"
         ],
         "checks": [
           "個人情報を過剰収集しない",
@@ -1291,14 +1268,14 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "contact",
         "window": "2〜4週",
         "title": "初回連絡を検証する",
-        "outcome": "短く、返信しやすく、誠実な提案文を運用できる状態。",
+        "outcome": "短く返信しやすい提案文を運用できる状態。",
         "tasks": [
           "連絡理由→価値→提案→次行動で書く",
-          "返信がない場合の回数と間隔を決める",
+          "フォロー回数を決める",
           "反応理由を記録する"
         ],
         "checks": [
-          "恐怖・偽の緊急性を使わない",
+          "偽の緊急性を使わない",
           "断られた相手へ執拗に連絡しない"
         ],
         "metrics": [
@@ -1311,34 +1288,34 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "discovery",
         "window": "1〜2か月",
         "title": "案件化前の条件確認を標準化する",
-        "outcome": "ヒアリングから見積・条件確認へ漏れなく進める状態。",
+        "outcome": "ヒアリングから見積へ漏れなく進める状態。",
         "tasks": [
-          "課題・成果物・納期・予算・意思決定者を確認する",
-          "取引条件を記録可能な形で明示/確認する",
+          "課題・成果物・納期・予算を確認する",
+          "取引条件を記録可能な形で確認する",
           "対応不可と追加対応を分ける"
         ],
         "checks": [
-          "契約前に成果を保証しない",
-          "曖昧な追加作業を放置しない"
+          "成果を保証しない",
+          "追加作業を曖昧にしない"
         ],
         "metrics": [
           "商談→提案率",
-          "条件未確定数",
+          "未確定数",
           "失注理由"
         ]
       },
       {
         "id": "pipeline",
         "window": "3か月〜",
-        "title": "営業を案件パイプライン化する",
+        "title": "営業をパイプライン化する",
         "outcome": "新規・検討中・受注・継続を定例管理できる状態。",
         "tasks": [
-          "週次で案件ステータスを更新する",
-          "失注理由を提案改善へ反映する",
-          "継続顧客向けの次提案を価値ベースで作る"
+          "週次でステータス更新する",
+          "失注理由を改善へ反映する",
+          "継続顧客へ価値ベースで提案する"
         ],
         "checks": [
-          "件数だけを追って質を落とさない",
+          "件数だけを追わない",
           "収支・契約・税務記録を整理する"
         ],
         "metrics": [
@@ -1354,7 +1331,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "リサーチ・事実確認",
     "category": "リサーチ・業務効率化",
     "actionHref": "/side-hustles/research",
-    "summary": "調査設計、一次情報、比較条件、成果物、更新管理をサービスとして再現可能にします。",
+    "summary": "調査設計、一次情報、比較条件、成果物、更新管理まで進めます。",
     "refs": [
       "freelancerLaw",
       "ntaSideIncome"
@@ -1364,15 +1341,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "scope",
         "window": "準備",
         "title": "調査の答える範囲を決める",
-        "outcome": "意思決定に必要な問い・期間・対象・成果物が明確な状態。",
+        "outcome": "問い・期間・対象・成果物が明確な状態。",
         "tasks": [
-          "最終判断から逆算して主要質問を作る",
-          "対象地域・期間・母集団・最新性を固定する",
-          "優先する一次情報を決める"
+          "最終判断から主要質問を作る",
+          "地域・期間・母集団・最新性を固定する",
+          "一次情報を決める"
         ],
         "checks": [
-          "検索結果スニペットだけで断定しない",
-          "現在と過去の情報を混ぜない"
+          "スニペットだけで断定しない",
+          "現在と過去を混ぜない"
         ],
         "metrics": [
           "主要質問",
@@ -1388,14 +1365,14 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "tasks": [
           "確認済み/解釈/未確認を分ける",
           "公開日と出来事の日付を記録する",
-          "数値の単位・母集団をそろえる"
+          "数値条件をそろえる"
         ],
         "checks": [
           "二次情報を一次情報として扱わない",
-          "条件の違う数値を直接比較しない"
+          "異条件数値を直接比較しない"
         ],
         "metrics": [
-          "根拠付き主張数",
+          "根拠付き主張",
           "未確認項目",
           "不一致ソース"
         ]
@@ -1403,15 +1380,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
       {
         "id": "deliverable",
         "window": "2〜4週",
-        "title": "再利用できる調査成果物を作る",
+        "title": "再利用できる成果物を作る",
         "outcome": "比較表・要約・根拠一覧を同じ形式で納品できる状態。",
         "tasks": [
           "結論と根拠を対応づける",
-          "ソース間の不一致を隠さず説明する",
+          "不一致を隠さず説明する",
           "追加調査条件を明示する"
         ],
         "checks": [
-          "断定できない部分を推測で埋めない",
+          "推測で埋めない",
           "重要な限界を省かない"
         ],
         "metrics": [
@@ -1424,15 +1401,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "service",
         "window": "1〜2か月",
         "title": "調査をサービス化する",
-        "outcome": "依頼受付→調査→レビュー→納品を標準化できる状態。",
+        "outcome": "受付→調査→レビュー→納品を標準化できる状態。",
         "tasks": [
-          "依頼時に目的・範囲・期日・成果物を確認する",
+          "目的・範囲・期日を確認する",
           "途中レビューを設定する",
-          "取引条件・機密の扱いを記録する"
+          "取引条件・機密を記録する"
         ],
         "checks": [
-          "機密情報を外部AIへ無断投入しない",
-          "調査範囲を無断拡大しない"
+          "機密を外部AIへ無断投入しない",
+          "範囲を無断拡大しない"
         ],
         "metrics": [
           "納期",
@@ -1444,15 +1421,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "maintenance",
         "window": "3か月〜",
         "title": "更新型リサーチへ発展する",
-        "outcome": "変化する情報を再調査し、差分を記録できる状態。",
+        "outcome": "変化する情報を再調査し差分を記録できる状態。",
         "tasks": [
-          "更新頻度を情報種別ごとに決める",
-          "変更点だけを再検証するSOPを作る",
-          "収支・契約・税務記録を整理する"
+          "更新頻度を決める",
+          "変更点だけ再検証するSOPを作る",
+          "収支・契約記録を整理する"
         ],
         "checks": [
-          "古い資料を最新版として扱わない",
-          "更新日だけ変えて内容を新しく見せない"
+          "古い資料を最新版扱いしない",
+          "更新日だけ変えない"
         ],
         "metrics": [
           "更新期限遵守",
@@ -1467,7 +1444,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "業務効率化・SOP化",
     "category": "リサーチ・業務効率化",
     "actionHref": "/side-hustles/workflow-efficiency",
-    "summary": "現状把握、標準化、AI補助、例外処理、改善サイクルまでを業務資産にします。",
+    "summary": "現状把握、標準化、AI補助、例外処理、改善まで進めます。",
     "refs": [
       "freelancerLaw",
       "ntaSideIncome"
@@ -1477,11 +1454,11 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "observe",
         "window": "準備",
         "title": "現状作業を見える化する",
-        "outcome": "入力→処理→確認→保存→引き継ぎへ分解できる状態。",
+        "outcome": "入力→処理→確認→保存→引継ぎへ分解できる状態。",
         "tasks": [
-          "作業を実際の順序で記録する",
+          "実際の順序を記録する",
           "担当・入力・出力・完了条件を記録する",
-          "ミス時の影響を分類する"
+          "ミス影響を分類する"
         ],
         "checks": [
           "理想手順を先に書かない",
@@ -1500,7 +1477,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "outcome": "初見の人でも同じ結果へ到達できるSOPがある状態。",
         "tasks": [
           "1ステップ1作業/判断へ分ける",
-          "チェックリストと命名規則を作る",
+          "チェックリストを作る",
           "例外をIf/Thenで定義する"
         ],
         "checks": [
@@ -1517,14 +1494,14 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "assist",
         "window": "2〜4週",
         "title": "AI補助を安全に入れる",
-        "outcome": "AIに渡す/渡さない情報と、人の確認点が明確な状態。",
+        "outcome": "AIに渡す/渡さない情報と人の確認点が明確な状態。",
         "tasks": [
-          "下書き・分類・要約など低リスク工程から試す",
+          "低リスク工程から試す",
           "個人情報・機密・権限を確認する",
-          "自動化前後の時間と品質を比較する"
+          "前後の時間と品質を比較する"
         ],
         "checks": [
-          "高リスク判断を無確認で自動化しない",
+          "高リスク判断を自動化しない",
           "公開・送信を勝手に自動化しない"
         ],
         "metrics": [
@@ -1537,14 +1514,14 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "automation",
         "window": "1〜2か月",
         "title": "部分自動化を安定させる",
-        "outcome": "失敗時に原因切り分け・再試行・ロールバックできる状態。",
+        "outcome": "失敗時に再試行・ロールバックできる状態。",
         "tasks": [
-          "自動化対象を小さな単位に分ける",
+          "自動化対象を小さく分ける",
           "ログ/記録/通知を残す",
           "失敗時フローを作る"
         ],
         "checks": [
-          "エラー時に無限再試行しない",
+          "無限再試行しない",
           "権限確認を省略しない"
         ],
         "metrics": [
@@ -1561,10 +1538,10 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "tasks": [
           "月次で例外・手戻りをレビューする",
           "不要工程を削除する",
-          "クライアント業務なら契約・機密・税務記録を整理する"
+          "契約・機密・税務記録を整理する"
         ],
         "checks": [
-          "古いSOPを残したまま運用しない",
+          "古いSOPを放置しない",
           "効率だけで品質を犠牲にしない"
         ],
         "metrics": [
@@ -1580,7 +1557,7 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
     "title": "AI副業プランナー",
     "category": "副業設計",
     "actionHref": "/side-hustles/sidejob-planner",
-    "summary": "自分に合う副業候補を選び、30日検証から継続判断まで進めるメタロードマップです。",
+    "summary": "自分に合う副業候補を選び、30日検証から継続判断まで進めます。",
     "refs": [
       "ntaSideIncome",
       "freelancerLaw"
@@ -1590,15 +1567,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "constraints",
         "window": "準備",
         "title": "自分の条件を数値化する",
-        "outcome": "時間・予算・得意・営業可否・リスク許容を比較できる状態。",
+        "outcome": "時間・予算・得意・営業可否を比較できる状態。",
         "tasks": [
           "週の使える時間を決める",
           "初期予算と固定費上限を決める",
-          "得意・苦手・営業可否を自己申告ベースで整理する"
+          "得意・苦手・営業可否を整理する"
         ],
         "checks": [
           "属性から向き不向きを決めつけない",
-          "収益額で候補を過大評価しない"
+          "収益額で過大評価しない"
         ],
         "metrics": [
           "時間上限",
@@ -1610,19 +1587,19 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "shortlist",
         "window": "1週",
         "title": "候補を3〜5件へ絞る",
-        "outcome": "候補ごとに最初の成果物と集客方法が比較できる状態。",
+        "outcome": "候補ごとの成果物と集客方法を比較できる状態。",
         "tasks": [
-          "各候補で最初に作る成果物を定義する",
+          "最初に作る成果物を定義する",
           "必要ツール・費用・集客方法を比較する",
-          "既存AAS専用機能への導線を確認する"
+          "AAS専用機能への導線を確認する"
         ],
         "checks": [
           "成功確率を作らない",
-          "最新の案件数・相場を未確認で断定しない"
+          "相場を未確認で断定しない"
         ],
         "metrics": [
           "候補数",
-          "比較表完成",
+          "比較表",
           "最初の成果物"
         ]
       },
@@ -1630,15 +1607,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "experiment",
         "window": "2〜4週",
         "title": "30日検証を行う",
-        "outcome": "小さな公開/応募/販売まで一度経験し、実データを得られる状態。",
+        "outcome": "小さな公開/応募/販売を経験し実データを得られる状態。",
         "tasks": [
-          "候補ごとに週1つの検証行動を設定する",
+          "週1つの検証行動を設定する",
           "作業時間・反応・学びを記録する",
           "必要なら候補を1つに絞る"
         ],
         "checks": [
-          "初月の収益だけで判断しない",
-          "赤字の固定費を増やしすぎない"
+          "初月収益だけで判断しない",
+          "固定費を増やしすぎない"
         ],
         "metrics": [
           "実行回数",
@@ -1652,13 +1629,13 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "title": "続ける候補を決める",
         "outcome": "継続・修正・中止の基準で選べる状態。",
         "tasks": [
-          "得意/苦手ではなく実測負荷と反応を比較する",
-          "続ける候補に90日目標を設定する",
-          "税務・契約・広告等の必要確認を洗い出す"
+          "実測負荷と反応を比較する",
+          "90日目標を設定する",
+          "税務・契約・広告の確認事項を洗い出す"
         ],
         "checks": [
           "サンクコストで続けない",
-          "収益保証のある案件を前提にしない"
+          "収益保証を前提にしない"
         ],
         "metrics": [
           "継続候補",
@@ -1670,15 +1647,15 @@ export const SIDE_HUSTLE_ROADMAPS: readonly SideHustleRoadmapDefinition[] = [
         "id": "specialize",
         "window": "3か月〜",
         "title": "副業を仕組みにする",
-        "outcome": "専用ロードマップへ移行し、再現可能な作業にできる状態。",
+        "outcome": "専用ロードマップへ移行し再現可能にできる状態。",
         "tasks": [
           "選んだ副業の専用ロードマップへ切り替える",
-          "月次で収支・時間・スキル蓄積を確認する",
+          "月次で収支・時間・スキルを確認する",
           "税務・契約記録を整理する"
         ],
         "checks": [
-          "本業・生活を圧迫する稼働を放置しない",
-          "規約・法令は最新情報を確認する"
+          "生活を圧迫する稼働を放置しない",
+          "規約・法令は最新確認する"
         ],
         "metrics": [
           "継続月数",
