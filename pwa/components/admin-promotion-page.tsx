@@ -138,6 +138,7 @@ export function AdminPromotionPage() {
   }, [workspacePreference]);
 
   const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
+  const adminUserId = state.kind === "ready" ? state.profile.id : "";
   const featureOptions = useMemo(() => {
     const confirmed = facts.features
       .split(/\r?\n|、|,/)
@@ -226,7 +227,7 @@ export function AdminPromotionPage() {
         facts={facts}
         featureOptions={featureOptions}
         onCopy={(prompt) => void copyPrompt(prompt)}
-        userId={state.profile.id}
+        userId={adminUserId}
       />
 
       <details className="admin-promo-advanced">

@@ -248,5 +248,6 @@ test("eight-step promotion wizard restores user-scoped progress across reloads a
   assert.match(builderSource, /window\.addEventListener\("beforeunload"/);
   assert.match(builderSource, /document\.addEventListener\("visibilitychange"/);
   assert.match(builderSource, /persistWizardProgress\(\); launchAiApp\("chatgpt"\)/);
-  assert.match(pageSource, /userId=\{state\.profile\.id\}/);
+  assert.match(pageSource, /const adminUserId = state\.kind === "ready" \? state\.profile\.id : ""/);
+  assert.match(pageSource, /userId=\{adminUserId\}/);
 });
