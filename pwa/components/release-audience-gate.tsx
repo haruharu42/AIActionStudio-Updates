@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { useEffect, useState, type ReactNode } from "react";
 
 import {
@@ -80,7 +82,7 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
   if (audience === "public" || gate.kind === "public" || alwaysPublicPreviewPath(pathname) || gate.kind === "allowed") return <>{children}</>;
 
   if (gate.kind === "signed_out" && pathname === "/") return <>{children}</>;
-  if (gate.kind === "loading") return null;
+  if (gate.kind === "loading") return <AppLoadingScreen message="候補版の利用権を確認しています…" />;
 
   const message = gate.kind === "denied" && gate.state?.is_release_tester
     ? "現在は第1段階の管理者確認中です。管理者が第2段階へ進めると、この一般ユーザーテストアカウントで候補版を確認できます。"

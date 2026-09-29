@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { getSupabaseClient } from "@/lib/supabase";
 import { createSessionRequestLoader } from "@/lib/session-request-loader";
@@ -199,7 +200,7 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
 
   return (
     <AccessStateContext.Provider value={value}>
-      {runtimeProfilePending ? null : children}
+      {runtimeProfilePending ? <AppLoadingScreen message="ユーザー設定を準備しています…" /> : children}
     </AccessStateContext.Provider>
   );
 }
