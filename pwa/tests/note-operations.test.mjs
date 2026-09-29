@@ -885,3 +885,14 @@ test("membership knowledge records the 2026-09-30 official billing recheck and l
   assert.match(source, /開設時期と現在設定を確認/);
   assert.match(source, /新方式を一律適用しない/);
 });
+
+
+test("membership cockpit never writes a previous account workspace into a newly selected account", async () => {
+  const cockpit = await read("components/note-operations/note-membership-cockpit.tsx");
+  assert.match(cockpit, /const workspaceOwnerRef = useRef\(""/);
+  assert.match(cockpit, /workspaceOwnerRef\.current = ""/);
+  assert.match(cockpit, /setWorkspaceHydrated\(false\)/);
+  assert.match(cockpit, /workspaceOwnerRef\.current = userId/);
+  assert.match(cockpit, /workspaceOwnerRef\.current !== userId/);
+  assert.match(cockpit, /<NoteMembershipAdvisor[\s\S]*?key=\{userId\}/);
+});

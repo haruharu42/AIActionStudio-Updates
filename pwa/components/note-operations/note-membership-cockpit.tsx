@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { NoteMembershipAdvisor } from "@/components/note-operations/note-membership-advisor";
 import { NoteMembershipMetricsPanel } from "@/components/note-operations/note-membership-metrics-panel";
@@ -138,9 +138,12 @@ export function NoteMembershipCockpit({
   const [articleTheme, setArticleTheme] = useState("");
   const [metricsEntries, setMetricsEntries] = useState<NoteMembershipMetricsEntry[]>([]);
   const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
+  const workspaceOwnerRef = useRef("");
 
   useEffect(() => {
     let active = true;
+    workspaceOwnerRef.current = "";
+    setWorkspaceHydrated(false);
     const restored = readMembershipCockpitProgress(userId);
     queueMicrotask(() => {
       if (!active) return;
@@ -151,13 +154,14 @@ export function NoteMembershipCockpit({
       setCalendar(restored.calendar);
       setImprove(restored.improve);
       setArticleTheme(restored.articleTheme);
+      workspaceOwnerRef.current = userId;
       setWorkspaceHydrated(true);
     });
     return () => { active = false; };
   }, [userId]);
 
   const persistWorkspace = useCallback(() => {
-    if (!workspaceHydrated) return;
+    if (!workspaceHydrated || workspaceOwnerRef.current !== userId) return;
     writeMembershipCockpitProgress(userId, {
       tab,
       pricing,
@@ -257,6 +261,7 @@ export function NoteMembershipCockpit({
 
       {tab === "consult" && (
         <NoteMembershipAdvisor
+          key={userId}
           userId={userId}
           profile={profile}
           selectedAi={selectedAi}
