@@ -104,3 +104,20 @@ test("prompt library follows filtered selection and keeps desktop prompt panes i
   assert.match(styles, /overscroll-behavior: contain/);
 });
 
+test("prompt library opens a selected card as a dedicated prompt view with a top switcher", async () => {
+  const [page, styles] = await Promise.all([
+    read("components/action-prompt-library-page.tsx"),
+    read("app/phase49-prompt-library.css"),
+  ]);
+
+  assert.match(page, /viewMode, setViewMode/);
+  assert.match(page, /viewMode === "library"/);
+  assert.match(page, /プロンプトを切り替える/);
+  assert.match(page, /switchPrompt\(event\.target\.value\)/);
+  assert.match(page, /一覧から選び直す/);
+  assert.match(page, /if \(openPrompt\) setViewMode\("prompt"\)/);
+  assert.match(styles, /\.action-prompt-switcher/);
+  assert.match(styles, /\.action-prompt-library-view \.action-prompt-list/);
+  assert.match(styles, /\.action-prompt-detail \.action-prompt-editor/);
+});
+

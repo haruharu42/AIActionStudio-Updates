@@ -76,6 +76,7 @@ export function ActionPromptLibraryPage() {
     () => ACTION_PROMPT_TEMPLATES[0] ? recommendedActionPromptAi(ACTION_PROMPT_TEMPLATES[0]) : "chatgpt",
   );
   const [progressReady, setProgressReady] = useState(false);
+  const [viewMode, setViewMode] = useState<"library" | "prompt">("library");
 
   const selected = templates.find((template) => template.id === selectedId) ?? templates[0];
 
@@ -91,6 +92,7 @@ export function ActionPromptLibraryPage() {
       if (routeSelection.query) setQuery(routeSelection.query);
 
       const routeTemplate = resolveActionPromptRouteTemplate(ACTION_PROMPT_TEMPLATES, routeSelection);
+      if (routeTemplate) setViewMode("prompt");
       const restored = routeTemplate
         ?? (stored ? ACTION_PROMPT_TEMPLATES.find((template) => template.id === stored.selectedId) : undefined)
         ?? ACTION_PROMPT_TEMPLATES[0];
@@ -119,7 +121,9 @@ export function ActionPromptLibraryPage() {
         const merged = mergeTemplates(cloudTemplates);
         const routeSelection = readActionPromptRouteSelection(window.location.search);
         const stored = readActionPromptProgress(userId);
-        const next = resolveActionPromptRouteTemplate(merged, routeSelection)
+        const routeTemplate = resolveActionPromptRouteTemplate(merged, routeSelection);
+        if (routeTemplate) setViewMode("prompt");
+        const next = routeTemplate
           ?? (stored ? merged.find((template) => template.id === stored.selectedId) : undefined)
           ?? merged[0];
 
@@ -178,16 +182,22 @@ export function ActionPromptLibraryPage() {
     [recent, templates],
   );
 
-  const selectTemplate = (template: ActionPromptTemplate) => {
+  const selectTemplate = (template: ActionPromptTemplate, openPrompt = true) => {
     setSelectedId(template.id);
     setSelectedAi(recommendedActionPromptAi(template));
     setValues(initialActionPromptValues(template));
     setMessage("");
+    if (openPrompt) setViewMode("prompt");
   };
 
   const keepSelectionInFilter = (nextFiltered: readonly ActionPromptTemplate[]) => {
     if (!nextFiltered.length || nextFiltered.some((template) => template.id === selectedId)) return;
-    selectTemplate(nextFiltered[0]);
+    selectTemplate(nextFiltered[0], false);
+  };
+
+  const switchPrompt = (templateId: string) => {
+    const next = templates.find((template) => template.id === templateId);
+    if (next) selectTemplate(next);
   };
 
   const changeCategory = (nextCategory: string) => {
@@ -265,53 +275,73 @@ export function ActionPromptLibraryPage() {
         <Link className="route-back" href="/">← ホーム</Link>
       </header>
 
-      <ActionPromptToolbar
-        categories={categories}
-        category={category}
-        query={query}
-        favoritesOnly={favoritesOnly}
-        onCategoryChange={changeCategory}
-        onQueryChange={changeQuery}
-        onFavoritesToggle={toggleFavoritesOnly}
-      />
+      {viewMode === "library" ? (
+        <div className="action-prompt-library-view">
+          <ActionPromptToolbar
+            categories={categories}
+            category={category}
+            query={query}
+            favoritesOnly={favoritesOnly}
+            onCategoryChange={changeCategory}
+            onQueryChange={changeQuery}
+            onFavoritesToggle={toggleFavoritesOnly}
+          />
 
-      {recentTemplates.length > 0 && (
-        <section className="action-prompt-recent" aria-label="最近使ったプロンプト">
-          <strong>最近使ったもの</strong>
-          <div>
-            {recentTemplates.map((template) => (
-              <button key={template.id} type="button" onClick={() => selectTemplate(template)}>
-                {template.title}
-              </button>
-            ))}
-          </div>
-        </section>
+          {recentTemplates.length > 0 && (
+            <section className="action-prompt-recent" aria-label="最近使ったプロンプト">
+              <strong>最近使ったもの</strong>
+              <div>
+                {recentTemplates.map((template) => (
+                  <button key={template.id} type="button" onClick={() => selectTemplate(template)}>
+                    {template.title}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <ActionPromptTemplateList
+            templates={filtered}
+            selectedId={selected.id}
+            onSelect={selectTemplate}
+          />
+        </div>
+      ) : (
+        <div className="action-prompt-detail">
+          <section className="action-prompt-switcher" aria-label="プロンプト切り替え">
+            <label>
+              <span>プロンプトを切り替える</span>
+              <select value={selected.id} onChange={(event) => switchPrompt(event.target.value)}>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.category} — {template.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" onClick={() => setViewMode("library")}>
+              一覧から選び直す
+            </button>
+          </section>
+
+          <ActionPromptEditor
+            selected={selected}
+            values={values}
+            prompt={prompt}
+            favorite={favorites.includes(selected.id)}
+            selectedAi={selectedAi}
+            message={message}
+            onValueChange={(key, value) => setValues((current) => ({ ...current, [key]: value }))}
+            onFavoriteToggle={toggleFavorite}
+            onAiChange={setSelectedAi}
+            onCopy={(openAi) => void copyPrompt(openAi)}
+            onReset={() => {
+              setValues(initialActionPromptValues(selected));
+              setMessage("入力内容をリセットしました。");
+            }}
+          />
+        </div>
       )}
-
-      <div className="action-prompt-layout">
-        <ActionPromptTemplateList
-          templates={filtered}
-          selectedId={selected.id}
-          onSelect={selectTemplate}
-        />
-
-        <ActionPromptEditor
-          selected={selected}
-          values={values}
-          prompt={prompt}
-          favorite={favorites.includes(selected.id)}
-          selectedAi={selectedAi}
-          message={message}
-          onValueChange={(key, value) => setValues((current) => ({ ...current, [key]: value }))}
-          onFavoriteToggle={toggleFavorite}
-          onAiChange={setSelectedAi}
-          onCopy={(openAi) => void copyPrompt(openAi)}
-          onReset={() => {
-            setValues(initialActionPromptValues(selected));
-            setMessage("入力内容をリセットしました。");
-          }}
-        />
-      </div>
     </main>
   );
 }
