@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import type { ArticleLibraryItem } from "@/lib/article-library-v2";
-import type { ArticleStatus } from "@/lib/phase7-articles";
+import type { ArticleStatus, ArticleStockSummary } from "@/lib/phase7-articles";
 import {
   ARTICLE_LIBRARY_PAGE_SIZE,
   ARTICLE_STATUS_LABELS,
@@ -17,6 +17,7 @@ type FilterChange = <Key extends keyof LibraryFilters>(key: Key, value: LibraryF
 export function ArticleLibraryListView({
   articles,
   totalCount,
+  stockSummary,
   hasMore,
   loading,
   loadingMore,
@@ -35,6 +36,7 @@ export function ArticleLibraryListView({
 }: {
   articles: ArticleLibraryItem[];
   totalCount: number;
+  stockSummary: ArticleStockSummary | null;
   hasMore: boolean;
   loading: boolean;
   loadingMore: boolean;
@@ -173,6 +175,16 @@ export function ArticleLibraryListView({
 
       <div className="library-toolbar">
         <span>{articles.length} / {totalCount} 件を表示</span>
+        {stockSummary && (
+          <span className={stockSummary.isUnlimited ? "library-storage-count unlimited" : "library-storage-count"}>
+            保存数: {stockSummary.currentArticles.toLocaleString("ja-JP")} / {stockSummary.isUnlimited
+              ? "無制限"
+              : `${stockSummary.maxArticles?.toLocaleString("ja-JP") ?? "-"}件`}
+            {!stockSummary.isUnlimited && stockSummary.remainingArticles !== null && (
+              <small>残り {stockSummary.remainingArticles.toLocaleString("ja-JP")}件</small>
+            )}
+          </span>
+        )}
         <small>一覧は本文なし・最大{ARTICLE_LIBRARY_PAGE_SIZE}件ずつ取得</small>
       </div>
 
