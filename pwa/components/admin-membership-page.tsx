@@ -451,27 +451,31 @@ export function AdminMembershipPage() {
         </div>
       )}
 
-      <details className="membership-admin-collapsible">
-        <summary className="membership-admin-collapsible-summary">
-          <span>
-            <strong>メンバーシップ管理を開く</strong>
-            <small>基本設定・料金・記事保存数・特典機能・ユーザー付与を必要な時だけ表示します。</small>
-          </span>
-          <span className="membership-admin-collapsible-state" aria-hidden="true">開く ▼</span>
-        </summary>
-        <div className="membership-admin-collapsible-body">
-
       {operationsReady && (
-        <MembershipStatusSection
-          assignments={assignments}
-          expiringSoon={expiringSoon}
-          plans={plans}
-          assignmentPlanCounts={assignmentPlanCounts}
-          users={users}
-          onSelectUser={selectUser}
-        />
+        <details className="membership-admin-item">
+          <summary className="membership-admin-item-summary">
+            <span><strong>現在のメンバー状況</strong><small>有効メンバー数・期限切れ予定・プラン別人数</small></span>
+            <span className="membership-admin-item-state" aria-hidden="true">開く ▼</span>
+          </summary>
+          <div className="membership-admin-item-body">
+            <MembershipStatusSection
+              assignments={assignments}
+              expiringSoon={expiringSoon}
+              plans={plans}
+              assignmentPlanCounts={assignmentPlanCounts}
+              users={users}
+              onSelectUser={selectUser}
+            />
+          </div>
+        </details>
       )}
 
+      <details className="membership-admin-item">
+        <summary className="membership-admin-item-summary">
+          <span><strong>noteメンバーシップ基本設定</strong><small>名称・参加URL・ユーザー向け案内</small></span>
+          <span className="membership-admin-item-state" aria-hidden="true">開く ▼</span>
+        </summary>
+        <div className="membership-admin-item-body">
       <section className="admin-panel membership-admin-section">
         <div className="admin-panel-heading">
           <div>
@@ -515,7 +519,15 @@ export function AdminMembershipPage() {
           )}
         </div>
       </section>
+        </div>
+      </details>
 
+      <details className="membership-admin-item">
+        <summary className="membership-admin-item-summary">
+          <span><strong>3プランの料金・表示設定</strong><small>料金・説明・無料/有料プランの記事保存数</small></span>
+          <span className="membership-admin-item-state" aria-hidden="true">開く ▼</span>
+        </summary>
+        <div className="membership-admin-item-body">
       <section className="admin-panel membership-admin-section">
         <div className="admin-panel-heading">
           <div>
@@ -669,7 +681,15 @@ export function AdminMembershipPage() {
           ))}
         </div>
       </section>
+        </div>
+      </details>
 
+      <details className="membership-admin-item">
+        <summary className="membership-admin-item-summary">
+          <span><strong>プランごとの利用可能機能</strong><small>3プランへ特典機能を割り振り</small></span>
+          <span className="membership-admin-item-state" aria-hidden="true">開く ▼</span>
+        </summary>
+        <div className="membership-admin-item-body">
       <section className="admin-panel membership-admin-section">
         <div className="admin-panel-heading">
           <div>
@@ -713,7 +733,15 @@ export function AdminMembershipPage() {
           ))}
         </div>
       </section>
+        </div>
+      </details>
 
+      <details className="membership-admin-item">
+        <summary className="membership-admin-item-summary">
+          <span><strong>ユーザーへメンバー特典を付与</strong><small>ユーザー検索・プラン付与・期限設定・取消</small></span>
+          <span className="membership-admin-item-state" aria-hidden="true">開く ▼</span>
+        </summary>
+        <div className="membership-admin-item-body">
       <section className="admin-panel membership-admin-section">
         <div className="admin-panel-heading">
           <div>
@@ -806,10 +834,28 @@ export function AdminMembershipPage() {
           </div>
         )}
       </section>
+        </div>
+      </details>
 
-      {operationsReady && <MembershipAuditSection auditActions={auditActions} />}
+      {operationsReady && (
+        <details className="membership-admin-item">
+          <summary className="membership-admin-item-summary">
+            <span><strong>メンバー特典の変更履歴</strong><small>付与・更新・取消の監査ログ</small></span>
+            <span className="membership-admin-item-state" aria-hidden="true">開く ▼</span>
+          </summary>
+          <div className="membership-admin-item-body">
+            <MembershipAuditSection auditActions={auditActions} />
+          </div>
+        </details>
+      )}
 
-      <MembershipRecommendationsSection />
+      <details className="membership-admin-item">
+        <summary className="membership-admin-item-summary">
+          <span><strong>次に追加できる運用機能</strong><small>今後の拡張候補を確認</small></span>
+          <span className="membership-admin-item-state" aria-hidden="true">開く ▼</span>
+        </summary>
+        <div className="membership-admin-item-body">
+          <MembershipRecommendationsSection />
         </div>
       </details>
 
