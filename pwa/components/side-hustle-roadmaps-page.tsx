@@ -119,6 +119,10 @@ export function SideHustleRoadmapsPage() {
   const selected = getSideHustleRoadmap(selectedSlug) ?? SIDE_HUSTLE_ROADMAPS[0];
   if (!selected) return null;
 
+  const selectedActionLabel = selected.actionHref.startsWith("/prompts")
+    ? "関連プロンプトを開く →"
+    : "この副業の専用機能を開く →";
+
   const selectedTotal = roadmapTaskCount(selected);
   const selectedDone = roadmapCompletedCount(selected, completed);
   const selectedPercent = percent(selectedDone, selectedTotal);
@@ -325,7 +329,7 @@ export function SideHustleRoadmapsPage() {
         </div>
 
         <div className="side-hustle-roadmap-actions">
-          <Link className="primary-action" href={selected.actionHref}>この副業の専用機能を開く →</Link>
+          <Link className="primary-action" href={selected.actionHref}>{selectedActionLabel}</Link>
           <button className="secondary-action" type="button" onClick={() => void copyProgress()}>進捗をコピー</button>
           <button className="secondary-action" type="button" onClick={resetSelected}>この副業だけリセット</button>
         </div>

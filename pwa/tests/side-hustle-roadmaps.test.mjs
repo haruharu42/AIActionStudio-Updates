@@ -142,3 +142,16 @@ test("roadmap page can deep-link to the matching side-hustle roadmap without los
   assert.match(page, /if \(!selectedFromUrl && parsed\.selectedSlug/);
   assert.match(page, /専用副業機能から対応するロードマップを開きました/);
 });
+
+
+test("roadmap action label distinguishes prompt-library handoff from dedicated side-hustle tools", async () => {
+  const page = await read("components/side-hustle-roadmaps-page.tsx");
+  const catalog = await read("features/side-hustle-roadmaps/catalog.ts");
+  const prompts = await read("lib/action-prompt-catalog.ts");
+
+  assert.match(page, /selected\.actionHref\.startsWith\("\/prompts"\)/);
+  assert.match(page, /関連プロンプトを開く/);
+  assert.match(page, /この副業の専用機能を開く/);
+  assert.match(catalog, /"slug": "adult-affiliate"[\s\S]*?"actionHref": "\/prompts\?category=%E3%82%A2%E3%83%80%E3%82%A2%E3%83%95%E3%82%A3"/);
+  assert.match(prompts, /"category": "アダアフィ"/);
+});
