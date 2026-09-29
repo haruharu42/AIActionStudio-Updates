@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const phase17Meta =
-  /<meta(?=[^>]*\bname=["']aas-phase["'])(?=[^>]*\bcontent=["']17["'])[^>]*>/i;
+const phase56Meta =
+  /<meta(?=[^>]*\bname=["']aas-phase["'])(?=[^>]*\bcontent=["']56["'])[^>]*>/i;
 const previewStageMeta =
-  /<meta(?=[^>]*\bname=["']aas-release-stage["'])(?=[^>]*\bcontent=["']production-preview["'])[^>]*>/i;
+  /<meta(?=[^>]*\bname=["']aas-release-stage["'])(?=[^>]*\bcontent=["']preview["'])[^>]*>/i;
 
-test("renders current Phase 17 production-preview metadata", async () => {
+test("renders current Phase 56 preview metadata", async () => {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
@@ -32,7 +32,7 @@ test("renders current Phase 17 production-preview metadata", async () => {
     /^text\/html\b/i,
   );
   const html = await response.text();
-  assert.match(html, phase17Meta);
+  assert.match(html, phase56Meta);
   assert.match(html, previewStageMeta);
   assert.doesNotMatch(html, /codex-preview/i);
   assert.doesNotMatch(html, /phase8-local/i);

@@ -163,8 +163,8 @@ test("tools hub exposes grouped supporting routes while article creation keeps i
   assert.match(layout, /phase12-17\.css/);
   assert.match(layout, /phase18-beginner\.css/);
   assert.match(layout, /phase19-dashboard\.css/);
-  assert.match(layout, /"aas-phase": "17"/);
-  assert.match(layout, /"aas-release-stage": "production-preview"/);
+  assert.match(layout, /"aas-phase": "56"/);
+  assert.match(layout, /"aas-release-stage": process\.env\.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE \?\? "development"/);
   assert.doesNotMatch(layout, /phase8-local/);
   assert.match(css, /\.tool-grid/);
   assert.match(css, /\.analytics-grid/);

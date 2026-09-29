@@ -18,8 +18,8 @@ test("pins patched framework versions, current release metadata, and PWA cache g
   assert.equal(packageJson.devDependencies.vite, "8.2.2");
   assert.equal(packageJson.devDependencies.wrangler, "4.129.0");
   assert.equal(packageJson.devDependencies["eslint-config-next"], "16.3.4");
-  assert.match(layout, /"aas-phase": "17"/);
-  assert.match(layout, /"aas-release-stage": "production-preview"/);
+  assert.match(layout, /"aas-phase": "56"/);
+  assert.match(layout, /"aas-release-stage": process\.env\.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE \?\? "development"/);
   assert.doesNotMatch(layout, /phase8-local/);
   assert.match(worker, /aas-pwa-phase17-prod-v2/);
   assert.doesNotMatch(worker, /aas-pwa-phase17-prod-v1/);

@@ -296,8 +296,8 @@ test("root uses the approved beginner dashboard across mobile and desktop", asyn
   assert.match(layout, /phase19-dashboard\.css/);
   assert.match(layout, /phase20-device-e2e\.css/);
   assert.match(layout, /openai-links\.css/);
-  assert.match(layout, /"aas-phase": "17"/);
-  assert.match(layout, /"aas-release-stage": "production-preview"/);
+  assert.match(layout, /"aas-phase": "56"/);
+  assert.match(layout, /"aas-release-stage": process\.env\.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE \?\? "development"/);
   assert.doesNotMatch(layout, /phase8-local/);
   assert.match(css, /\.beginner-shell/);
   assert.match(css, /\.beginner-bottom-nav/);
