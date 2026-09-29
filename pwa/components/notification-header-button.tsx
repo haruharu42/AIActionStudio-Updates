@@ -38,7 +38,6 @@ export function NotificationHeaderButton() {
 
   useEffect(() => {
     if (state.kind !== "ready" || !client || notificationAccess.loading || !notificationAccess.allowed) {
-      setUnreadCount(0);
       return;
     }
 
