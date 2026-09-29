@@ -218,6 +218,9 @@ test("eight-step promotion workflow stays responsive and keeps screenshot settin
   assert.match(builderSource, /最終画像はSTEP 8でAAS本体へ保存/);
   assert.match(builderSource, /AdminPromotionContentWorkspace/);
   assert.match(css, /\.admin-promo-wizard-steps/);
+  assert.match(css, /grid-template-columns: repeat\(8, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.admin-promo-wizard-steps[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.admin-promo-wizard-steps > li > button[\s\S]*?min-height: 72px/);
   assert.match(css, /\.admin-promo-wizard-card/);
   assert.match(css, /\.admin-promo-cta-safety/);
   assert.match(css, /@media \(max-width: 760px\)/);
