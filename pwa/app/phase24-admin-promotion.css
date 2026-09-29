@@ -1913,3 +1913,52 @@
     font-size: 8px;
   }
 }
+
+
+/* Promotion wizard: use the same light surface family as the surrounding page. */
+.admin-promo-wizard-steps > li {
+  border-color: rgb(148 163 184 / 28%);
+  background: rgb(255 255 255 / 82%);
+  color: #64748b;
+  box-shadow: none;
+}
+
+.admin-promo-wizard-steps > li > button {
+  background: transparent;
+  color: inherit;
+}
+
+.admin-promo-wizard-steps > li > button span {
+  background: rgb(241 245 249 / 92%);
+  color: #475569;
+  border: 1px solid rgb(148 163 184 / 24%);
+}
+
+.admin-promo-wizard-steps > li.active,
+.admin-promo-wizard-steps > li.done {
+  background: rgb(255 255 255 / 88%);
+}
+
+.admin-promo-wizard-steps > li.active {
+  border-color: rgb(96 165 250 / 58%);
+  box-shadow: inset 0 0 0 1px rgb(96 165 250 / 18%);
+  color: #1e3a5f;
+}
+
+.admin-promo-wizard-steps > li.done {
+  border-color: rgb(148 163 184 / 34%);
+  color: #475569;
+}
+
+.admin-promo-wizard-steps > li.active > button span,
+.admin-promo-wizard-steps > li.done > button span {
+  background: rgb(239 246 255 / 96%);
+  color: #2563eb;
+  border-color: rgb(96 165 250 / 34%);
+}
+
+.admin-promo-wizard-steps > li.done > button:hover,
+.admin-promo-wizard-steps > li.done > button:focus-visible {
+  background: rgb(248 250 252 / 92%);
+  outline-color: rgb(96 165 250 / 42%);
+}
