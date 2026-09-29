@@ -77,7 +77,7 @@ test("promotion screenshot vision supports secure API analysis and direct ChatGP
   assert.doesNotMatch(workspace, /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS|service[_-]?role/i);
 
   assert.match(contentMigration, /'promotion-assets'/);
-  assert.match(contentMigration, /public, false/);
+  assert.match(contentMigration, /public = false/);
   assert.match(contentMigration, /create table if not exists public\.promotion_content_assets/);
   assert.match(contentMigration, /status='pending_upload'/);
   assert.match(contentMigration, /status='ready'/);
