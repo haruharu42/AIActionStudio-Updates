@@ -357,6 +357,24 @@ export function Phase11CreatePage() {
     setStep((current) => Math.max(0, current - 1));
   };
 
+  const startFreshArticle = () => {
+    if (gate.kind !== "ready") return;
+    if (!window.confirm("復元した作業内容を破棄して、新しい記事を最初から作成しますか？")) return;
+
+    clearArticleWizardProgress(gate.ownerId);
+    accountPresetAppliedRef.current = false;
+    setStep(0);
+    setDraft(initialDraftFromLocation());
+    setMagazinePlan({ ...DEFAULT_MAGAZINE_PLAN, articleTitles: [] });
+    setTagsText("");
+    setTitleCandidatesText("");
+    setArticlePromptAuthorized("");
+    setCreatedId("");
+    setActivePresetId(null);
+    setWizardRestored(false);
+    setMessage("復元した下書きを破棄し、新しい記事作成を開始しました。");
+  };
+
   const jumpBackToStep = (targetStep: number) => {
     if (targetStep < 0 || targetStep >= step || busy || articleBusy) return;
     setMessage("");
@@ -435,6 +453,15 @@ export function Phase11CreatePage() {
           );
         })}
       </ol>
+
+      {wizardRestored === true && !createdId && (
+        <div className="route-notice article-wizard-restored" role="status">
+          <span>前回の作業内容を復元しています。不要な場合は、新しい記事として最初から作り直せます。</span>
+          <button className="secondary-action" type="button" onClick={startFreshArticle}>
+            新しい記事を最初から作る
+          </button>
+        </div>
+      )}
 
       <section className="creator-card">
         {draft.publicationTarget !== "blog" && (

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
@@ -300,4 +301,30 @@ test("final save validation rechecks marker integrity even if wizard navigation 
     })),
     /無料記事には有料エリア開始位置を入れない/,
   );
+});
+
+
+test("restored article work can be explicitly discarded without weakening normal autosave", async () => {
+  const source = await readFile(
+    new URL("../components/phase11-create-page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /const startFreshArticle = \(\)/);
+  assert.match(source, /復元した作業内容を破棄して、新しい記事を最初から作成しますか/);
+  assert.match(source, /clearArticleWizardProgress\(gate\.ownerId\)/);
+  assert.match(source, /accountPresetAppliedRef\.current = false/);
+  assert.match(source, /setStep\(0\)/);
+  assert.match(source, /setDraft\(initialDraftFromLocation\(\)\)/);
+  assert.match(source, /setMagazinePlan\(\{ \.\.\.DEFAULT_MAGAZINE_PLAN, articleTitles: \[\] \}\)/);
+  assert.match(source, /setTagsText\(""\)/);
+  assert.match(source, /setTitleCandidatesText\(""\)/);
+  assert.match(source, /setArticlePromptAuthorized\(""\)/);
+  assert.match(source, /setActivePresetId\(null\)/);
+  assert.match(source, /setWizardRestored\(false\)/);
+  assert.match(source, /wizardRestored === true && !createdId/);
+  assert.match(source, /新しい記事を最初から作る/);
+  assert.match(source, /pagehide/);
+  assert.match(source, /beforeunload/);
+  assert.match(source, /visibilitychange/);
 });
