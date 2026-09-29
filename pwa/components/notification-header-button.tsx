@@ -18,7 +18,7 @@ export function NotificationHeaderButton() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const refresh = useCallback(async () => {
-    if (state.kind !== "ready" || !client) {
+    if (state.kind !== "ready" || !client || notificationAccess.loading || !notificationAccess.allowed) {
       setUnreadCount(0);
       return;
     }
@@ -34,9 +34,14 @@ export function NotificationHeaderButton() {
     } catch {
       setUnreadCount(0);
     }
-  }, [client, state]);
+  }, [client, notificationAccess.allowed, notificationAccess.loading, state]);
 
   useEffect(() => {
+    if (state.kind !== "ready" || !client || notificationAccess.loading || !notificationAccess.allowed) {
+      setUnreadCount(0);
+      return;
+    }
+
     let active = true;
     const safeRefresh = () => { if (active) void refresh(); };
     queueMicrotask(safeRefresh);
@@ -49,7 +54,7 @@ export function NotificationHeaderButton() {
       window.removeEventListener(NOTIFICATION_REFRESH_EVENT, safeRefresh);
       window.removeEventListener("focus", safeRefresh);
     };
-  }, [refresh]);
+  }, [client, notificationAccess.allowed, notificationAccess.loading, refresh, state.kind]);
 
   if (state.kind !== "ready" || notificationAccess.loading || !notificationAccess.allowed) return null;
 

@@ -200,6 +200,9 @@ test("notification feature itself follows admin to tester to public rollout on U
   assert.match(client, /get_my_notification_preferences_v2/);
   assert.match(client, /register_my_push_subscription_v2/);
   assert.match(bell, /useAppFeatureAccess\("notifications"\)/);
+  const accessGuardIndex = bell.indexOf('notificationAccess.loading || !notificationAccess.allowed');
+  const rpcIndex = bell.indexOf('await getMyNotifications');
+  assert.ok(accessGuardIndex >= 0 && rpcIndex > accessGuardIndex, "notification access must be checked before inbox RPC");
   assert.match(bell, /!notificationAccess\.allowed/);
   assert.match(settings, /useAppFeatureAccess\("notifications"\)/);
   assert.match(settings, /notificationAccess\.allowed/);
