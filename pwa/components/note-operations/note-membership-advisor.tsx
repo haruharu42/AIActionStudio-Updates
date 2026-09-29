@@ -65,11 +65,13 @@ export function NoteMembershipAdvisor({
   profile,
   selectedAi,
   onMessage,
+  onResultPresenceChange,
 }: {
   userId: string;
   profile: NoteOperationProfile;
   selectedAi: AiProvider;
   onMessage(message: string): void;
+  onResultPresenceChange?(hasResult: boolean): void;
 }) {
   const [form, setForm] = useState<NoteMembershipAdvisorInput>({ ...DEFAULT_NOTE_MEMBERSHIP_ADVISOR_INPUT });
   const [resultText, setResultText] = useState("");
@@ -82,9 +84,10 @@ export function NoteMembershipAdvisor({
       if (!active) return;
       setForm(restored);
       setResultText(restoredResult);
+      onResultPresenceChange?.(Boolean(restoredResult.trim()));
     });
     return () => { active = false; };
-  }, [userId]);
+  }, [onResultPresenceChange, userId]);
 
   const prompt = useMemo(
     () => buildNoteMembershipAdvisorPrompt(profile, form),
@@ -124,6 +127,7 @@ export function NoteMembershipAdvisor({
     const next = value.slice(0, 120000);
     setResultText(next);
     writeNoteMembershipAdvisorResult(userId, next);
+    onResultPresenceChange?.(Boolean(next.trim()));
   };
 
   const pasteResult = async () => {

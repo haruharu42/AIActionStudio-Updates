@@ -217,6 +217,7 @@ export function NoteMembershipCockpit({
   const [improve, setImprove] = useState<MembershipImproveInput>({ ...DEFAULT_MEMBERSHIP_IMPROVE_INPUT });
   const [articleTheme, setArticleTheme] = useState("");
   const [workspaceResults, setWorkspaceResults] = useState({ ...DEFAULT_MEMBERSHIP_WORKSPACE_RESULTS });
+  const [consultResultSaved, setConsultResultSaved] = useState(false);
   const [metricsEntries, setMetricsEntries] = useState<NoteMembershipMetricsEntry[]>([]);
   const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
   const workspaceOwnerRef = useRef("");
@@ -313,9 +314,13 @@ export function NoteMembershipCockpit({
   );
 
   const progress = Math.round((checked.length / NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.length) * 100);
-  const savedResultCount = Object.values(workspaceResults).filter((value) => value.trim().length > 0).length;
+  const savedResultCount = Object.values(workspaceResults).filter((value) => value.trim().length > 0).length
+    + (consultResultSaved ? 1 : 0);
 
   const tabStatus = (key: NoteMembershipCockpitTab): string => {
+    if (key === "consult") {
+      return consultResultSaved ? "保存済み" : "";
+    }
     if (key === "launch") {
       return checked.length ? checked.length + "/" + NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.length : "";
     }
@@ -364,6 +369,7 @@ export function NoteMembershipCockpit({
           profile={profile}
           selectedAi={selectedAi}
           onMessage={onMessage}
+          onResultPresenceChange={setConsultResultSaved}
         />
       )}
 

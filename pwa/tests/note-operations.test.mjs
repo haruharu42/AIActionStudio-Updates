@@ -991,3 +991,19 @@ test("membership cockpit surfaces saved AI results and launch progress directly 
   assert.match(styles, /\.note-membership-cockpit-tabs em/);
   assert.match(styles, /\.note-membership-cockpit-tabs button\.active em/);
 });
+
+
+test("membership consultation result participates in the cockpit saved-result status", async () => {
+  const [advisor, cockpit] = await Promise.all([
+    readPwa("components/note-operations/note-membership-advisor.tsx"),
+    readPwa("components/note-operations/note-membership-cockpit.tsx"),
+  ]);
+
+  assert.match(advisor, /onResultPresenceChange\?\(hasResult: boolean\): void/);
+  assert.match(advisor, /onResultPresenceChange\?\.\(Boolean\(restoredResult\.trim\(\)\)\)/);
+  assert.match(advisor, /onResultPresenceChange\?\.\(Boolean\(next\.trim\(\)\)\)/);
+  assert.match(cockpit, /const \[consultResultSaved, setConsultResultSaved\] = useState\(false\)/);
+  assert.match(cockpit, /\+ \(consultResultSaved \? 1 : 0\)/);
+  assert.match(cockpit, /key === "consult"[\s\S]*?consultResultSaved \? "保存済み" : ""/);
+  assert.match(cockpit, /onResultPresenceChange=\{setConsultResultSaved\}/);
+});
