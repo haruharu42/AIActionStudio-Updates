@@ -974,3 +974,20 @@ test("membership advisor can round-trip and persist AI consultation results per 
   assert.match(advisor, /保存しているnoteメンバーシップ相談のAI回答をクリアしますか/);
   assert.match(advisor, /updateResult\(event\.target\.value\)/);
 });
+
+
+test("membership cockpit surfaces saved AI results and launch progress directly on its tabs", async () => {
+  const [cockpit, styles] = await Promise.all([
+    readPwa("components/note-operations/note-membership-cockpit.tsx"),
+    readPwa("app/phase38-note-operations.css"),
+  ]);
+
+  assert.match(cockpit, /const savedResultCount = Object\.values\(workspaceResults\)/);
+  assert.match(cockpit, /const tabStatus = \(key: NoteMembershipCockpitTab\): string/);
+  assert.match(cockpit, /workspaceResults\[key\]\.trim\(\) \? "保存済み" : ""/);
+  assert.match(cockpit, /checked\.length \? checked\.length \+ "\/" \+ NOTE_MEMBERSHIP_LAUNCH_CHECKLIST\.length/);
+  assert.match(cockpit, /AI回答 \{savedResultCount\}件保存/);
+  assert.match(cockpit, /tabStatus\(item\.key\) && <em>/);
+  assert.match(styles, /\.note-membership-cockpit-tabs em/);
+  assert.match(styles, /\.note-membership-cockpit-tabs button\.active em/);
+});

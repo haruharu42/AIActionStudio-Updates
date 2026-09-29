@@ -1539,6 +1539,7 @@
 }
 
 .note-membership-cockpit-tabs button {
+  position: relative;
   min-width: 112px;
   min-height: 66px;
   display: grid;
@@ -1591,6 +1592,25 @@
   grid-area: short;
   color: #8294a8;
   font-size: 7px;
+}
+
+.note-membership-cockpit-tabs em {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  border-radius: 999px;
+  background: #e7f7ef;
+  color: #2f7d59;
+  padding: 2px 5px;
+  font-size: 6.5px;
+  font-style: normal;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.note-membership-cockpit-tabs button.active em {
+  background: #d9edff;
+  color: #1d5e9c;
 }
 
 .note-membership-workspace {

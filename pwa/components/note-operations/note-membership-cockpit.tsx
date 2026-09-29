@@ -313,6 +313,17 @@ export function NoteMembershipCockpit({
   );
 
   const progress = Math.round((checked.length / NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.length) * 100);
+  const savedResultCount = Object.values(workspaceResults).filter((value) => value.trim().length > 0).length;
+
+  const tabStatus = (key: NoteMembershipCockpitTab): string => {
+    if (key === "launch") {
+      return checked.length ? checked.length + "/" + NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.length : "";
+    }
+    if (key === "pricing" || key === "page" || key === "promotion" || key === "calendar" || key === "improve") {
+      return workspaceResults[key].trim() ? "保存済み" : "";
+    }
+    return "";
+  };
 
   const updateWorkspaceResult = (key: MembershipWorkspaceResultKey, value: string) => {
     setWorkspaceResults((current) => ({ ...current, [key]: value.slice(0, 120000) }));
@@ -326,7 +337,7 @@ export function NoteMembershipCockpit({
           <h2 id="note-membership-cockpit-title">noteメンバーシップ運営コックピット</h2>
           <p>設計して終わりではなく、開始準備・募集・月間運営・改善まで1つの流れで進めます。</p>
         </div>
-        <b>{progress}% 準備</b>
+        <b>{progress}% 準備 · AI回答 {savedResultCount}件保存</b>
       </div>
 
       <nav className="note-membership-cockpit-tabs" aria-label="メンバーシップ運営メニュー">
@@ -341,6 +352,7 @@ export function NoteMembershipCockpit({
             <span>{index + 1}</span>
             <strong>{item.label}</strong>
             <small>{item.short}</small>
+            {tabStatus(item.key) && <em>{tabStatus(item.key)}</em>}
           </button>
         ))}
       </nav>
