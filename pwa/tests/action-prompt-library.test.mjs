@@ -334,3 +334,55 @@ test("prompt library includes adult affiliate templates with compliance guardrai
   assert.match(catalog, /規約回避/);
   assert.match(catalog, /18歳以上/);
 });
+
+test("thin prompt categories are expanded into production-ready dedicated workflows", async () => {
+  const [catalog, dedicated] = await Promise.all([
+    read("lib/action-prompt-catalog.ts"),
+    read("lib/action-prompt-template-guidance.ts"),
+  ]);
+
+  const ids = [
+    "image-thumbnail-prompt",
+    "image-character-consistency",
+    "image-article-illustration-set",
+    "crowdwork-requirements-analysis",
+    "crowdwork-delivery-message",
+    "skill-market-offer-design",
+    "skill-market-faq",
+    "digital-product-sales-page",
+    "digital-product-update-plan",
+    "client-discovery-questions",
+    "client-proposal-structure",
+    "customer-support-reply",
+  ];
+
+  for (const id of ids) {
+    assert.match(catalog, new RegExp('id: "' + id + '"'));
+    assert.match(dedicated, new RegExp('"' + id + '":'));
+  }
+
+  for (const phrase of [
+    "安全余白",
+    "一貫性チェックリスト",
+    "挿入推奨位置",
+    "応募可否を自分で判断",
+    "購入前チェックリスト",
+    "未確認で追記が必要",
+    "改訂履歴",
+    "初回ヒアリング",
+    "見積前に未確定",
+    "確認できていない責任",
+  ]) {
+    assert.match(catalog + "\n" + dedicated, new RegExp(phrase));
+  }
+
+  const categoryCount = (category) =>
+    (catalog.match(new RegExp('(?:category: |"category": )"' + category + '"', "g")) ?? []).length;
+
+  assert.ok(categoryCount("画像・デザイン") >= 4);
+  assert.ok(categoryCount("クラウドソーシング") >= 3);
+  assert.ok(categoryCount("スキル販売") >= 3);
+  assert.ok(categoryCount("デジタル商品") >= 3);
+  assert.ok(categoryCount("顧客対応・営業") >= 4);
+});
+
