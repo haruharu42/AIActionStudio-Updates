@@ -60,6 +60,9 @@ import {
   noteOperationsGateFor,
   notePerformanceLoopAvailable,
   noteScheduleResponseStorageKey,
+  readNoteOperationsTab,
+  writeNoteOperationsTab,
+  type NoteOperationsTab,
 } from "@/components/note-operations/note-operations-page-helpers";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
@@ -70,13 +73,11 @@ import {
   type UserWritingProfile,
 } from "@/lib/user-personalization";
 
-type Tab = "start" | "profile" | "plan" | "calendar" | "membership";
-
 export function NoteOperationsPage() {
   const { state: accessState, client } = useSharedAccessState();
   const { preference: workspacePreference } = useWorkspacePreset();
   const [initError, setInitError] = useState("");
-  const [tab, setTab] = useState<Tab>("start");
+  const [tab, setTab] = useState<NoteOperationsTab>("start");
   const [profile, setProfile] = useState<NoteOperationProfile | null>(null);
   const [schedule, setSchedule] = useState<NoteScheduleItem[]>([]);
   const [message, setMessage] = useState("");
@@ -119,6 +120,7 @@ export function NoteOperationsPage() {
         if (active) {
           setProfile(nextProfile);
           setSchedule(nextSchedule);
+          setTab(readNoteOperationsTab(userId));
           setWritingProfile(nextWritingProfile);
           setSelectedAi(nextWritingProfile.preferredAi);
           setScheduleResponse(savedScheduleResponse);
@@ -184,6 +186,11 @@ export function NoteOperationsPage() {
     return () => { active = false; };
   }, [gate, performanceLoopEnabled, previousMonth, referenceMonth]);
 
+  const changeTab = (next: NoteOperationsTab) => {
+    setTab(next);
+    if (gate.kind === "ready") writeNoteOperationsTab(gate.userId, next);
+  };
+
   const articleSchedule = useMemo(
     () => schedule.filter((item) => isNoteArticleScheduleItem(item)),
     [schedule],
@@ -241,13 +248,15 @@ export function NoteOperationsPage() {
       }
       const prompt = buildNoteAccountResearchPrompt(profile, selectedAi);
       setAccountPrompt(prompt);
+      let copied = false;
       try {
         await navigator.clipboard.writeText(prompt);
+        copied = true;
         setMessage(`${AI_PROVIDER_LABELS[selectedAi]}用の最新調査プロンプトをコピーしました。AI側で貼り付けて実行してください。`);
       } catch {
-        setMessage("クリップボードへコピーできなかったため、下のプロンプト欄からコピーしてください。");
+        setMessage("クリップボードへコピーできなかったため、下のプロンプト欄からコピーしてください。AIは自動で開いていません。");
       }
-      launchAiApp(selectedAi);
+      if (copied) launchAiApp(selectedAi);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "AI用アカウント構成プロンプトを作成できませんでした。");
     } finally {
@@ -289,13 +298,15 @@ export function NoteOperationsPage() {
       );
       setSchedulePrompt(prompt);
       setSchedulePreview(null);
+      let copied = false;
       try {
         await navigator.clipboard.writeText(prompt);
+        copied = true;
         setMessage(`${AI_PROVIDER_LABELS[selectedAi]}用の月間運用リサーチプロンプトをコピーしました。AIが回答したら、回答全文をコピーしてAASへ戻ってください。`);
       } catch {
-        setMessage("クリップボードへコピーできなかったため、下のプロンプト欄からコピーしてください。");
+        setMessage("クリップボードへコピーできなかったため、下のプロンプト欄からコピーしてください。AIは自動で開いていません。");
       }
-      launchAiApp(selectedAi);
+      if (copied) launchAiApp(selectedAi);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "月間運用プロンプトを作成できませんでした。");
     } finally {
@@ -335,7 +346,7 @@ export function NoteOperationsPage() {
       setMessage(historySaved
         ? `${targetMonth.replace("-", "年")}月のAI運用スケジュールをAASへ反映しました。カレンダーで確認できます。`
         : `${targetMonth.replace("-", "年")}月の予定は反映できましたが、AI調査メモだけ保存できませんでした。予定自体は利用できます。`);
-      setTab("calendar");
+      changeTab("calendar");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "AI運用スケジュールを反映できませんでした。");
     } finally {
@@ -497,11 +508,11 @@ export function NoteOperationsPage() {
         </div>
 
         <nav className="note-ops-tabs" aria-label="note運営メニュー">
-          <button className={tab === "start" ? "active" : ""} onClick={() => setTab("start")}>1. はじめ方</button>
-          <button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}>2. プロフィール</button>
-          <button className={tab === "plan" ? "active" : ""} onClick={() => setTab("plan")}>3. 運用プラン</button>
-          <button className={tab === "calendar" ? "active" : ""} onClick={() => setTab("calendar")}>4. カレンダー</button>
-          <button className={tab === "membership" ? "active" : ""} onClick={() => setTab("membership")}>5. メンバーシップ相談</button>
+          <button className={tab === "start" ? "active" : ""} onClick={() => changeTab("start")}>1. はじめ方</button>
+          <button className={tab === "profile" ? "active" : ""} onClick={() => changeTab("profile")}>2. プロフィール</button>
+          <button className={tab === "plan" ? "active" : ""} onClick={() => changeTab("plan")}>3. 運用プラン</button>
+          <button className={tab === "calendar" ? "active" : ""} onClick={() => changeTab("calendar")}>4. カレンダー</button>
+          <button className={tab === "membership" ? "active" : ""} onClick={() => changeTab("membership")}>5. メンバーシップ相談</button>
         </nav>
 
         {message && <div className="route-notice note-ops-message">{message}</div>}
@@ -800,7 +811,7 @@ export function NoteOperationsPage() {
             profile={profile}
             selectedAi={selectedAi}
             onMessage={setMessage}
-            onOpenCalendar={() => setTab("calendar")}
+            onOpenCalendar={() => changeTab("calendar")}
           />
         )}
 

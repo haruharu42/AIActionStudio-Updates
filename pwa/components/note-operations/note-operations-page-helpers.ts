@@ -10,6 +10,10 @@ export type NoteOperationsGate =
 
 const NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0.1.1";
 const NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX = "aas.note.schedule.response.v1";
+const NOTE_OPERATIONS_TAB_STORAGE_PREFIX = "aas.note.operations.tab.v1";
+
+export type NoteOperationsTab = "start" | "profile" | "plan" | "calendar" | "membership";
+const NOTE_OPERATIONS_TABS: readonly NoteOperationsTab[] = ["start", "profile", "plan", "calendar", "membership"];
 
 export function noteOperationsGateFor(
   accessState: SharedAccessState,
@@ -39,6 +43,32 @@ export function noteOperationsGateFor(
 
 export function noteScheduleResponseStorageKey(userId: string): string {
   return `${NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX}:${userId}`;
+}
+
+export function noteOperationsTabStorageKey(userId: string): string {
+  return `${NOTE_OPERATIONS_TAB_STORAGE_PREFIX}:${userId}`;
+}
+
+export function readNoteOperationsTab(userId: string): NoteOperationsTab {
+  if (typeof window === "undefined" || !userId) return "start";
+  try {
+    const value = window.localStorage.getItem(noteOperationsTabStorageKey(userId));
+    return NOTE_OPERATIONS_TABS.includes(value as NoteOperationsTab)
+      ? value as NoteOperationsTab
+      : "start";
+  } catch {
+    return "start";
+  }
+}
+
+export function writeNoteOperationsTab(userId: string, tab: NoteOperationsTab): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  try {
+    window.localStorage.setItem(noteOperationsTabStorageKey(userId), tab);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function notePerformanceLoopAvailable(): boolean {

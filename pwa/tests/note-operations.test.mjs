@@ -896,3 +896,23 @@ test("membership cockpit never writes a previous account workspace into a newly 
   assert.match(cockpit, /workspaceOwnerRef\.current !== userId/);
   assert.match(cockpit, /<NoteMembershipAdvisor[\s\S]*?key=\{userId\}/);
 });
+
+
+test("note operations restores the last account-scoped tab and only launches AI after clipboard success", async () => {
+  const [page, helpers] = await Promise.all([
+    read("components/note-operations-page.tsx"),
+    read("components/note-operations/note-operations-page-helpers.ts"),
+  ]);
+
+  assert.match(helpers, /type NoteOperationsTab = "start" \| "profile" \| "plan" \| "calendar" \| "membership"/);
+  assert.match(helpers, /aas\.note\.operations\.tab\.v1/);
+  assert.match(helpers, /readNoteOperationsTab/);
+  assert.match(helpers, /writeNoteOperationsTab/);
+  assert.match(page, /setTab\(readNoteOperationsTab\(userId\)\)/);
+  assert.match(page, /const changeTab = \(next: NoteOperationsTab\)/);
+  assert.match(page, /writeNoteOperationsTab\(gate\.userId, next\)/);
+  assert.match(page, /onClick=\{\(\) => changeTab\("membership"\)\}/);
+  assert.match(page, /onOpenCalendar=\{\(\) => changeTab\("calendar"\)\}/);
+  assert.match(page, /let copied = false;[\s\S]*?if \(copied\) launchAiApp\(selectedAi\)/);
+  assert.match(page, /AIは自動で開いていません/);
+});
