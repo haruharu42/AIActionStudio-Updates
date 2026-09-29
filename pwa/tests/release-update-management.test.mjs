@@ -337,7 +337,9 @@ test("admin public deployment pipeline keeps Preview and public release coupled 
   assert.match(edgeFunction, /service_finalize_app_release_deployment/);
   assert.doesNotMatch(edgeFunction, /AAS_GITHUB_RELEASE_TOKEN\s*=\s*["']/);
 
-  assert.match(client, /AAS_PREVIEW_RELEASE_BRANCH = "preview\/current"/);
+  assert.match(client, /NEXT_PUBLIC_AAS_SOURCE_BRANCH/);
+  assert.match(client, /AAS_BUILD_SOURCE_BRANCH === "preview\\/current"/);
+  assert.match(client, /\\? "preview\\/current" : "main"/);
   assert.match(client, /requestPublicPwaDeployment/);
   assert.match(client, /loadPublicPwaDeployments/);
   assert.match(page, /第3段階：一般公開PWAへ反映/);
@@ -348,10 +350,14 @@ test("admin public deployment pipeline keeps Preview and public release coupled 
   assert.match(page, /Preview PWAの管理者画面から実行/);
 
   assert.match(workflow, /permissions:\s*\n\s*contents: write/);
-  assert.match(workflow, /Only preview\/current may be promoted/);
+  assert.match(workflow, /Only main or preview\\/current may be promoted/);
+  assert.match(workflow, /main\\|preview\\/current/);
   assert.match(workflow, /git merge-base --is-ancestor/);
   assert.match(workflow, /git push origin "\$SOURCE_SHA:refs\/heads\/main"/);
   assert.match(workflow, /Admin public release Cloudflare contract: PASS/);
   assert.match(workflow, /Deploy general-public PWA Worker/);
   assert.match(previewWorkflow, /- preview\/current/);
+  assert.match(previewWorkflow, /NEXT_PUBLIC_AAS_SOURCE_BRANCH: \\$\\{\\{ github\\.ref_name \\}\\}/);
+  assert.match(edgeFunction, /ALLOWED_PREVIEW_BRANCHES/);
+  assert.match(edgeFunction, /\\["main", "preview\\/current"\\]/);
 });
