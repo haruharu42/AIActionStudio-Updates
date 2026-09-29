@@ -160,7 +160,7 @@ export function AdminPromotionContentWorkspace({ channel }: { channel: AdminProm
   }, [assets, body, previewUrls]);
 
   return (
-    <section className="admin-promo-panel admin-promo-content-workspace" data-aas-collapse="off">
+    <section className="admin-promo-panel admin-promo-content-workspace">
       <div className="admin-promo-section-title">
         <div><p className="eyebrow">FINAL CONTENT</p><h2>完成原稿・スクショ保存</h2></div>
         <strong>AAS本体保存</strong>
