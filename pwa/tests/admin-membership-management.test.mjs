@@ -194,3 +194,37 @@ test("membership management foreign keys have covering indexes", () => {
   assert.doesNotMatch(migration, /drop table|drop column|truncate|delete from/i);
 });
 
+
+
+test("article library save limits are configurable for free and paid membership tiers", () => {
+  const migration = readRepo("supabase/migrations/20260929103000_article_library_plan_limits_v1.sql");
+  const adminPage = readAdminMembershipSource();
+  const adminClient = read("lib/admin-membership.ts");
+  const library = read("components/article-library/article-library-list.tsx");
+  const phase7 = read("lib/phase7-articles.ts");
+
+  assert.match(migration, /free_limit integer not null default 5/);
+  assert.match(migration, /when 'CREATOR_CLUB' then 15/);
+  assert.match(migration, /when 'CREATOR_CLUB_PLUS' then 30/);
+  assert.match(migration, /when 'CREATOR_CLUB_PRO' then null/);
+  assert.match(migration, /plan_limits_enabled boolean not null default false/);
+  assert.match(migration, /private\.get_effective_article_library_limit/);
+  assert.match(migration, /article_quota_exceeded/);
+  assert.match(migration, /admin_list_creator_membership_plans_v3/);
+  assert.match(migration, /admin_update_creator_membership_plan_v2/);
+  assert.match(migration, /admin_update_article_library_quota_settings/);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+
+  assert.match(adminClient, /getArticleLibraryQuotaSettings/);
+  assert.match(adminClient, /updateArticleLibraryQuotaSettings/);
+  assert.match(adminClient, /articleLibraryLimit/);
+  assert.match(adminPage, /無料プランの記事ライブラリ保存数/);
+  assert.match(adminPage, /記事ライブラリ保存数/);
+  assert.match(adminPage, /無制限/);
+  assert.match(adminPage, /一般公開時に有効化/);
+
+  assert.match(phase7, /getMyArticleStockSummary/);
+  assert.match(phase7, /記事ライブラリの保存上限に達しています/);
+  assert.match(library, /保存数:/);
+  assert.match(library, /残り/);
+});
