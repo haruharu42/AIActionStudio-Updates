@@ -39,6 +39,7 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     "SNS",
     "動画・YouTube",
     "画像・デザイン",
+    "漫画・コミック",
     "アフィリエイト",
     "物販・販売",
     "クラウドソーシング",
@@ -119,5 +120,26 @@ test("prompt library opens a selected card as a dedicated prompt view with a top
   assert.match(styles, /\.action-prompt-switcher/);
   assert.match(styles, /\.action-prompt-library-view \.action-prompt-list/);
   assert.match(styles, /\.action-prompt-detail \.action-prompt-editor/);
+});
+
+test("prompt library includes reusable manga and four-panel comic templates", async () => {
+  const catalog = await read("lib/action-prompt-catalog.ts");
+
+  for (const id of [
+    "comic-4koma-creator",
+    "comic-name-creator",
+    "comic-one-page-creator",
+    "comic-dialogue-creator",
+  ]) {
+    assert.match(catalog, new RegExp(`id: "${id}"`));
+  }
+
+  assert.match(catalog, /category: "漫画・コミック"/);
+  assert.match(catalog, /四コマ漫画作成/);
+  assert.match(catalog, /漫画ネーム作成/);
+  assert.match(catalog, /1ページ漫画作成/);
+  assert.match(catalog, /漫画セリフ作成/);
+  assert.match(catalog, /キャラクターの見た目を全コマで統一/);
+  assert.match(catalog, /既存作品・実在作家・既存キャラクター/);
 });
 
