@@ -781,3 +781,82 @@ button:disabled { cursor: not-allowed; }
     font-size: 10px;
   }
 }
+
+
+.membership-admin-item {
+  margin-top: 14px;
+}
+
+.membership-admin-item > summary {
+  list-style: none;
+}
+
+.membership-admin-item > summary::-webkit-details-marker {
+  display: none;
+}
+
+.membership-admin-item-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  border: 1px solid rgb(148 163 184 / 34%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 78%);
+  color: #1e293b;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.membership-admin-item-summary > span:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.membership-admin-item-summary strong {
+  font-size: 14px;
+}
+
+.membership-admin-item-summary small {
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.membership-admin-item-state {
+  flex: 0 0 auto;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.membership-admin-item[open] .membership-admin-item-state {
+  font-size: 0;
+}
+
+.membership-admin-item[open] .membership-admin-item-state::after {
+  content: "閉じる ▲";
+  font-size: 10px;
+}
+
+.membership-admin-item-body {
+  padding-top: 10px;
+}
+
+.membership-admin-item-body > .membership-admin-section {
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .membership-admin-item-summary {
+    align-items: flex-start;
+    min-height: 0;
+    padding: 13px 14px;
+  }
+
+  .membership-admin-item-summary small {
+    font-size: 9px;
+  }
+}
