@@ -63,7 +63,7 @@ test("personalization settings can be viewed edited saved and reset", async () =
   assert.match(accessProvider, /runtimeProfileUserId/);
   assert.match(accessProvider, /runtimeProfileReadyUserId/);
   assert.match(accessProvider, /runtimeProfilePending/);
-  assert.match(accessProvider, /runtimeProfilePending \? null : children/);
+  assert.match(accessProvider, /runtimeProfilePending \\? <AppLoadingScreen/);
 });
 
 

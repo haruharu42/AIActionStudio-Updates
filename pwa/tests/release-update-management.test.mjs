@@ -158,7 +158,7 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(gate, /\/auth\/callback/);
   assert.match(gate, /pathname === "\/"/);
   assert.match(gate, /if \(gate\.kind === "loading"\) return <AppLoadingScreen/);
-  assert.doesNotMatch(gate, /候補版の利用権を確認しています/);
+  assert.match(gate, /候補版の利用権を確認しています/);
   assert.match(gate, /第1段階の管理者確認中/);
   assert.match(gate, /管理者が指定した一般ユーザーテスター/);
   assert.match(gate, /if \(!session\) \{[\s\S]*?setGate\(\{ kind: "signed_out" \}\)/);
