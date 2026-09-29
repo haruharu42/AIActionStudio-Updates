@@ -130,8 +130,8 @@ function DesktopNavCustomizer({
               <span aria-hidden="true">{item.icon}</span>
               <strong>{item.label}</strong>
               <div>
-                <button type="button" disabled={index === 0} onClick={() => move(key, -1)} aria-label={item.label + "を左へ"}>←</button>
-                <button type="button" disabled={index === items.length - 1} onClick={() => move(key, 1)} aria-label={item.label + "を右へ"}>→</button>
+                <button type="button" disabled={index === 0} onClick={() => move(key, -1)} aria-label={item.label + "を上へ"}>↑</button>
+                <button type="button" disabled={index === items.length - 1} onClick={() => move(key, 1)} aria-label={item.label + "を下へ"}>↓</button>
               </div>
             </div>
           );
@@ -169,10 +169,12 @@ export function AasReferenceBottomNav({
   active,
   onHome,
   onLibrary,
+  showMobile = true,
 }: {
   active: ReferenceNavKey;
   onHome?: () => void;
   onLibrary?: () => void;
+  showMobile?: boolean;
 }) {
   const [desktopItems, setDesktopItems] = useState<DesktopNavItemKey[]>([...DEFAULT_DESKTOP_NAV_ITEMS]);
   const [customizing, setCustomizing] = useState(false);
@@ -194,12 +196,14 @@ export function AasReferenceBottomNav({
 
   return (
     <>
-      <SharedMobileBottomNav
-        activeKey={active}
-        onHome={onHome}
-        onLibrary={onLibrary}
-        className="aas-reference-mobile-main-nav"
-      />
+      {showMobile ? (
+        <SharedMobileBottomNav
+          activeKey={active}
+          onHome={onHome}
+          onLibrary={onLibrary}
+          className="aas-reference-mobile-main-nav"
+        />
+      ) : null}
 
       <nav className="aas-reference-desktop-nav" aria-label="PCメインナビゲーション">
         <NavItem active={active === "home"} href="/" icon="⌂" label="ホーム" onClick={onHome} />
