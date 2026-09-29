@@ -96,7 +96,7 @@ export function AdminPromotionChannelBuilder({
 }: {
   facts: AdminProductFacts;
   featureOptions: readonly string[];
-  onCopy(prompt: string): void;
+  onCopy(prompt: string): Promise<boolean>;
   userId: string;
 }) {
   const [channel, setChannel] = useState<AdminPromotionChannel>("note");
@@ -557,7 +557,7 @@ export function AdminPromotionChannelBuilder({
                       ④ プロンプトを送信、の順で使います。
                     </p>
                     <div className="admin-promo-direct-screenshot-actions">
-                      <button type="button" className="primary-action" onClick={() => onCopy(directScreenshotPrompt)}>
+                      <button type="button" className="primary-action" onClick={() => void onCopy(directScreenshotPrompt)}>
                         ChatGPT直接添付用プロンプトをコピー
                       </button>
                       <button type="button" className="secondary-action" onClick={() => { persistWizardProgress(); launchAiApp("chatgpt"); }}>
@@ -606,6 +606,7 @@ export function AdminPromotionChannelBuilder({
             <PromptOutput
               prompt={prompt}
               onCopy={() => onCopy(prompt)}
+              onBeforeExternalLaunch={persistWizardProgress}
               note={screenshotAnalysis
                 ? meta.label + "専用プロンプトです。アップロード済みスクショの解析結果・裏付け可能な主張・公開前の注意を反映しています。"
                 : meta.label + "専用プロンプトです。スクリーンショットを追加しない場合は、必要な画面・撮影範囲・挿入または添付位置だけを具体的に指示します。"}

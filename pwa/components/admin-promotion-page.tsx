@@ -191,12 +191,14 @@ export function AdminPromotionPage() {
     }
   };
 
-  const copyPrompt = async (prompt: string) => {
+  const copyPrompt = async (prompt: string): Promise<boolean> => {
     try {
       await navigator.clipboard.writeText(prompt);
       setMessage("生成用プロンプトをコピーしました。");
+      return true;
     } catch {
       setMessage("自動コピーできませんでした。プロンプトを長押ししてコピーしてください。");
+      return false;
     }
   };
 
@@ -226,7 +228,7 @@ export function AdminPromotionPage() {
       <AdminPromotionChannelBuilder
         facts={facts}
         featureOptions={featureOptions}
-        onCopy={(prompt) => void copyPrompt(prompt)}
+        onCopy={copyPrompt}
         userId={adminUserId}
       />
 
@@ -274,7 +276,7 @@ export function AdminPromotionPage() {
           </div>
           <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
           <SocialWritingStyleSettings value={advancedSocialStyle} onChange={setAdvancedSocialStyle} />
-          <PromptOutput prompt={previewPrompt} onCopy={() => void copyPrompt(previewPrompt)} />
+          <PromptOutput prompt={previewPrompt} onCopy={() => copyPrompt(previewPrompt)} />
         </section>
       )}
 
@@ -290,7 +292,7 @@ export function AdminPromotionPage() {
             <SelectWithCustomField label="特に紹介したい内容" value={article.focus} onChange={(value) => setArticle((current) => ({ ...current, focus: value }))} options={featureOptions} customPlaceholder="紹介したい内容を入力" />
             <SelectWithCustomField label="CTA・誘導先" value={article.cta} onChange={(value) => setArticle((current) => ({ ...current, cta: value }))} options={CTA_OPTIONS} customPlaceholder="CTA・誘導先を入力" />
           </div>
-          <PromptOutput prompt={articlePrompt} onCopy={() => void copyPrompt(articlePrompt)} />
+          <PromptOutput prompt={articlePrompt} onCopy={() => copyPrompt(articlePrompt)} />
         </section>
       )}
 
@@ -309,7 +311,7 @@ export function AdminPromotionPage() {
           </div>
           <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
           <SocialWritingStyleSettings value={advancedSocialStyle} onChange={setAdvancedSocialStyle} />
-          <PromptOutput prompt={socialPrompt} onCopy={() => void copyPrompt(socialPrompt)} />
+          <PromptOutput prompt={socialPrompt} onCopy={() => copyPrompt(socialPrompt)} />
         </section>
       )}
 
@@ -328,7 +330,7 @@ export function AdminPromotionPage() {
           </div>
           <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
           <SocialWritingStyleSettings value={advancedSocialStyle} onChange={setAdvancedSocialStyle} />
-          <PromptOutput prompt={campaignPrompt} onCopy={() => void copyPrompt(campaignPrompt)} />
+          <PromptOutput prompt={campaignPrompt} onCopy={() => copyPrompt(campaignPrompt)} />
         </section>
       )}
         </div>

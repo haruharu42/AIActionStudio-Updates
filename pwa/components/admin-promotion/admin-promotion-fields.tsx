@@ -223,12 +223,21 @@ export function SocialLengthSettings({
 export function PromptOutput({
   prompt,
   onCopy,
+  onBeforeExternalLaunch,
   note = "プロンプトをコピーしてAIへ渡すと、確認済み情報だけを基準にテスト報告・公開予告・紹介記事・SNS素材を作成できます。",
 }: {
   prompt: string;
-  onCopy: () => void;
+  onCopy: () => boolean | Promise<boolean>;
+  onBeforeExternalLaunch?: () => void;
   note?: string;
 }) {
+  const copyAndOpenAi = async (key: AiAppKey) => {
+    onBeforeExternalLaunch?.();
+    const copied = await onCopy();
+    if (!copied) return;
+    launchAiApp(key);
+  };
+
   return (
     <section className="admin-promo-output" aria-label="生成用プロンプト">
       <div className="admin-promo-output-head">
@@ -238,7 +247,9 @@ export function PromptOutput({
       <pre>{prompt}</pre>
       <div className="admin-promo-ai-actions">
         {(Object.keys(AI_APP_LINKS) as AiAppKey[]).map((key) => (
-          <button key={key} type="button" onClick={() => launchAiApp(key)}>{AI_APP_LINKS[key].name}を開く</button>
+          <button key={key} type="button" onClick={() => void copyAndOpenAi(key)}>
+            コピーして{AI_APP_LINKS[key].name}を開く
+          </button>
         ))}
       </div>
       <p>{note}</p>

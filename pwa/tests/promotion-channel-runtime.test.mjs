@@ -251,3 +251,26 @@ test("eight-step promotion wizard restores user-scoped progress across reloads a
   assert.match(pageSource, /const adminUserId = state\.kind === "ready" \? state\.profile\.id : ""/);
   assert.match(pageSource, /userId=\{adminUserId\}/);
 });
+
+
+test("promotion AI handoff persists first, copies the prompt, and opens AI only after copy succeeds", async () => {
+  const [page, fields] = await Promise.all([
+    readFile(new URL("../components/admin-promotion-page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/admin-promotion/admin-promotion-fields.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /const copyPrompt = async \(prompt: string\): Promise<boolean>/);
+  assert.match(page, /return true/);
+  assert.match(page, /return false/);
+  assert.match(page, /onCopy=\{copyPrompt\}/);
+
+  assert.match(fields, /onCopy: \(\) => boolean \| Promise<boolean>/);
+  assert.match(fields, /onBeforeExternalLaunch\?: \(\) => void/);
+  assert.match(fields, /const copyAndOpenAi = async \(key: AiAppKey\)/);
+  assert.match(fields, /onBeforeExternalLaunch\?\.\(\);[\s\S]*?const copied = await onCopy\(\);[\s\S]*?if \(!copied\) return;[\s\S]*?launchAiApp\(key\)/);
+  assert.match(fields, /コピーして\{AI_APP_LINKS\[key\]\.name\}を開く/);
+
+  assert.match(builderSource, /onCopy\(prompt: string\): Promise<boolean>/);
+  assert.match(builderSource, /onBeforeExternalLaunch=\{persistWizardProgress\}/);
+  assert.match(builderSource, /onClick=\{\(\) => void onCopy\(directScreenshotPrompt\)\}/);
+});
