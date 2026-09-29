@@ -10,6 +10,7 @@ import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootst
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
 import { ReleaseAudienceGate } from "@/components/release-audience-gate";
 import { ReleaseUpdateManager } from "@/components/release-update-manager";
+import { SectionCollapseManager } from "@/components/section-collapse-manager";
 import { RouteScrollToTop } from "@/components/route-scroll-to-top";
 import "./globals.css";
 import "./phase9-11.css";
@@ -95,6 +96,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <AdminHomeTopbar />
               <div className="free-trial-global-shell"><FreeTrialBanner /></div>
               <ReleaseUpdateManager />
+              <SectionCollapseManager />
               {children}
               <PersistentMobileNav />
             </WorkspacePresetProvider>
