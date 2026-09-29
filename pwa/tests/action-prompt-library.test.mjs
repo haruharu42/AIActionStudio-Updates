@@ -224,3 +224,75 @@ test("all 13 prompt categories use full dedicated prompt profiles", async () => 
   assert.match(guidance, /購入前に必要な素材、対象外、修正範囲/);
 });
 
+
+
+test("all prompt templates receive researched category rules and template-specific guidance", async () => {
+  const [catalog, research, dedicated] = await Promise.all([
+    read("lib/action-prompt-catalog.ts"),
+    read("lib/action-prompt-research-guidance.ts"),
+    read("lib/action-prompt-template-guidance.ts"),
+  ]);
+
+  assert.match(catalog, /actionPromptResearchGuidance/);
+  assert.match(catalog, /actionPromptTemplateGuidance/);
+  assert.match(catalog, /id: template\.id/);
+
+  for (const category of [
+    "記事・コンテンツ",
+    "SNS",
+    "動画・YouTube",
+    "画像・デザイン",
+    "漫画・コミック",
+    "アフィリエイト",
+    "物販・販売",
+    "クラウドソーシング",
+    "スキル販売",
+    "デジタル商品",
+    "顧客対応・営業",
+    "リサーチ",
+    "業務効率化",
+  ]) {
+    assert.match(research, new RegExp('"' + category + '":'));
+  }
+
+  for (const id of [
+    "note-article-plan",
+    "paid-content-value",
+    "x-post-series",
+    "instagram-caption",
+    "youtube-plan",
+    "youtube-script",
+    "image-prompt",
+    "comic-4koma-creator",
+    "comic-name-creator",
+    "comic-one-page-creator",
+    "comic-dialogue-creator",
+    "affiliate-research",
+    "product-listing",
+    "crowdwork-proposal",
+    "market-research",
+    "work-efficiency",
+    "blog-seo-brief",
+    "threads-post-series",
+    "short-video-script",
+    "youtube-thumbnail-copy",
+    "affiliate-comparison-outline",
+    "flea-market-listing",
+    "skill-market-service-page",
+    "digital-product-outline",
+    "client-outreach-message",
+    "fact-check-research",
+    "repeatable-sop",
+  ]) {
+    assert.match(dedicated, new RegExp('"' + id + '":'));
+  }
+
+  assert.match(research, /people-first/);
+  assert.match(research, /Who \/ How \/ Why/);
+  assert.match(research, /冒頭30秒/);
+  assert.match(research, /Hook→Body→Close/);
+  assert.match(research, /Creation \/ Engagement \/ Reach \/ Monetization \/ Guidelines/);
+  assert.match(research, /プロジェクト形式.*コンペ形式.*タスク形式/);
+  assert.match(research, /ココナラ等ではカテゴリ・提供内容/);
+  assert.match(dedicated, /【テンプレート専用設計】/);
+});

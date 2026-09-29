@@ -1,4 +1,6 @@
 import { actionPromptCategoryGuidance } from "@/lib/action-prompt-category-guidance";
+import { actionPromptResearchGuidance } from "@/lib/action-prompt-research-guidance";
+import { actionPromptTemplateGuidance } from "@/lib/action-prompt-template-guidance";
 
 export type ActionPromptField = {
   key: string;
@@ -726,5 +728,7 @@ export function buildActionPrompt(
     resolvedPrompt,
     ACTION_PROMPT_ACCURACY_LAYER,
     actionPromptCategoryGuidance({ category: template.category, title: template.title, sideHustle: template.sideHustle }),
+    actionPromptResearchGuidance({ category: template.category, title: template.title, sideHustle: template.sideHustle }),
+    actionPromptTemplateGuidance({ id: template.id, category: template.category, title: template.title, sideHustle: template.sideHustle }),
   ].filter(Boolean).join("\n\n");
 }
