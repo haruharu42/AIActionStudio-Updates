@@ -9,6 +9,7 @@ import {
   SocialWritingStyleSettings,
 } from "@/components/admin-promotion/admin-promotion-fields";
 import { AdminPromotionScreenshotAnalyzer } from "@/components/admin-promotion/admin-promotion-screenshot-analyzer";
+import { AdminPromotionContentWorkspace } from "@/components/admin-promotion/admin-promotion-content-workspace";
 import {
   AUDIENCE_OPTIONS,
   CTA_OPTIONS,
@@ -321,6 +322,8 @@ export function AdminPromotionChannelBuilder({
           ? `${meta.label}専用プロンプトです。アップロード済みスクショの解析結果・裏付け可能な主張・公開前の注意を反映しています。`
           : `${meta.label}専用プロンプトです。スクリーンショットを追加しない場合は、必要な画面・撮影範囲・挿入または添付位置だけを具体的に指示します。`}
       />
+
+      <AdminPromotionContentWorkspace key={channel} channel={channel} />
     </section>
   );
 }
