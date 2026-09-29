@@ -14,12 +14,20 @@ import {
   type PromotionScreenshotAnalysisConfig,
   type PromotionScreenshotChannel,
 } from "@/lib/promotion-screenshot-analysis";
+import {
+  deleteAdminPromotionContentAsset,
+  downloadAdminPromotionContentAsset,
+  loadAdminPromotionContentWorkspace,
+  uploadAdminPromotionContentAsset,
+  type PromotionContentAsset,
+} from "@/lib/promotion-content-workspace";
 import { getSupabaseClient } from "@/lib/supabase";
 
 type LocalScreenshot = {
   id: string;
   file: File;
   previewUrl: string;
+  asset: PromotionContentAsset | null;
 };
 
 function revoke(items: readonly LocalScreenshot[]) {
@@ -37,6 +45,7 @@ export function AdminPromotionScreenshotAnalyzer({
   const itemsRef = useRef<LocalScreenshot[]>([]);
   const [analysis, setAnalysis] = useState<PromotionScreenshotAnalysis | null>(null);
   const [busy, setBusy] = useState(false);
+  const [storageBusy, setStorageBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [config, setConfig] = useState<PromotionScreenshotAnalysisConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
@@ -76,6 +85,46 @@ export function AdminPromotionScreenshotAnalyzer({
     void load();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadSaved = async () => {
+      setStorageBusy(true);
+      try {
+        const client = getSupabaseClient();
+        const workspace = await loadAdminPromotionContentWorkspace(client, channel);
+        const loaded: LocalScreenshot[] = [];
+        for (const asset of workspace.assets.slice(0, PROMOTION_SCREENSHOT_MAX_IMAGES)) {
+          const file = await downloadAdminPromotionContentAsset(client, asset);
+          loaded.push({
+            id: asset.id,
+            file,
+            previewUrl: URL.createObjectURL(file),
+            asset,
+          });
+        }
+        if (!active) {
+          revoke(loaded);
+          return;
+        }
+        setItems((current) => {
+          revoke(current);
+          return loaded;
+        });
+        setAnalysis(null);
+        onAnalysisChange(null);
+        if (loaded.length) {
+          setMessage(`AAS本体から保存済みスクリーンショットを${loaded.length}枚読み込みました。`);
+        }
+      } catch (error) {
+        if (active) setMessage(error instanceof Error ? error.message : "AAS本体の保存画像を読み込めませんでした。");
+      } finally {
+        if (active) setStorageBusy(false);
+      }
+    };
+    void loadSaved();
+    return () => { active = false; };
+  }, [channel, onAnalysisChange]);
 
   const saveConfig = async () => {
     if (configEnabled && !config?.apiKeyConfigured && !configApiKey.trim()) {
@@ -126,13 +175,13 @@ export function AdminPromotionScreenshotAnalyzer({
     onAnalysisChange(null);
   };
 
-  const addFiles = (files: FileList | null) => {
-    if (!files?.length) return;
+  const addFiles = async (files: FileList | null) => {
+    if (!files?.length || storageBusy) return;
     const additions = Array.from(files);
     const combined = [...items.map((item) => item.file), ...additions];
     const maxImages = Math.min(PROMOTION_SCREENSHOT_MAX_IMAGES, config?.maxImages ?? PROMOTION_SCREENSHOT_MAX_IMAGES);
     if (combined.length > maxImages) {
-      setMessage(`現在の設定では一度に最大${maxImages}枚まで解析できます。`);
+      setMessage(`現在の設定では一度に最大${maxImages}枚まで保存・解析できます。`);
       return;
     }
     const validation = validatePromotionScreenshotFiles(combined);
@@ -141,27 +190,72 @@ export function AdminPromotionScreenshotAnalyzer({
       return;
     }
 
-    const next = [
-      ...items,
-      ...additions.map((file, index) => ({
-        id: `${Date.now()}-${index}-${file.name}`,
-        file,
-        previewUrl: URL.createObjectURL(file),
-      })),
-    ].slice(0, PROMOTION_SCREENSHOT_MAX_IMAGES);
-
-    replaceItems(next);
-    setMessage("スクリーンショットを追加しました。解析するとSNS専用プロンプトへ反映されます。");
+    setStorageBusy(true);
+    setMessage("");
+    const saved: LocalScreenshot[] = [];
+    try {
+      const client = getSupabaseClient();
+      for (const file of additions) {
+        const asset = await uploadAdminPromotionContentAsset(client, channel, file);
+        saved.push({
+          id: asset.id,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          asset,
+        });
+      }
+      replaceItems([...items, ...saved]);
+      setMessage(`スクリーンショットを${saved.length}枚、AAS本体の非公開Storageへ保存しました。解析すると媒体専用プロンプトへ反映されます。`);
+    } catch (error) {
+      if (saved.length) replaceItems([...items, ...saved]);
+      setMessage(error instanceof Error ? error.message : "スクリーンショットをAAS本体へ保存できませんでした。");
+    } finally {
+      setStorageBusy(false);
+    }
   };
 
-  const remove = (id: string) => {
-    replaceItems(items.filter((item) => item.id !== id));
+  const remove = async (item: LocalScreenshot) => {
+    if (storageBusy) return;
+    setStorageBusy(true);
     setMessage("");
+    try {
+      if (item.asset) await deleteAdminPromotionContentAsset(getSupabaseClient(), item.asset);
+      replaceItems(items.filter((candidate) => candidate.id !== item.id));
+      setMessage("スクリーンショットをAAS本体から削除しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "スクリーンショットを削除できませんでした。");
+    } finally {
+      setStorageBusy(false);
+    }
   };
 
-  const clear = () => {
-    replaceItems([]);
+  const clear = async () => {
+    if (storageBusy || !items.length) return;
+    setStorageBusy(true);
     setMessage("");
+    try {
+      const client = getSupabaseClient();
+      for (const item of items) {
+        if (item.asset) await deleteAdminPromotionContentAsset(client, item.asset);
+      }
+      replaceItems([]);
+      setMessage("保存済みスクリーンショットをすべてAAS本体から削除しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "保存済みスクリーンショットの削除中にエラーが発生しました。");
+      try {
+        const workspace = await loadAdminPromotionContentWorkspace(client, channel);
+        const remaining: LocalScreenshot[] = [];
+        for (const asset of workspace.assets.slice(0, PROMOTION_SCREENSHOT_MAX_IMAGES)) {
+          const file = await downloadAdminPromotionContentAsset(client, asset);
+          remaining.push({ id: asset.id, file, previewUrl: URL.createObjectURL(file), asset });
+        }
+        replaceItems(remaining);
+      } catch {
+        // Keep the current previews when a recovery reload also fails.
+      }
+    } finally {
+      setStorageBusy(false);
+    }
   };
 
   const runAnalysis = async () => {
@@ -196,9 +290,9 @@ export function AdminPromotionScreenshotAnalyzer({
         <div>
           <p className="eyebrow">SCREENSHOT VISION</p>
           <h3 id="admin-promo-screenshot-analyzer-title">紹介したいページをスクショから読み取る</h3>
-          <p>紹介したいページやAAS画面を最大4枚まで追加すると、画面内容・訴求ポイント・公開前に隠す情報を解析し、{channel === "x" ? "X" : channel === "threads" ? "Threads" : "Instagram"}専用プロンプトへ自動反映します。</p>
+          <p>紹介したいページやAAS画面を最大4枚までAAS本体へ保存すると、画面内容・訴求ポイント・公開前に隠す情報を解析し、{channel === "x" ? "X" : channel === "threads" ? "Threads" : "Instagram"}専用プロンプトへ自動反映します。</p>
         </div>
-        <strong>元画像は保存しない</strong>
+        <strong>AAS本体へ保存</strong>
       </div>
 
       <details className="admin-promo-screenshot-config" open={configOpen} onToggle={(event) => setConfigOpen(event.currentTarget.open)}>
@@ -260,13 +354,14 @@ export function AdminPromotionScreenshotAnalyzer({
           type="file"
           accept="image/png,image/jpeg,image/webp"
           multiple
-          disabled={busy || configBusy || configLoading || items.length >= Math.min(PROMOTION_SCREENSHOT_MAX_IMAGES, config?.maxImages ?? PROMOTION_SCREENSHOT_MAX_IMAGES)}
+          disabled={busy || storageBusy || configBusy || configLoading || items.length >= Math.min(PROMOTION_SCREENSHOT_MAX_IMAGES, config?.maxImages ?? PROMOTION_SCREENSHOT_MAX_IMAGES)}
           onChange={(event) => {
-            addFiles(event.target.files);
+            const files = event.target.files;
             event.currentTarget.value = "";
+            void addFiles(files);
           }}
         />
-        <small>PNG / JPEG / WebP、1枚4MB以下・合計12MB以下。解析中だけサーバーへ送信し、Supabase StorageやDBへ画像を保存しません。</small>
+        <small>PNG / JPEG / WebP、1枚4MB以下・合計12MB以下。元画像はAAS本体の非公開Supabase Storageへ保存し、ログイン中の管理者だけが利用できます。</small>
       </label>
 
       {items.length > 0 && (
@@ -277,7 +372,7 @@ export function AdminPromotionScreenshotAnalyzer({
               <div>
                 <strong>スクショ{index + 1}</strong>
                 <small>{item.file.name}</small>
-                <button type="button" disabled={busy} onClick={() => remove(item.id)}>削除</button>
+                <button type="button" disabled={busy || storageBusy} onClick={() => void remove(item)}>削除</button>
               </div>
             </article>
           ))}
@@ -285,10 +380,10 @@ export function AdminPromotionScreenshotAnalyzer({
       )}
 
       <div className="admin-promo-screenshot-analyzer-actions">
-        <button type="button" className="primary-action" disabled={busy || configBusy || items.length === 0 || !config?.enabled || !config.apiKeyConfigured} onClick={() => void runAnalysis()}>
+        <button type="button" className="primary-action" disabled={busy || storageBusy || configBusy || items.length === 0 || !config?.enabled || !config.apiKeyConfigured} onClick={() => void runAnalysis()}>
           {busy ? "画像を解析中…" : "スクショを解析してプロンプトへ反映"}
         </button>
-        {items.length > 0 && <button type="button" className="secondary-action" disabled={busy} onClick={clear}>すべて外す</button>}
+        {items.length > 0 && <button type="button" className="secondary-action" disabled={busy || storageBusy} onClick={() => void clear()}>AAS本体からすべて削除</button>}
       </div>
 
       <p className="admin-promo-screenshot-cost-note">
