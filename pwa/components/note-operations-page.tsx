@@ -60,7 +60,9 @@ import {
   noteOperationsGateFor,
   notePerformanceLoopAvailable,
   noteScheduleResponseStorageKey,
+  readNoteOperationsMonths,
   readNoteOperationsTab,
+  writeNoteOperationsMonths,
   writeNoteOperationsTab,
   type NoteOperationsTab,
 } from "@/components/note-operations/note-operations-page-helpers";
@@ -90,6 +92,7 @@ export function NoteOperationsPage() {
   const [schedulePrompt, setSchedulePrompt] = useState("");
   const [scheduleResponse, setScheduleResponse] = useState("");
   const [scheduleResponseLoaded, setScheduleResponseLoaded] = useState(false);
+  const [monthsLoaded, setMonthsLoaded] = useState(false);
   const [schedulePreview, setSchedulePreview] = useState<NoteAiSchedulePlan | null>(null);
   const [performanceLoopEnabled, setPerformanceLoopEnabled] = useState(false);
   const [articleOutput, setArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
@@ -117,6 +120,7 @@ export function NoteOperationsPage() {
         } catch {
           // Device storage is optional. The current session still works without it.
         }
+        const savedMonths = readNoteOperationsMonths(userId);
         if (active) {
           setProfile(nextProfile);
           setSchedule(nextSchedule);
@@ -125,6 +129,9 @@ export function NoteOperationsPage() {
           setSelectedAi(nextWritingProfile.preferredAi);
           setScheduleResponse(savedScheduleResponse);
           setScheduleResponseLoaded(true);
+          setTargetMonth(savedMonths.targetMonth);
+          setCalendarMonth(savedMonths.calendarMonth);
+          setMonthsLoaded(true);
         }
       } catch (error) {
         if (active) setInitError(error instanceof Error ? error.message : "note運営を初期化できませんでした。");
@@ -168,6 +175,11 @@ export function NoteOperationsPage() {
       // Ignore storage failures. Do not block schedule import.
     }
   }, [gate, scheduleResponse, scheduleResponseLoaded]);
+
+  useEffect(() => {
+    if (gate.kind !== "ready" || !monthsLoaded) return;
+    writeNoteOperationsMonths(gate.userId, { targetMonth, calendarMonth });
+  }, [calendarMonth, gate, monthsLoaded, targetMonth]);
 
   useEffect(() => {
     if (gate.kind !== "ready" || !performanceLoopEnabled) return;

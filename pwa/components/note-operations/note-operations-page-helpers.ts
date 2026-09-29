@@ -11,6 +11,7 @@ export type NoteOperationsGate =
 const NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0.1.1";
 const NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX = "aas.note.schedule.response.v1";
 const NOTE_OPERATIONS_TAB_STORAGE_PREFIX = "aas.note.operations.tab.v1";
+const NOTE_OPERATIONS_MONTHS_STORAGE_PREFIX = "aas.note.operations.months.v1";
 
 export type NoteOperationsTab = "start" | "profile" | "plan" | "calendar" | "membership";
 const NOTE_OPERATIONS_TABS: readonly NoteOperationsTab[] = ["start", "profile", "plan", "calendar", "membership"];
@@ -47,6 +48,50 @@ export function noteScheduleResponseStorageKey(userId: string): string {
 
 export function noteOperationsTabStorageKey(userId: string): string {
   return `${NOTE_OPERATIONS_TAB_STORAGE_PREFIX}:${userId}`;
+}
+
+export function noteOperationsMonthsStorageKey(userId: string): string {
+  return `${NOTE_OPERATIONS_MONTHS_STORAGE_PREFIX}:${userId}`;
+}
+
+export type NoteOperationsMonths = {
+  targetMonth: string;
+  calendarMonth: string;
+};
+
+function validMonth(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}$/.test(value);
+}
+
+export function readNoteOperationsMonths(userId: string): NoteOperationsMonths {
+  const currentMonth = todayJstDateKey().slice(0, 7);
+  const fallback = { targetMonth: currentMonth, calendarMonth: currentMonth };
+  if (typeof window === "undefined" || !userId) return fallback;
+  try {
+    const raw = window.localStorage.getItem(noteOperationsMonthsStorageKey(userId));
+    if (!raw) return fallback;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return fallback;
+    const row = parsed as Record<string, unknown>;
+    const targetMonth = validMonth(row.targetMonth) && row.targetMonth >= currentMonth
+      ? row.targetMonth
+      : currentMonth;
+    const calendarMonth = validMonth(row.calendarMonth) ? row.calendarMonth : targetMonth;
+    return { targetMonth, calendarMonth };
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeNoteOperationsMonths(userId: string, value: NoteOperationsMonths): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  if (!validMonth(value.targetMonth) || !validMonth(value.calendarMonth)) return false;
+  try {
+    window.localStorage.setItem(noteOperationsMonthsStorageKey(userId), JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function readNoteOperationsTab(userId: string): NoteOperationsTab {

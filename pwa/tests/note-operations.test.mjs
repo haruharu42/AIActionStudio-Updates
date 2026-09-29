@@ -372,6 +372,15 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /importAndApplyAiSchedule/);
   assert.match(page, /navigator\.clipboard\?\.readText/);
   assert.match(helpers, /NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX/);
+  assert.match(helpers, /NOTE_OPERATIONS_MONTHS_STORAGE_PREFIX/);
+  assert.match(helpers, /readNoteOperationsMonths/);
+  assert.match(helpers, /writeNoteOperationsMonths/);
+  assert.match(helpers, /row\.targetMonth >= currentMonth/);
+  assert.match(page, /const \[monthsLoaded, setMonthsLoaded\] = useState\(false\)/);
+  assert.match(page, /const savedMonths = readNoteOperationsMonths\(userId\)/);
+  assert.match(page, /setTargetMonth\(savedMonths\.targetMonth\)/);
+  assert.match(page, /setCalendarMonth\(savedMonths\.calendarMonth\)/);
+  assert.match(page, /writeNoteOperationsMonths\(gate\.userId, \{ targetMonth, calendarMonth \}\)/);
   assert.match(page, /window\.localStorage\.getItem/);
   assert.match(page, /window\.localStorage\.setItem/);
   assert.match(page, /window\.localStorage\.removeItem/);
@@ -1006,4 +1015,19 @@ test("membership consultation result participates in the cockpit saved-result st
   assert.match(cockpit, /\+ \(consultResultSaved \? 1 : 0\)/);
   assert.match(cockpit, /key === "consult"[\s\S]*?consultResultSaved \? "保存済み" : ""/);
   assert.match(cockpit, /onResultPresenceChange=\{setConsultResultSaved\}/);
+});
+
+
+test("note operation month context is account-scoped and future planning never restores a past target month", async () => {
+  const helpers = await readPwa("components/note-operations/note-operations-page-helpers.ts");
+  const page = await readPwa("components/note-operations-page.tsx");
+
+  assert.match(helpers, /aas\.note\.operations\.months\.v1/);
+  assert.match(helpers, /noteOperationsMonthsStorageKey\(userId\)/);
+  assert.match(helpers, /targetMonth: currentMonth/);
+  assert.match(helpers, /calendarMonth: currentMonth/);
+  assert.match(helpers, /validMonth\(row\.targetMonth\) && row\.targetMonth >= currentMonth/);
+  assert.match(helpers, /validMonth\(row\.calendarMonth\) \? row\.calendarMonth : targetMonth/);
+  assert.match(page, /setMonthsLoaded\(true\)/);
+  assert.match(page, /if \(gate\.kind !== "ready" \|\| !monthsLoaded\) return/);
 });
