@@ -409,3 +409,22 @@ test("prompt library keeps a separate in-progress draft for every template and r
   assert.match(page, /setValues\(valuesForTemplate\(template, stored\)\)/);
   assert.match(page, /setSelectedAi\(selectedAiForTemplate\(template, stored\)\)/);
 });
+
+
+test("prompt library groups the long switcher by category and recovers from zero-result filters", async () => {
+  const [page, list] = await Promise.all([
+    read("components/action-prompt-library-page.tsx"),
+    read("components/action-prompt-library/action-prompt-template-list.tsx"),
+  ]);
+
+  assert.match(page, /const clearFilters = \(\)/);
+  assert.match(page, /setCategory\("すべて"\)/);
+  assert.match(page, /setQuery\(""\)/);
+  assert.match(page, /setFavoritesOnly\(false\)/);
+  assert.match(page, /onClearFilters=\{clearFilters\}/);
+  assert.match(page, /<optgroup key=\{categoryName\} label=\{categoryName\}>/);
+  assert.match(page, /template\.category === categoryName/);
+  assert.match(list, /onClearFilters: \(\) => void/);
+  assert.match(list, /条件に一致するプロンプトがありません/);
+  assert.match(list, /検索条件をクリア/);
+});

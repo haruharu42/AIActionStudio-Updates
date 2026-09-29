@@ -4,9 +4,10 @@ type Props = {
   templates: readonly ActionPromptTemplate[];
   selectedId: string;
   onSelect: (template: ActionPromptTemplate) => void;
+  onClearFilters: () => void;
 };
 
-export function ActionPromptTemplateList({ templates, selectedId, onSelect }: Props) {
+export function ActionPromptTemplateList({ templates, selectedId, onSelect, onClearFilters }: Props) {
   return (
     <section className="action-prompt-list" aria-label="プロンプト一覧">
       <div className="action-prompt-list-head">
@@ -28,7 +29,12 @@ export function ActionPromptTemplateList({ templates, selectedId, onSelect }: Pr
         </button>
       ))}
 
-      {!templates.length && <p className="route-notice">条件に一致するプロンプトがありません。</p>}
+      {!templates.length && (
+        <div className="route-notice action-prompt-empty" role="status">
+          <span>条件に一致するプロンプトがありません。</span>
+          <button type="button" className="secondary-action" onClick={onClearFilters}>検索条件をクリア</button>
+        </div>
+      )}
     </section>
   );
 }

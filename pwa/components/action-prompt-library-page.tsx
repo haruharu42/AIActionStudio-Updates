@@ -225,6 +225,12 @@ export function ActionPromptLibraryPage() {
     );
   };
 
+  const clearFilters = () => {
+    setCategory("すべて");
+    setQuery("");
+    setFavoritesOnly(false);
+  };
+
   const toggleFavoritesOnly = () => {
     const nextFavoritesOnly = !favoritesOnly;
     setFavoritesOnly(nextFavoritesOnly);
@@ -315,6 +321,7 @@ export function ActionPromptLibraryPage() {
             templates={filtered}
             selectedId={selected.id}
             onSelect={selectTemplate}
+            onClearFilters={clearFilters}
           />
         </div>
       ) : (
@@ -323,10 +330,14 @@ export function ActionPromptLibraryPage() {
             <label>
               <span>プロンプトを切り替える</span>
               <select value={selected.id} onChange={(event) => switchPrompt(event.target.value)}>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.category} — {template.title}
-                  </option>
+                {categories.filter((item) => item !== "すべて").map((categoryName) => (
+                  <optgroup key={categoryName} label={categoryName}>
+                    {templates
+                      .filter((template) => template.category === categoryName)
+                      .map((template) => (
+                        <option key={template.id} value={template.id}>{template.title}</option>
+                      ))}
+                  </optgroup>
                 ))}
               </select>
             </label>
