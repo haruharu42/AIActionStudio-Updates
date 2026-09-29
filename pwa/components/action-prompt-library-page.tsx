@@ -41,6 +41,23 @@ function valuesForTemplate(
   );
 }
 
+function filterActionPromptTemplates(
+  templates: readonly ActionPromptTemplate[],
+  category: string,
+  query: string,
+  favoritesOnly: boolean,
+  favorites: readonly string[],
+): ActionPromptTemplate[] {
+  const needle = query.trim().toLowerCase();
+  return templates.filter((template) => {
+    if (category !== "すべて" && template.category !== category) return false;
+    if (favoritesOnly && !favorites.includes(template.id)) return false;
+    if (!needle) return true;
+    return [template.title, template.category, template.sideHustle, template.description]
+      .some((value) => value.toLowerCase().includes(needle));
+  });
+}
+
 export function ActionPromptLibraryPage() {
   const { state, client } = useSharedAccessState();
   const userId = state.kind === "ready" ? state.profile.id : "";
@@ -144,26 +161,10 @@ export function ActionPromptLibraryPage() {
     [templates],
   );
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return templates.filter((template) => {
-      if (category !== "すべて" && template.category !== category) return false;
-      if (favoritesOnly && !favorites.includes(template.id)) return false;
-      if (!needle) return true;
-      return [template.title, template.category, template.sideHustle, template.description]
-        .some((value) => value.toLowerCase().includes(needle));
-    });
-  }, [category, favorites, favoritesOnly, query, templates]);
-
-  useEffect(() => {
-    if (!filtered.length || filtered.some((template) => template.id === selectedId)) return;
-
-    const next = filtered[0];
-    setSelectedId(next.id);
-    setSelectedAi(recommendedActionPromptAi(next));
-    setValues(initialActionPromptValues(next));
-    setMessage("");
-  }, [filtered, selectedId]);
+  const filtered = useMemo(
+    () => filterActionPromptTemplates(templates, category, query, favoritesOnly, favorites),
+    [category, favorites, favoritesOnly, query, templates],
+  );
 
   const prompt = useMemo(
     () => selected ? buildActionPrompt(selected, values) : "",
@@ -182,6 +183,33 @@ export function ActionPromptLibraryPage() {
     setSelectedAi(recommendedActionPromptAi(template));
     setValues(initialActionPromptValues(template));
     setMessage("");
+  };
+
+  const keepSelectionInFilter = (nextFiltered: readonly ActionPromptTemplate[]) => {
+    if (!nextFiltered.length || nextFiltered.some((template) => template.id === selectedId)) return;
+    selectTemplate(nextFiltered[0]);
+  };
+
+  const changeCategory = (nextCategory: string) => {
+    setCategory(nextCategory);
+    keepSelectionInFilter(
+      filterActionPromptTemplates(templates, nextCategory, query, favoritesOnly, favorites),
+    );
+  };
+
+  const changeQuery = (nextQuery: string) => {
+    setQuery(nextQuery);
+    keepSelectionInFilter(
+      filterActionPromptTemplates(templates, category, nextQuery, favoritesOnly, favorites),
+    );
+  };
+
+  const toggleFavoritesOnly = () => {
+    const nextFavoritesOnly = !favoritesOnly;
+    setFavoritesOnly(nextFavoritesOnly);
+    keepSelectionInFilter(
+      filterActionPromptTemplates(templates, category, query, nextFavoritesOnly, favorites),
+    );
   };
 
   const toggleFavorite = () => {
@@ -242,9 +270,9 @@ export function ActionPromptLibraryPage() {
         category={category}
         query={query}
         favoritesOnly={favoritesOnly}
-        onCategoryChange={setCategory}
-        onQueryChange={setQuery}
-        onFavoritesToggle={() => setFavoritesOnly((value) => !value)}
+        onCategoryChange={changeCategory}
+        onQueryChange={changeQuery}
+        onFavoritesToggle={toggleFavoritesOnly}
       />
 
       {recentTemplates.length > 0 && (
