@@ -1598,3 +1598,134 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.admin-promo-content-workspace {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-promo-final-body {
+  min-height: 320px;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.75;
+}
+
+.admin-promo-content-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-promo-upload-button {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.admin-promo-upload-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.admin-promo-saved-screenshots {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.admin-promo-saved-screenshots article {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgb(148 163 184 / 30%);
+  border-radius: 14px;
+  background: rgb(248 250 252 / 76%);
+}
+
+.admin-promo-saved-screenshots img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.admin-promo-saved-screenshots input {
+  width: 100%;
+}
+
+.admin-promo-saved-screenshots article > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-promo-rich-preview {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgb(59 130 246 / 22%);
+  border-radius: 14px;
+  background: rgb(239 246 255 / 46%);
+}
+
+.admin-promo-rich-preview > div {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-promo-rich-preview h2,
+.admin-promo-rich-preview h3 {
+  margin: 8px 0 2px;
+}
+
+.admin-promo-rich-preview p,
+.admin-promo-rich-preview ul,
+.admin-promo-rich-preview ol,
+.admin-promo-rich-preview blockquote {
+  margin: 0;
+  line-height: 1.75;
+}
+
+.admin-promo-rich-preview figure {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.admin-promo-rich-preview figure img {
+  display: block;
+  max-width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgb(148 163 184 / 26%);
+}
+
+.admin-promo-rich-preview figcaption {
+  color: #64748b;
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .admin-promo-content-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-promo-content-actions > * {
+    width: 100%;
+  }
+
+  .admin-promo-final-body {
+    min-height: 260px;
+  }
+}
