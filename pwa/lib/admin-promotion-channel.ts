@@ -408,3 +408,43 @@ export function buildAdminChannelPromotionPrompt(
       return buildInstagramPromotionPrompt(facts, input);
   }
 }
+
+
+export function buildAdminChannelTitlePrompt(
+  facts: AdminProductFacts,
+  input: AdminChannelPromotionInput,
+): string {
+  const meta = ADMIN_PROMOTION_CHANNELS[input.channel];
+  const label = meta.kind === "article" ? "タイトル" : "フック";
+  return `${buildAdminChannelPromotionPrompt(facts, input)}
+
+【AAS 8ステップ作成 / STEP 5】
+今回は完成稿をまだ作らず、${meta.label}向けの${label}候補だけを5案作成してください。
+- 1〜5の番号付きで出力する。
+- 各案は今回の発信フェーズ・目的・読者・確認済み製品情報に一致させる。
+- 煽り、成果保証、未確認の数値・実績・レビューは使わない。
+- 記事媒体は検索・一覧で内容が伝わる具体的なタイトルにする。
+- SNSは1〜2行目で続きを読みたくなる自然なフックにする。
+- 解説、本文、自己評価、スクショ指示は出力しない。`;
+}
+
+export function buildAdminChannelBodyPrompt(
+  facts: AdminProductFacts,
+  input: AdminChannelPromotionInput,
+  selectedTitle: string,
+): string {
+  const meta = ADMIN_PROMOTION_CHANNELS[input.channel];
+  const title = selectedTitle.trim();
+  const outputRule = meta.kind === "article"
+    ? `採用タイトル: ${title || "未選択"}。このタイトルに合う完成記事本文だけをMarkdownで出力してください。タイトル自体は本文へ重複して入れないでください。必要なスクショ位置は本文中に分かる形で残してください。`
+    : `採用フック: ${title || "未選択"}。このフックを起点に、${meta.label}へそのまま投稿できる完成投稿だけを出力してください。内部説明・自己評価・候補一覧は出さないでください。`;
+
+  return `${buildAdminChannelPromotionPrompt(facts, input)}
+
+【AAS 8ステップ作成 / STEP 6】
+STEP 5で選んだ内容を使って本文・投稿を作成します。
+${outputRule}
+- 最終回答には公開に使う完成原稿だけを出す。
+- 確認済みでない価格・公開日・成果・利用者数・レビューは作らない。
+- 販売前なら「販売中」「購入できます」と誤認させない。`;
+}
