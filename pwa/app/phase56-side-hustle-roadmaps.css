@@ -161,6 +161,18 @@
   background: linear-gradient(90deg, #5ccde5, #658fe8 52%, #9a82e7);
 }
 
+.side-hustle-roadmap-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.side-hustle-roadmap-empty .secondary-action {
+  flex: 0 0 auto;
+}
+
 .side-hustle-roadmap-selected {
   display: grid;
   gap: 16px;
@@ -528,6 +540,15 @@
 
   .side-hustle-roadmap-phase summary > div {
     grid-column: 1 / -1;
+  }
+
+  .side-hustle-roadmap-empty {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .side-hustle-roadmap-empty .secondary-action {
+    width: 100%;
   }
 
   .side-hustle-roadmap-actions {

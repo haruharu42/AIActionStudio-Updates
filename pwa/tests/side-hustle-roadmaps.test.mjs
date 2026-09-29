@@ -124,3 +124,10 @@ test("roadmap filters keep the visible cards and selected detail in sync and pro
   assert.match(page, /条件をクリア/);
   assert.match(page, /const clearFilters = \(\)/);
 });
+
+test("roadmap empty filter state uses the full card grid width on desktop and stacks on mobile", async () => {
+  const styles = await read("app/phase56-side-hustle-roadmaps.css");
+  assert.match(styles, /\.side-hustle-roadmap-empty \{[\s\S]*?grid-column:\s*1 \/ -1/);
+  assert.match(styles, /\.side-hustle-roadmap-empty \.secondary-action/);
+  assert.match(styles, /@media \(max-width: 460px\)[\s\S]*?\.side-hustle-roadmap-empty \{[\s\S]*?flex-direction:\s*column/);
+});
