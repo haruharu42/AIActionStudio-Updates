@@ -6,6 +6,7 @@ import type { FormEvent, ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { signOutCurrentBrowser } from "@/lib/auth-session";
 import {
   authMessage,
@@ -558,7 +559,7 @@ export function Phase7App() {
     return <AuthScreen client={client} mode="recovery" setMode={setAuthMode} refresh={refresh} />;
   }
 
-  if (state.kind === "loading") return null;
+  if (state.kind === "loading") return <AppLoadingScreen message="アカウントと利用権を確認しています…" />;
 
   if (state.kind === "unavailable" || !client) {
     return (

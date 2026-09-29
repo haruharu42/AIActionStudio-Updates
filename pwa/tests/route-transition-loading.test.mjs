@@ -139,7 +139,7 @@ test("persistent navigation and article export do not start their own auth sessi
 });
 
 
-test("auth and preview gates keep mandatory verification invisible while it runs", async () => {
+test("auth and preview gates show a safe accessible loading shell while verification runs", async () => {
   const [authGateway, releaseGate] = await Promise.all([
     read("components/phase6-app.tsx"),
     read("components/release-audience-gate.tsx"),
@@ -147,12 +147,12 @@ test("auth and preview gates keep mandatory verification invisible while it runs
 
   assert.match(authGateway, /useSharedAccessState\(\)/);
   assert.doesNotMatch(authGateway, /loadAccessState/);
-  assert.match(authGateway, /if \(state\.kind === "loading"\) return null/);
-  assert.doesNotMatch(authGateway, /アカウントと利用権を確認しています/);
+  assert.match(authGateway, /if \(state\.kind === "loading"\) return <AppLoadingScreen/);
+  assert.match(authGateway, /アカウントと利用権を確認しています/);
 
   assert.match(releaseGate, /loadMyAppReleaseState/);
-  assert.match(releaseGate, /if \(gate\.kind === "loading"\) return null/);
-  assert.doesNotMatch(releaseGate, /候補版の利用権を確認しています/);
+  assert.match(releaseGate, /if \(gate\.kind === "loading"\) return <AppLoadingScreen/);
+  assert.match(releaseGate, /候補版の利用権を確認しています/);
 });
 
 
