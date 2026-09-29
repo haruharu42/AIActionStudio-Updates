@@ -6,6 +6,7 @@ import { SelectWithCustom } from "@/components/select-with-custom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  getArticleLibraryQuotaSettings,
   getMembershipSettings,
   listMembershipAuditActions,
   listMembershipAssignments,
@@ -13,8 +14,10 @@ import {
   listMembershipPlanFeatures,
   listMembershipPlans,
   setMembershipPlanFeature,
+  updateArticleLibraryQuotaSettings,
   updateMembershipPlan,
   updateMembershipSettings,
+  type ArticleLibraryQuotaSettings,
   type MembershipAssignment,
   type MembershipAuditAction,
   type MembershipFeature,
@@ -43,6 +46,12 @@ const EMPTY_SETTINGS: MembershipSettings = {
   updatedAt: null,
 };
 
+const EMPTY_LIBRARY_QUOTA: ArticleLibraryQuotaSettings = {
+  freeLimit: 5,
+  planLimitsEnabled: false,
+  updatedAt: null,
+};
+
 function currentFeatureEnabled(
   planCode: string,
   featureKey: string,
@@ -66,6 +75,7 @@ function formatDate(value: string | null): string {
 export function AdminMembershipPage() {
   const [state, setState] = useState<LoadState>("loading");
   const [settings, setSettings] = useState<MembershipSettings>(EMPTY_SETTINGS);
+  const [libraryQuota, setLibraryQuota] = useState<ArticleLibraryQuotaSettings>(EMPTY_LIBRARY_QUOTA);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [features, setFeatures] = useState<MembershipFeature[]>([]);
   const [planFeatures, setPlanFeatures] = useState<MembershipPlanFeature[]>([]);
@@ -131,13 +141,15 @@ export function AdminMembershipPage() {
     setReferenceNow(Date.now());
 
     try {
-      const [nextSettings, nextPlans, nextFeatures, nextPlanFeatures] = await Promise.all([
+      const [nextSettings, nextLibraryQuota, nextPlans, nextFeatures, nextPlanFeatures] = await Promise.all([
         getMembershipSettings(client),
+        getArticleLibraryQuotaSettings(client),
         listMembershipPlans(client),
         listMembershipFeatures(client),
         listMembershipPlanFeatures(client),
       ]);
       setSettings(nextSettings);
+      setLibraryQuota(nextLibraryQuota);
       setPlans(nextPlans);
       setFeatures(nextFeatures);
       setPlanFeatures(nextPlanFeatures);
@@ -237,6 +249,27 @@ export function AdminMembershipPage() {
     }
   };
 
+  const saveFreeArticleLimit = async () => {
+    if (busy) return;
+    if (!Number.isInteger(libraryQuota.freeLimit) || libraryQuota.freeLimit < 1 || libraryQuota.freeLimit > 100000) {
+      setMessage("無料プランの記事保存数は1〜100,000件の範囲で入力してください。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const client = getSupabaseClient();
+      await updateArticleLibraryQuotaSettings(client, libraryQuota.freeLimit);
+      setLibraryQuota(await getArticleLibraryQuotaSettings(client));
+      setMessage(`無料プランの記事ライブラリ保存上限を${libraryQuota.freeLimit}件に設定しました。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "無料プランの記事保存上限を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const patchPlan = (planCode: string, patch: Partial<MembershipPlan>) => {
     setPlans((current) => current.map((plan) => plan.planCode === planCode ? { ...plan, ...patch } : plan));
   };
@@ -255,6 +288,14 @@ export function AdminMembershipPage() {
       setMessage("月額料金は0〜1,000,000円の範囲で入力してください。");
       return;
     }
+    if (!plan.storageQuotaManaged) {
+      setMessage("記事保存数設定用のDB migrationがまだ未適用です。");
+      return;
+    }
+    if (plan.articleLibraryLimit !== null && (!Number.isInteger(plan.articleLibraryLimit) || plan.articleLibraryLimit < 1 || plan.articleLibraryLimit > 100000)) {
+      setMessage("記事ライブラリ保存数は1〜100,000件、または無制限を設定してください。");
+      return;
+    }
 
     setBusy(true);
     setMessage("");
@@ -264,9 +305,10 @@ export function AdminMembershipPage() {
         displayName: plan.displayName,
         monthlyPriceYen: plan.monthlyPriceYen,
         description: plan.description,
+        articleLibraryLimit: plan.articleLibraryLimit,
       });
       setPlans(await listMembershipPlans(getSupabaseClient()));
-      setMessage(`${plan.displayName}の料金・表示設定を保存しました。`);
+      setMessage(`${plan.displayName}の料金・表示・記事保存数設定を保存しました。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "プラン設定を保存できませんでした。");
     } finally {
@@ -474,7 +516,47 @@ export function AdminMembershipPage() {
         </div>
         <p className="trial-admin-note">
           note側で設定した実際の月額料金と同じ金額を入力してください。プランコードは既存ユーザーの権限判定に使うため固定です。
+          記事ライブラリの保存可能数も、無料プランと各有料プランごとにここで設定できます。
         </p>
+        <div className="membership-plan-editor-card membership-free-storage-card">
+          <div className="membership-plan-editor-head">
+            <div>
+              <span>FREE PLAN</span>
+              <code>FREE</code>
+            </div>
+            <strong>記事保存 {libraryQuota.freeLimit.toLocaleString("ja-JP")}件</strong>
+          </div>
+          <SelectWithCustom
+            className="route-field"
+            label="無料プランの記事ライブラリ保存数"
+            value={String(libraryQuota.freeLimit)}
+            onChange={(value) => setLibraryQuota((current) => ({
+              ...current,
+              freeLimit: Math.max(1, Math.min(100000, Number(value) || 1)),
+            }))}
+            options={[
+              { value: "5", label: "5件" },
+              { value: "10", label: "10件" },
+              { value: "15", label: "15件" },
+              { value: "30", label: "30件" },
+              { value: "50", label: "50件" },
+              { value: "100", label: "100件" },
+            ]}
+            placeholder="保存数を選択"
+            customPlaceholder="その他の保存数を入力"
+            inputType="number"
+            min={1}
+            max={100000}
+          />
+          <button type="button" disabled={busy} onClick={() => void saveFreeArticleLimit()}>
+            無料プランの保存数を保存
+          </button>
+          <small>
+            {libraryQuota.planLimitsEnabled
+              ? "この保存上限は現在有効です。"
+              : "設定値は保存できます。プラン別保存上限はPreview確認後、一般公開時に有効化します。"}
+          </small>
+        </div>
         {!pricingReady && (
           <div className="route-notice" role="note">
             料金設定DBはまだ未適用です。現在のプラン・機能割り当ては確認できますが、料金・説明の保存はmigration適用後に有効になります。
@@ -535,6 +617,31 @@ export function AdminMembershipPage() {
                   onChange={(event) => patchPlan(plan.planCode, { description: event.target.value })}
                 />
               </label>
+              <SelectWithCustom
+                className="route-field"
+                label="記事ライブラリ保存数"
+                value={plan.articleLibraryLimit === null ? "unlimited" : String(plan.articleLibraryLimit)}
+                onChange={(value) => patchPlan(plan.planCode, {
+                  articleLibraryLimit: value === "unlimited"
+                    ? null
+                    : Math.max(1, Math.min(100000, Number(value) || 1)),
+                })}
+                options={[
+                  { value: "15", label: "15件" },
+                  { value: "30", label: "30件" },
+                  { value: "50", label: "50件" },
+                  { value: "100", label: "100件" },
+                  { value: "unlimited", label: "無制限" },
+                ]}
+                placeholder="保存数を選択"
+                customPlaceholder="その他の保存数を入力"
+                inputType="number"
+                min={1}
+                max={100000}
+              />
+              <small className="trial-admin-note">
+                現在: {plan.articleLibraryLimit === null ? "無制限" : `${plan.articleLibraryLimit.toLocaleString("ja-JP")}件`}
+              </small>
               <div className="membership-plan-feature-summary">
                 <span>現在の利用可能機能</span>
                 <strong>
