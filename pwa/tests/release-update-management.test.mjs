@@ -359,6 +359,8 @@ test("admin public deployment pipeline keeps Preview and public release coupled 
   assert.match(workflow, /Admin public release Cloudflare contract: PASS/);
   assert.match(workflow, /Deploy general-public PWA Worker/);
   assert.doesNotMatch(previewWorkflow, /\n\s*- preview\/current\s*\n/);
+  assert.doesNotMatch(previewWorkflow, /\n\s*- feat\/note-easy-import-manual-contrast-20260920\s*\n/);
+  assert.match(previewWorkflow, /Automatic Preview deploy is restricted to main/);
   assert.match(previewWorkflow, /workflow_dispatch:/);
   assert.match(previewWorkflow, /DEPLOY_PREVIEW/);
   assert.match(previewWorkflow, /NEXT_PUBLIC_AAS_SOURCE_BRANCH: \$\{\{ github\.ref_name \}\}/);
