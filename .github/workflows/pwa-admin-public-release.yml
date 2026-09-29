@@ -13,7 +13,7 @@ on:
         required: true
         type: string
       source_branch:
-        description: "Approved Preview source branch"
+        description: "Approved Preview source branch (main or preview/current)"
         required: true
         type: string
       source_sha:
@@ -74,10 +74,13 @@ jobs:
             echo 'Invalid release UUID.' >&2
             exit 1
           fi
-          if [ "$SOURCE_BRANCH" != "preview/current" ]; then
-            echo 'Only preview/current may be promoted to the public PWA.' >&2
-            exit 1
-          fi
+          case "$SOURCE_BRANCH" in
+            main|preview/current) ;;
+            *)
+              echo 'Only main or preview/current may be promoted to the public PWA.' >&2
+              exit 1
+              ;;
+          esac
           if ! printf '%s' "$SOURCE_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
             echo 'Preview SHA must be an exact lowercase 40-character commit SHA.' >&2
             exit 1
