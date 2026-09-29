@@ -807,6 +807,7 @@ export function NoteOperationsPage() {
 
         {tab === "membership" && (
           <NoteMembershipCockpit
+            key={gate.userId}
             userId={gate.userId}
             profile={profile}
             selectedAi={selectedAi}

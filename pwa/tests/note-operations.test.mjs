@@ -891,7 +891,7 @@ test("membership cockpit never writes a previous account workspace into a newly 
   const cockpit = await read("components/note-operations/note-membership-cockpit.tsx");
   assert.match(cockpit, /const workspaceOwnerRef = useRef\(""/);
   assert.match(cockpit, /workspaceOwnerRef\.current = ""/);
-  assert.match(cockpit, /setWorkspaceHydrated\(false\)/);
+  assert.doesNotMatch(cockpit, /setWorkspaceHydrated\(false\)/);
   assert.match(cockpit, /workspaceOwnerRef\.current = userId/);
   assert.match(cockpit, /workspaceOwnerRef\.current !== userId/);
   assert.match(cockpit, /<NoteMembershipAdvisor[\s\S]*?key=\{userId\}/);
@@ -915,4 +915,10 @@ test("note operations restores the last account-scoped tab and only launches AI 
   assert.match(page, /onOpenCalendar=\{\(\) => changeTab\("calendar"\)\}/);
   assert.match(page, /let copied = false;[\s\S]*?if \(copied\) launchAiApp\(selectedAi\)/);
   assert.match(page, /AIは自動で開いていません/);
+});
+
+
+test("note membership cockpit remounts per account so another account never sees the previous local workspace", async () => {
+  const page = await read("components/note-operations-page.tsx");
+  assert.match(page, /<NoteMembershipCockpit[\s\S]*?key=\{gate\.userId\}[\s\S]*?userId=\{gate\.userId\}/);
 });

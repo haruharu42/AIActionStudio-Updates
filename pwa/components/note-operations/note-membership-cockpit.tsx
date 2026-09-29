@@ -143,7 +143,6 @@ export function NoteMembershipCockpit({
   useEffect(() => {
     let active = true;
     workspaceOwnerRef.current = "";
-    setWorkspaceHydrated(false);
     const restored = readMembershipCockpitProgress(userId);
     queueMicrotask(() => {
       if (!active) return;
