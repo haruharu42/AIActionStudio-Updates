@@ -720,7 +720,7 @@ test("note membership cockpit covers grounded improvement metrics and article so
     assert.match(cockpit, new RegExp(label));
   }
   assert.match(cockpit, /NoteMembershipAdvisor/);
-  assert.match(cockpit, /const copied = await copy\(\);[\s\S]*?if \(copied\) launchAiApp\(selectedAi\)/);
+  assert.match(cockpit, /const copied = await copy\(\);[\s\S]*?if \(!copied\) return;[\s\S]*?onBeforeExternalLaunch\(\);[\s\S]*?launchAiApp\(selectedAi\)/);
   assert.doesNotMatch(cockpit, /const copyTask = copy\(\);[\s\S]*?launchAiApp\(selectedAi\)/);
   assert.match(advisor, /const copied = await copyPrompt\(\);[\s\S]*?if \(copied\) launchAiApp\(selectedAi\)/);
   assert.doesNotMatch(advisor, /const copyTask = copyPrompt\(\);[\s\S]*?launchAiApp\(selectedAi\)/);
@@ -838,7 +838,7 @@ test("membership advisor restores account-scoped selections and only opens exter
   assert.match(advisor, /const copied = await copyPrompt\(\)/);
   assert.match(advisor, /if \(copied\) launchAiApp\(selectedAi\)/);
   assert.match(cockpit, /<NoteMembershipAdvisor[\s\S]*?userId=\{userId\}/);
-  assert.match(cockpit, /const copied = await copy\(\);[\s\S]*?if \(copied\) launchAiApp\(selectedAi\)/);
+  assert.match(cockpit, /const copied = await copy\(\);[\s\S]*?if \(!copied\) return;[\s\S]*?onBeforeExternalLaunch\(\);[\s\S]*?launchAiApp\(selectedAi\)/);
 });
 
 
