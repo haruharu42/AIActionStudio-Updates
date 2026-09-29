@@ -93,13 +93,23 @@ export function SideHustleRoadmapsPage() {
   const [storageError, setStorageError] = useState(false);
 
   useEffect(() => {
-    setProgress(readProgress(userId));
-    setHydrated(true);
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setProgress(readProgress(userId));
+      setHydrated(true);
+    });
+    return () => { active = false; };
   }, [userId]);
 
   useEffect(() => {
     if (!hydrated) return;
-    setStorageError(!writeProgress(userId, progress));
+    const saved = writeProgress(userId, progress);
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setStorageError(!saved);
+    });
+    return () => { active = false; };
   }, [hydrated, progress, userId]);
 
   const filtered = useMemo(() => {
@@ -243,11 +253,11 @@ export function SideHustleRoadmapsPage() {
         </div>
 
         <div className="side-hustle-roadmap-phases">
-          {selected.phases.map((phase, phaseIndex) => {
+          {selected.phases.map((phase) => {
             const phaseKeys = phase.tasks.map((_task, index) => roadmapTaskKey(selected.slug, phase.id, index));
             const phaseDone = phaseKeys.filter((key) => completed.has(key)).length;
             return (
-              <details key={selected.slug + ":" + phase.id} className="side-hustle-roadmap-phase" open={phaseIndex === 0}>
+              <details key={selected.slug + ":" + phase.id} className="side-hustle-roadmap-phase">
                 <summary>
                   <span>{phase.window}</span>
                   <div>
