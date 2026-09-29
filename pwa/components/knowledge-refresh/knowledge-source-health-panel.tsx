@@ -28,6 +28,10 @@ export function KnowledgeSourceHealthPanel({
     ),
     [enabledSources],
   );
+  const backoffSources = useMemo(
+    () => enabledSources.filter((source) => source.consecutiveFailures >= 3),
+    [enabledSources],
+  );
   const disabledSources = useMemo(
     () => sources.filter((source) => !source.enabled),
     [sources],
@@ -72,6 +76,7 @@ export function KnowledgeSourceHealthPanel({
       <div className="knowledge-source-health-stats">
         <article><span>有効URL</span><strong>{enabledSources.length}</strong></article>
         <article className={failingSources.length > 0 ? "warning" : ""}><span>取得失敗</span><strong>{failingSources.length}</strong></article>
+        <article className={backoffSources.length > 0 ? "backoff" : ""}><span>再試行待ち</span><strong>{backoffSources.length}</strong></article>
         <article className={disabledSources.length > 0 ? "disabled" : ""}><span>停止中</span><strong>{disabledSources.length}</strong></article>
         <article><span>次回対象</span><strong>{dueSources ?? "-"}</strong></article>
       </div>
@@ -99,10 +104,11 @@ export function KnowledgeSourceHealthPanel({
               source.consecutiveFailures > 0
               || (source.lastHttpStatus !== null && source.lastHttpStatus >= 400)
             );
-            const statusClass = !source.enabled ? "disabled" : isFailing ? "warning" : "healthy";
-            const statusLabel = !source.enabled ? "停止中" : isFailing ? "要確認" : "正常";
+            const isBackoff = source.enabled && source.consecutiveFailures >= 3;
+            const statusClass = !source.enabled ? "disabled" : isBackoff ? "backoff" : isFailing ? "warning" : "healthy";
+            const statusLabel = !source.enabled ? "停止中" : isBackoff ? "再試行待ち" : isFailing ? "要確認" : "正常";
             return (
-              <article key={source.id} className={!source.enabled ? "disabled" : isFailing ? "warning" : ""}>
+              <article key={source.id} className={!source.enabled ? "disabled" : isBackoff ? "backoff" : isFailing ? "warning" : ""}>
                 <header>
                   <span className={statusClass}>{statusLabel}</span>
                   <strong>{knowledgeSourceHost(source.sourceUrl)}</strong>

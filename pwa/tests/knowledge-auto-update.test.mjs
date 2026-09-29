@@ -476,18 +476,25 @@ test("knowledge source health puts failing URLs first and never labels disabled 
     readPwa("app/phase26-knowledge.css"),
   ]);
 
+  assert.match(sourceHealth, /const backoffSources = useMemo/);
+  assert.match(sourceHealth, /source\.consecutiveFailures >= 3/);
   assert.match(sourceHealth, /const disabledSources = useMemo/);
   assert.match(sourceHealth, /const orderedSources = useMemo/);
   assert.match(sourceHealth, /if \(!source\.enabled\) return 2/);
   assert.match(sourceHealth, /return b\.consecutiveFailures - a\.consecutiveFailures/);
   assert.match(sourceHealth, /<span>停止中<\/span><strong>\{disabledSources\.length\}<\/strong>/);
-  assert.match(sourceHealth, /const statusClass = !source\.enabled \? "disabled"/);
-  assert.match(sourceHealth, /const statusLabel = !source\.enabled \? "停止中"/);
+  assert.match(sourceHealth, /const isBackoff = source\.enabled && source\.consecutiveFailures >= 3/);
+  assert.match(sourceHealth, /const statusClass = !source\.enabled \? "disabled" : isBackoff \? "backoff"/);
+  assert.match(sourceHealth, /const statusLabel = !source\.enabled \? "停止中" : isBackoff \? "再試行待ち"/);
+  assert.match(sourceHealth, /<span>再試行待ち<\/span><strong>\{backoffSources\.length\}<\/strong>/);
   assert.match(sourceHealth, /orderedSources\.map/);
+  assert.match(css, /\.knowledge-source-list article > header > span\.backoff/);
+  assert.match(css, /\.knowledge-source-list article\.backoff/);
+  assert.match(css, /\.knowledge-source-health-stats article\.backoff/);
   assert.match(css, /\.knowledge-source-list article > header > span\.disabled/);
   assert.match(css, /\.knowledge-source-health-stats article\.disabled/);
   assert.match(css, /\.knowledge-source-list article\.disabled/);
-  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.knowledge-source-health-stats \{[\s\S]*?grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
 });
 
 

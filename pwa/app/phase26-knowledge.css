@@ -69,7 +69,7 @@
 
 .knowledge-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 9px;
   margin-top: 14px;
   margin-bottom: 14px;
@@ -1258,6 +1258,11 @@
   color: #9a6216;
 }
 
+.knowledge-source-list article > header > span.backoff {
+  background: #e9efff;
+  color: #4b63a5;
+}
+
 .knowledge-source-list article > header > span.disabled {
   background: #edf1f4;
   color: #687a87;
@@ -1281,6 +1286,11 @@
 .knowledge-source-health-stats article.warning {
   border-color: #efd3a5;
   background: #fffaf2;
+}
+
+.knowledge-source-health-stats article.backoff {
+  border-color: #cbd6f2;
+  background: #f6f8ff;
 }
 
 .knowledge-source-health-stats article.disabled {
@@ -1381,6 +1391,11 @@
 .knowledge-source-list article.warning {
   border-color: #efd0a0;
   background: #fffbf4;
+}
+
+.knowledge-source-list article.backoff {
+  border-color: #cbd6f2;
+  background: #f7f9ff;
 }
 
 .knowledge-source-list article.disabled {
