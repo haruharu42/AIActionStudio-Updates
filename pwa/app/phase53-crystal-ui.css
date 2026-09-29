@@ -1011,8 +1011,8 @@ body.aas-crystal-theme :where(.pwa-shell .side-nav a, .pwa-shell .side-nav butto
   color: #4d638f !important;
 }
 
-/* Match the approved PC preview only on the home screen.
-   Other routes keep the stable desktop dock placement. */
+/* Legacy home preview alignment.
+   Phase 53.2 below normalizes this into one persistent left rail across signed-in desktop routes. */
 @media (min-width: 1100px) {
   body.aas-crystal-theme .reference-home > .aas-reference-desktop-nav {
     inset: 88px auto 18px 16px;
