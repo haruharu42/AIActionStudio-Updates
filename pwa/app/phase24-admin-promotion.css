@@ -1729,3 +1729,112 @@
     min-height: 260px;
   }
 }
+
+
+.admin-promo-eight-step {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-promo-wizard-steps {
+  margin: 0;
+}
+
+.admin-promo-wizard-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgb(148 163 184 / 28%);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 82%);
+}
+
+.admin-promo-wizard-body {
+  min-height: 360px;
+}
+
+.admin-promo-wizard-preview,
+.admin-promo-wizard-social-preview {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid rgb(148 163 184 / 26%);
+  border-radius: 14px;
+  background: rgb(248 250 252 / 76%);
+  color: #334155;
+}
+
+.admin-promo-wizard-preview {
+  display: grid;
+  gap: 12px;
+  line-height: 1.75;
+}
+
+.admin-promo-wizard-preview h2,
+.admin-promo-wizard-preview h3,
+.admin-promo-wizard-preview p,
+.admin-promo-wizard-preview ul,
+.admin-promo-wizard-preview ol,
+.admin-promo-wizard-preview blockquote {
+  margin: 0;
+}
+
+.admin-promo-wizard-social-preview {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.75;
+}
+
+.admin-promo-selected-title {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid rgb(59 130 246 / 22%);
+  border-radius: 12px;
+  background: rgb(239 246 255 / 52%);
+}
+
+.admin-promo-selected-title span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-promo-selected-title strong {
+  color: #1e293b;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.admin-promo-wizard-full-prompt {
+  margin-top: 4px;
+  border-top: 1px solid rgb(148 163 184 / 20%);
+  padding-top: 12px;
+}
+
+.admin-promo-wizard-full-prompt > summary {
+  cursor: pointer;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-promo-wizard-full-prompt pre {
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .admin-promo-wizard-card {
+    padding: 13px;
+  }
+
+  .admin-promo-wizard-body {
+    min-height: 300px;
+  }
+}
