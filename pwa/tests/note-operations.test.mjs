@@ -840,3 +840,38 @@ test("membership advisor restores account-scoped selections and only opens exter
   assert.match(cockpit, /<NoteMembershipAdvisor[\s\S]*?userId=\{userId\}/);
   assert.match(cockpit, /const copied = await copy\(\);[\s\S]*?if \(copied\) launchAiApp\(selectedAi\)/);
 });
+
+
+test("membership cockpit restores every planning workspace per account and persists before leaving", async () => {
+  const [cockpit, cockpitLib] = await Promise.all([
+    read("components/note-operations/note-membership-cockpit.tsx"),
+    read("lib/note-membership-cockpit.ts"),
+  ]);
+
+  for (const marker of [
+    "DEFAULT_MEMBERSHIP_PRICING_INPUT",
+    "DEFAULT_MEMBERSHIP_PAGE_INPUT",
+    "DEFAULT_MEMBERSHIP_PROMOTION_INPUT",
+    "DEFAULT_MEMBERSHIP_CALENDAR_INPUT",
+    "DEFAULT_MEMBERSHIP_IMPROVE_INPUT",
+    "readMembershipCockpitProgress",
+    "writeMembershipCockpitProgress",
+    "aas.note.membership.cockpit.v1",
+  ]) {
+    assert.match(cockpitLib, new RegExp(marker.replaceAll(".", "\\.")));
+  }
+
+  assert.match(cockpit, /const \[workspaceHydrated, setWorkspaceHydrated\] = useState\(false\)/);
+  assert.match(cockpit, /const restored = readMembershipCockpitProgress\(userId\)/);
+  assert.match(cockpit, /setTab\(restored\.tab\)/);
+  assert.match(cockpit, /setPricing\(restored\.pricing\)/);
+  assert.match(cockpit, /setPageInput\(restored\.pageInput\)/);
+  assert.match(cockpit, /setPromotion\(restored\.promotion\)/);
+  assert.match(cockpit, /setCalendar\(restored\.calendar\)/);
+  assert.match(cockpit, /setImprove\(restored\.improve\)/);
+  assert.match(cockpit, /setArticleTheme\(restored\.articleTheme\)/);
+  assert.match(cockpit, /writeMembershipCockpitProgress\(userId/);
+  assert.match(cockpit, /window\.addEventListener\("pagehide"/);
+  assert.match(cockpit, /window\.addEventListener\("beforeunload"/);
+  assert.match(cockpit, /document\.addEventListener\("visibilitychange"/);
+});

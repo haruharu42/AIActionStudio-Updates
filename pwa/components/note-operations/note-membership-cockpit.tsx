@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { NoteMembershipAdvisor } from "@/components/note-operations/note-membership-advisor";
 import { NoteMembershipMetricsPanel } from "@/components/note-operations/note-membership-metrics-panel";
 import {
+  DEFAULT_MEMBERSHIP_CALENDAR_INPUT,
+  DEFAULT_MEMBERSHIP_IMPROVE_INPUT,
+  DEFAULT_MEMBERSHIP_PAGE_INPUT,
+  DEFAULT_MEMBERSHIP_PRICING_INPUT,
+  DEFAULT_MEMBERSHIP_PROMOTION_INPUT,
   NOTE_MEMBERSHIP_LAUNCH_CHECKLIST,
   buildMembershipCalendarPrompt,
   buildMembershipImprovePrompt,
@@ -14,6 +19,8 @@ import {
   buildMembershipPromotionPrompt,
   membershipArticleHref,
   membershipLaunchStorageKey,
+  readMembershipCockpitProgress,
+  writeMembershipCockpitProgress,
   type MembershipCalendarInput,
   type MembershipImproveInput,
   type MembershipLaunchChecklistKey,
@@ -123,37 +130,64 @@ export function NoteMembershipCockpit({
   const [tab, setTab] = useState<NoteMembershipCockpitTab>("consult");
   const [checked, setChecked] = useState<MembershipLaunchChecklistKey[]>([]);
 
-  const [pricing, setPricing] = useState<MembershipPricingInput>({
-    planCount: 2,
-    currentPrice: "未設定・AIに相談",
-    mainValue: "mixed",
-    individualSupport: "light",
-    weeklyHours: "1_3",
-    goal: "balance",
-  });
-  const [pageInput, setPageInput] = useState<MembershipPageInput>({
-    angle: "beginner",
-    length: "standard",
-    faq: "yes",
-  });
-  const [promotion, setPromotion] = useState<MembershipPromotionInput>({
-    channel: "note",
-    stage: "before_open",
-    focus: "concept",
-    image: "ai",
-  });
-  const [calendar, setCalendar] = useState<MembershipCalendarInput>({
-    cadence: "weekly1",
-    contentMix: "mixed",
-    monthGoal: "habit",
-  });
-  const [improve, setImprove] = useState<MembershipImproveInput>({
-    problem: "join",
-    evidence: "none",
-    changeRange: "small",
-  });
+  const [pricing, setPricing] = useState<MembershipPricingInput>({ ...DEFAULT_MEMBERSHIP_PRICING_INPUT });
+  const [pageInput, setPageInput] = useState<MembershipPageInput>({ ...DEFAULT_MEMBERSHIP_PAGE_INPUT });
+  const [promotion, setPromotion] = useState<MembershipPromotionInput>({ ...DEFAULT_MEMBERSHIP_PROMOTION_INPUT });
+  const [calendar, setCalendar] = useState<MembershipCalendarInput>({ ...DEFAULT_MEMBERSHIP_CALENDAR_INPUT });
+  const [improve, setImprove] = useState<MembershipImproveInput>({ ...DEFAULT_MEMBERSHIP_IMPROVE_INPUT });
   const [articleTheme, setArticleTheme] = useState("");
   const [metricsEntries, setMetricsEntries] = useState<NoteMembershipMetricsEntry[]>([]);
+  const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const restored = readMembershipCockpitProgress(userId);
+    queueMicrotask(() => {
+      if (!active) return;
+      setTab(restored.tab);
+      setPricing(restored.pricing);
+      setPageInput(restored.pageInput);
+      setPromotion(restored.promotion);
+      setCalendar(restored.calendar);
+      setImprove(restored.improve);
+      setArticleTheme(restored.articleTheme);
+      setWorkspaceHydrated(true);
+    });
+    return () => { active = false; };
+  }, [userId]);
+
+  const persistWorkspace = useCallback(() => {
+    if (!workspaceHydrated) return;
+    writeMembershipCockpitProgress(userId, {
+      tab,
+      pricing,
+      pageInput,
+      promotion,
+      calendar,
+      improve,
+      articleTheme,
+    });
+  }, [articleTheme, calendar, improve, pageInput, pricing, promotion, tab, userId, workspaceHydrated]);
+
+  useEffect(() => {
+    persistWorkspace();
+  }, [persistWorkspace]);
+
+  useEffect(() => {
+    if (!workspaceHydrated) return;
+    const persist = () => persistWorkspace();
+    const persistWhenHidden = () => {
+      if (document.visibilityState === "hidden") persistWorkspace();
+    };
+    window.addEventListener("pagehide", persist);
+    window.addEventListener("beforeunload", persist);
+    document.addEventListener("visibilitychange", persistWhenHidden);
+    return () => {
+      window.removeEventListener("pagehide", persist);
+      window.removeEventListener("beforeunload", persist);
+      document.removeEventListener("visibilitychange", persistWhenHidden);
+    };
+  }, [persistWorkspace, workspaceHydrated]);
 
   useEffect(() => {
     let active = true;

@@ -54,6 +54,50 @@ export type MembershipImproveInput = {
   changeRange: "small" | "medium" | "large";
 };
 
+export const DEFAULT_MEMBERSHIP_PRICING_INPUT: MembershipPricingInput = {
+  planCount: 2,
+  currentPrice: "未設定・AIに相談",
+  mainValue: "mixed",
+  individualSupport: "light",
+  weeklyHours: "1_3",
+  goal: "balance",
+};
+
+export const DEFAULT_MEMBERSHIP_PAGE_INPUT: MembershipPageInput = {
+  angle: "beginner",
+  length: "standard",
+  faq: "yes",
+};
+
+export const DEFAULT_MEMBERSHIP_PROMOTION_INPUT: MembershipPromotionInput = {
+  channel: "note",
+  stage: "before_open",
+  focus: "concept",
+  image: "ai",
+};
+
+export const DEFAULT_MEMBERSHIP_CALENDAR_INPUT: MembershipCalendarInput = {
+  cadence: "weekly1",
+  contentMix: "mixed",
+  monthGoal: "habit",
+};
+
+export const DEFAULT_MEMBERSHIP_IMPROVE_INPUT: MembershipImproveInput = {
+  problem: "join",
+  evidence: "none",
+  changeRange: "small",
+};
+
+export type NoteMembershipCockpitProgress = {
+  tab: NoteMembershipCockpitTab;
+  pricing: MembershipPricingInput;
+  pageInput: MembershipPageInput;
+  promotion: MembershipPromotionInput;
+  calendar: MembershipCalendarInput;
+  improve: MembershipImproveInput;
+  articleTheme: string;
+};
+
 export const NOTE_MEMBERSHIP_LAUNCH_CHECKLIST = [
   { key: "concept", label: "コンセプト・対象読者を確定" },
   { key: "plans", label: "プラン数・料金・特典を確定" },
@@ -71,6 +115,100 @@ export type MembershipLaunchChecklistKey = typeof NOTE_MEMBERSHIP_LAUNCH_CHECKLI
 
 export function membershipLaunchStorageKey(userId: string): string {
   return "aas.note.membership.launch.v1:" + userId;
+}
+
+const MEMBERSHIP_COCKPIT_STORAGE_PREFIX = "aas.note.membership.cockpit.v1";
+
+export function membershipCockpitStorageKey(userId: string): string {
+  return MEMBERSHIP_COCKPIT_STORAGE_PREFIX + ":" + userId;
+}
+
+function pickAllowed<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof value === "string" && allowed.includes(value as T) ? value as T : fallback;
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+export function readMembershipCockpitProgress(userId: string): NoteMembershipCockpitProgress {
+  const fallback: NoteMembershipCockpitProgress = {
+    tab: "consult",
+    pricing: { ...DEFAULT_MEMBERSHIP_PRICING_INPUT },
+    pageInput: { ...DEFAULT_MEMBERSHIP_PAGE_INPUT },
+    promotion: { ...DEFAULT_MEMBERSHIP_PROMOTION_INPUT },
+    calendar: { ...DEFAULT_MEMBERSHIP_CALENDAR_INPUT },
+    improve: { ...DEFAULT_MEMBERSHIP_IMPROVE_INPUT },
+    articleTheme: "",
+  };
+  if (typeof window === "undefined" || !userId) return fallback;
+
+  try {
+    const raw = window.localStorage.getItem(membershipCockpitStorageKey(userId));
+    if (!raw) return fallback;
+    const parsed = recordValue(JSON.parse(raw));
+    const pricing = recordValue(parsed.pricing);
+    const pageInput = recordValue(parsed.pageInput);
+    const promotion = recordValue(parsed.promotion);
+    const calendar = recordValue(parsed.calendar);
+    const improve = recordValue(parsed.improve);
+
+    return {
+      tab: pickAllowed(parsed.tab, ["consult", "pricing", "launch", "page", "promotion", "calendar", "improve"] as const, "consult"),
+      pricing: {
+        planCount: typeof pricing.planCount === "number" && Number.isFinite(pricing.planCount)
+          ? Math.max(1, Math.min(5, Math.trunc(pricing.planCount)))
+          : fallback.pricing.planCount,
+        currentPrice: typeof pricing.currentPrice === "string" ? pricing.currentPrice.slice(0, 120) : fallback.pricing.currentPrice,
+        mainValue: pickAllowed(pricing.mainValue, ["content", "community", "qa", "individual", "support", "mixed"] as const, fallback.pricing.mainValue),
+        individualSupport: pickAllowed(pricing.individualSupport, ["none", "light", "medium", "heavy"] as const, fallback.pricing.individualSupport),
+        weeklyHours: pickAllowed(pricing.weeklyHours, ["under1", "1_3", "3_5", "5_plus"] as const, fallback.pricing.weeklyHours),
+        goal: pickAllowed(pricing.goal, ["easy_join", "balance", "premium", "ai"] as const, fallback.pricing.goal),
+      },
+      pageInput: {
+        angle: pickAllowed(pageInput.angle, ["beginner", "benefit", "community", "creator", "professional"] as const, fallback.pageInput.angle),
+        length: pickAllowed(pageInput.length, ["short", "standard", "detailed"] as const, fallback.pageInput.length),
+        faq: pickAllowed(pageInput.faq, ["yes", "no"] as const, fallback.pageInput.faq),
+      },
+      promotion: {
+        channel: pickAllowed(promotion.channel, ["note", "x", "threads", "instagram"] as const, fallback.promotion.channel),
+        stage: pickAllowed(promotion.stage, ["before_open", "just_opened", "ongoing"] as const, fallback.promotion.stage),
+        focus: pickAllowed(promotion.focus, ["concept", "benefits", "founder", "limited", "faq"] as const, fallback.promotion.focus),
+        image: pickAllowed(promotion.image, ["yes", "no", "ai"] as const, fallback.promotion.image),
+      },
+      calendar: {
+        cadence: pickAllowed(calendar.cadence, ["weekly1", "weekly2", "monthly2", "monthly1"] as const, fallback.calendar.cadence),
+        contentMix: pickAllowed(calendar.contentMix, ["article", "article_board", "article_qa", "mixed"] as const, fallback.calendar.contentMix),
+        monthGoal: pickAllowed(calendar.monthGoal, ["habit", "value", "conversation", "retention"] as const, fallback.calendar.monthGoal),
+      },
+      improve: {
+        problem: pickAllowed(improve.problem, ["join", "retention", "upper_plan", "workload", "engagement", "description"] as const, fallback.improve.problem),
+        evidence: pickAllowed(improve.evidence, ["none", "some", "enough"] as const, fallback.improve.evidence),
+        changeRange: pickAllowed(improve.changeRange, ["small", "medium", "large"] as const, fallback.improve.changeRange),
+      },
+      articleTheme: typeof parsed.articleTheme === "string" ? parsed.articleTheme.slice(0, 300) : "",
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeMembershipCockpitProgress(
+  userId: string,
+  progress: NoteMembershipCockpitProgress,
+): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  try {
+    window.localStorage.setItem(
+      membershipCockpitStorageKey(userId),
+      JSON.stringify({ ...progress, articleTheme: progress.articleTheme.slice(0, 300) }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function profileBlock(profile: NoteOperationProfile): string {
