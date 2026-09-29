@@ -40,6 +40,7 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     "動画・YouTube",
     "画像・デザイン",
     "漫画・コミック",
+    "アダアフィ",
     "アフィリエイト",
     "物販・販売",
     "クラウドソーシング",
@@ -164,6 +165,7 @@ test("every prompt receives shared accuracy rules plus category-specific reinfor
     "動画・YouTube",
     "画像・デザイン",
     "漫画・コミック",
+    "アダアフィ",
     "アフィリエイト",
     "物販・販売",
     "クラウドソーシング",
@@ -182,7 +184,7 @@ test("every prompt receives shared accuracy rules plus category-specific reinfor
   assert.match(guidance, /購入前に必要な素材、対象外、修正範囲/);
 });
 
-test("all 13 prompt categories use full dedicated prompt profiles", async () => {
+test("all 14 prompt categories use full dedicated prompt profiles", async () => {
   const [catalog, guidance] = await Promise.all([
     read("lib/action-prompt-catalog.ts"),
     read("lib/action-prompt-category-guidance.ts"),
@@ -203,6 +205,7 @@ test("all 13 prompt categories use full dedicated prompt profiles", async () => 
     "動画・YouTube",
     "画像・デザイン",
     "漫画・コミック",
+    "アダアフィ",
     "アフィリエイト",
     "物販・販売",
     "クラウドソーシング",
@@ -243,6 +246,7 @@ test("all prompt templates receive researched category rules and template-specif
     "動画・YouTube",
     "画像・デザイン",
     "漫画・コミック",
+    "アダアフィ",
     "アフィリエイト",
     "物販・販売",
     "クラウドソーシング",
@@ -295,4 +299,38 @@ test("all prompt templates receive researched category rules and template-specif
   assert.match(research, /プロジェクト形式.*コンペ形式.*タスク形式/);
   assert.match(research, /ココナラ等ではカテゴリ・提供内容/);
   assert.match(dedicated, /【テンプレート専用設計】/);
+});
+
+
+test("prompt library includes adult affiliate templates with compliance guardrails", async () => {
+  const [catalog, category, research, dedicated] = await Promise.all([
+    read("lib/action-prompt-catalog.ts"),
+    read("lib/action-prompt-category-guidance.ts"),
+    read("lib/action-prompt-research-guidance.ts"),
+    read("lib/action-prompt-template-guidance.ts"),
+  ]);
+
+  const ids = [
+    "adult-affiliate-offer-research",
+    "adult-affiliate-seo-brief",
+    "adult-affiliate-x-plan",
+    "adult-affiliate-lp-flow",
+    "adult-affiliate-compliance-check",
+    "adult-affiliate-conversion-review",
+    "adult-affiliate-content-calendar",
+    "adult-affiliate-site-architecture",
+  ];
+  for (const id of ids) {
+    assert.match(catalog, new RegExp('id": "' + id + '"|id: "' + id + '"'));
+    assert.match(dedicated, new RegExp('"' + id + '":'));
+  }
+
+  assert.match(catalog, /"category": "アダアフィ"|category: "アダアフィ"/);
+  assert.match(category, /"アダアフィ":/);
+  assert.match(research, /"アダアフィ":/);
+  assert.match(research, /適切な内容警告/);
+  assert.match(research, /未成年をターゲットにできず/);
+  assert.match(research, /広告であることが明瞭/);
+  assert.match(catalog, /規約回避/);
+  assert.match(catalog, /18歳以上/);
 });
