@@ -41,6 +41,13 @@ export type ArticleSummary = {
   updatedAt: string;
 };
 
+export type ArticleStockSummary = {
+  currentArticles: number;
+  maxArticles: number | null;
+  remainingArticles: number | null;
+  isUnlimited: boolean;
+};
+
 export type ArticleWorkspace = {
   articleId: string;
   userId: string;
@@ -444,6 +451,12 @@ export function fromApiError(error: unknown, fallback: string): ArticleLibraryEr
       { category: "access", code, status, cause: error },
     );
   }
+  if (code === "P0001" && normalized.includes("article_quota_exceeded")) {
+    return new ArticleLibraryError(
+      "記事ライブラリの保存上限に達しています。不要な記事を削除するか、保存可能数の多いプランをご確認ください。",
+      { category: "validation", code: "article_quota_exceeded", status, cause: error },
+    );
+  }
   if (code === "P0002" || status === 404 || normalized.includes("not found")) {
     return new ArticleLibraryError("記事が見つかりません。一覧を更新してください。", {
       category: "not_found",
@@ -497,6 +510,30 @@ export async function requireArticleAccess(
       status: 403,
     });
   }
+}
+
+export async function getMyArticleStockSummary(
+  client: SupabaseClient,
+  ownerId: string,
+): Promise<ArticleStockSummary> {
+  const owner = inputUuid(ownerId, "プロフィールID");
+  await requireArticleAccess(client, owner);
+  const { data, error } = await client.rpc("get_my_article_stock_summary");
+  if (error) throw fromApiError(error, "記事保存数の取得に失敗しました。");
+  const raw = singleton(data);
+  const row = record(raw, "記事保存数");
+  const currentArticles = nullableNonNegativeInteger(row.current_articles, "current_articles");
+  const maxArticles = nullableNonNegativeInteger(row.max_articles, "max_articles");
+  const remainingArticles = nullableNonNegativeInteger(row.remaining_articles, "remaining_articles");
+  if (currentArticles === null || typeof row.is_unlimited !== "boolean") {
+    throw invalidResponse("記事保存数の応答形式が不正です。");
+  }
+  return {
+    currentArticles,
+    maxArticles,
+    remainingArticles,
+    isUnlimited: row.is_unlimited,
+  };
 }
 
 export async function listCloudArticles(
