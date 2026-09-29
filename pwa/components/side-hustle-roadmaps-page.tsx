@@ -66,9 +66,14 @@ export function SideHustleRoadmapsPage() {
     } catch {
       // Keep safe defaults when stored progress is unavailable or corrupted.
     }
-    setSelectedSlug(nextSelected);
-    setCompleted(nextCompleted);
-    setHydrated(true);
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setSelectedSlug(nextSelected);
+      setCompleted(nextCompleted);
+      setHydrated(true);
+    });
+    return () => { active = false; };
   }, [storageKey]);
 
   useEffect(() => {
