@@ -424,3 +424,17 @@ test("dedicated side-hustle wizard links directly to its matching roadmap", asyn
   assert.match(wizard, /href=\{\"\/side-hustle-roadmaps\?roadmap=\" \+ encodeURIComponent\(definition\.slug\)\}/);
   assert.match(wizard, /この副業のロードマップ/);
 });
+
+
+test("side-hustle wizard never shows a blank screen while restoring or on an unknown slug", async () => {
+  const wizard = await read("components/side-hustle-wizard-page.tsx");
+
+  assert.match(wizard, /import \{ AppLoadingScreen \} from "@\/components\/app-loading-screen"/);
+  assert.match(wizard, /if \(!definition\) \{/);
+  assert.match(wizard, /副業機能が見つかりません/);
+  assert.match(wizard, /指定された副業機能は現在のAASには登録されていません/);
+  assert.match(wizard, /href="\/tools"/);
+  assert.match(wizard, /if \(!draft \|\| !hydrated\) \{/);
+  assert.match(wizard, /<AppLoadingScreen message="副業ワークフローを復元しています…"/);
+  assert.doesNotMatch(wizard, /if \(!definition \|\| !draft \|\| !hydrated\) return null/);
+});

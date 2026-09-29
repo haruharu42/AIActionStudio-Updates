@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { SideHustlePromptStep } from "@/components/side-hustles/side-hustle-prompt-step";
 import { SideHustleResultStep } from "@/components/side-hustles/side-hustle-result-step";
 import { SideHustleSelectField } from "@/components/side-hustles/side-hustle-select-field";
@@ -109,7 +110,21 @@ function SideHustleWizardContent({ slug }: { slug: string }) {
   const built = definition && draft ? buildSideHustlePrompt(definition, draft) : null;
   const runtimeState = getRuntimeKnowledgeState();
 
-  if (!definition || !draft || !hydrated) return null;
+  if (!definition) {
+    return (
+      <main className="standalone-page">
+        <section className="standalone-card">
+          <p className="eyebrow">SIDE HUSTLE</p>
+          <h1>副業機能が見つかりません</h1>
+          <p className="route-notice error">指定された副業機能は現在のAASには登録されていません。</p>
+          <Link className="route-back" href="/tools">← 機能一覧へ戻る</Link>
+        </section>
+      </main>
+    );
+  }
+  if (!draft || !hydrated) {
+    return <AppLoadingScreen message="副業ワークフローを復元しています…" />;
+  }
 
   const fields = definition.fields.filter((field) =>
     draft.step === 0 ? field.group === "basic" : field.group === "detail",
