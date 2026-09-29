@@ -85,3 +85,19 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     /sb_secret_|service[_-]?role|sk_(?:live|test)_|whsec_/i,
   );
 });
+
+test("prompt library follows filtered selection and keeps desktop prompt panes independently scrollable", async () => {
+  const [page, styles] = await Promise.all([
+    read("components/action-prompt-library-page.tsx"),
+    read("app/phase49-prompt-library.css"),
+  ]);
+
+  assert.match(page, /if \(!filtered\.length \|\| filtered\.some\(\(template\) => template\.id === selectedId\)\) return;/);
+  assert.match(page, /const next = filtered\[0\];/);
+  assert.match(styles, /@media \(min-width: 900px\)/);
+  assert.match(styles, /max-height: calc\(100dvh - 40px\)/);
+  assert.match(styles, /scrollbar-gutter: stable/);
+  assert.match(styles, /max-height: min\(52dvh, 520px\)/);
+  assert.match(styles, /overscroll-behavior: contain/);
+});
+
