@@ -143,3 +143,39 @@ test("prompt library includes reusable manga and four-panel comic templates", as
   assert.match(catalog, /既存作品・実在作家・既存キャラクター/);
 });
 
+test("every prompt receives shared accuracy rules plus category-specific reinforcement", async () => {
+  const catalog = await read("lib/action-prompt-catalog.ts");
+
+  assert.match(catalog, /ACTION_PROMPT_ACCURACY_LAYER/);
+  assert.match(catalog, /CATEGORY_ACCURACY_GUIDANCE/);
+  assert.match(catalog, /DEFAULT_CATEGORY_ACCURACY_GUIDANCE/);
+  assert.match(catalog, /actionPromptAccuracyGuidance\(template\.category\)/);
+  assert.match(catalog, /未指定.*未知として扱い/);
+  assert.match(catalog, /事実、推測、提案、例を混同しない/);
+  assert.match(catalog, /完成前チェック/);
+  assert.match(catalog, /内部の思考過程は出力せず/);
+
+  for (const category of [
+    "記事・コンテンツ",
+    "SNS",
+    "動画・YouTube",
+    "画像・デザイン",
+    "漫画・コミック",
+    "アフィリエイト",
+    "物販・販売",
+    "クラウドソーシング",
+    "スキル販売",
+    "デジタル商品",
+    "顧客対応・営業",
+    "リサーチ",
+    "業務効率化",
+  ]) {
+    assert.match(catalog, new RegExp(`"${category}":`));
+  }
+
+  assert.match(catalog, /一次情報、公式資料、原典、公開日・更新日/);
+  assert.match(catalog, /キャラクター設定表を基準/);
+  assert.match(catalog, /タイトル、サムネイル文言、冒頭、動画本編/);
+  assert.match(catalog, /提供範囲、納品物、必要素材、修正範囲/);
+});
+
