@@ -1,4 +1,4 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v11-axia-generated";
+const CACHE_NAME = "aas-pwa-phase56-runtime-v12-axia-generated";
 const APP_SHELL = [
   "/offline.html",
   "/favicon.svg",

@@ -8,12 +8,14 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 test("AI Action Studio branding is used on the active PWA shell", async () => {
-  const [layout, shell, legacyShell, manifest, home] = await Promise.all([
+  const [layout, shell, legacyShell, manifest, home, offline, serviceWorker] = await Promise.all([
     read("app/layout.tsx"),
     read("components/aas-reference-shell.tsx"),
     read("components/phase6-app.tsx"),
     read("public/manifest.webmanifest"),
     read("components/phase18-beginner-home.tsx"),
+    read("public/offline.html"),
+    read("public/sw.js"),
   ]);
 
   assert.match(layout, /AI Action Studio/);
@@ -24,6 +26,11 @@ test("AI Action Studio branding is used on the active PWA shell", async () => {
   assert.match(legacyShell, /AIで副業を、/);
   assert.doesNotMatch(legacyShell, /AI ARTICLE/);
   assert.match(manifest, /AI Action Studio/);
+  assert.match(offline, /AI Action Studio｜オフライン/);
+  assert.doesNotMatch(offline, /AI記事スタジオ|AI Article Studio/);
+  assert.match(offline, /addEventListener\("online"/);
+  assert.match(serviceWorker, /aas-pwa-phase56-runtime-v12-axia-generated/);
+  assert.doesNotMatch(serviceWorker, /phase17-prod-v2/);
   assert.match(home, /ActionStudioHomeHero/);
   assert.match(home, /ActionStudioQuickActions/);
 });

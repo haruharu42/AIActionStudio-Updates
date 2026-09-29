@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#081225" />
-    <title>AI記事スタジオ｜オフライン</title>
+    <title>AI Action Studio｜オフライン</title>
     <style>
       *{box-sizing:border-box}body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;background:#081225;color:#f7f9ff;font-family:"Yu Gothic UI",Meiryo,system-ui,sans-serif}.card{width:min(100%,440px);border:1px solid #2a3a58;border-radius:18px;background:#0e1a31;padding:38px;text-align:center}.mark{color:#9b5cff;font-size:36px}h1{font-size:24px;margin:18px 0 10px}p{color:#aebbd0;font-size:13px;line-height:1.8}button{border:0;border-radius:10px;background:#7c3aed;color:white;padding:12px 18px;font:700 12px inherit;cursor:pointer}
     </style>
@@ -16,5 +16,6 @@
       <p>アカウント・利用権はオンラインで安全に再確認します。接続後にもう一度お試しください。</p>
       <button type="button" onclick="location.reload()">再読み込み</button>
     </main>
+    <script>window.addEventListener("online",()=>location.reload(),{once:true});</script>
   </body>
 </html>
