@@ -155,6 +155,16 @@ export function ActionPromptLibraryPage() {
     });
   }, [category, favorites, favoritesOnly, query, templates]);
 
+  useEffect(() => {
+    if (!filtered.length || filtered.some((template) => template.id === selectedId)) return;
+
+    const next = filtered[0];
+    setSelectedId(next.id);
+    setSelectedAi(recommendedActionPromptAi(next));
+    setValues(initialActionPromptValues(next));
+    setMessage("");
+  }, [filtered, selectedId]);
+
   const prompt = useMemo(
     () => selected ? buildActionPrompt(selected, values) : "",
     [selected, values],
