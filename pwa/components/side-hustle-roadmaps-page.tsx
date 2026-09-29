@@ -62,11 +62,18 @@ export function SideHustleRoadmapsPage() {
   useEffect(() => {
     let nextSelected = SIDE_HUSTLE_ROADMAPS[0]?.slug ?? "";
     let nextCompleted = new Set<string>();
+    let selectedFromUrl = "";
     try {
+      const requestedSlug = new URLSearchParams(window.location.search).get("roadmap")?.trim() ?? "";
+      if (requestedSlug && getSideHustleRoadmap(requestedSlug)) {
+        selectedFromUrl = requestedSlug;
+        nextSelected = requestedSlug;
+      }
+
       const raw = window.localStorage.getItem(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw) as SavedRoadmapProgress;
-        if (parsed.selectedSlug && getSideHustleRoadmap(parsed.selectedSlug)) {
+        if (!selectedFromUrl && parsed.selectedSlug && getSideHustleRoadmap(parsed.selectedSlug)) {
           nextSelected = parsed.selectedSlug;
         }
         if (Array.isArray(parsed.completed)) {
@@ -81,6 +88,11 @@ export function SideHustleRoadmapsPage() {
       if (!active) return;
       setSelectedSlug(nextSelected);
       setCompleted(nextCompleted);
+      if (selectedFromUrl) {
+        setCategory("すべて");
+        setQuery("");
+        setMessage("専用副業機能から対応するロードマップを開きました。");
+      }
       setHydrated(true);
     });
     return () => { active = false; };

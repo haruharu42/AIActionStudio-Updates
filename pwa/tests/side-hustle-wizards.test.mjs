@@ -417,3 +417,10 @@ test("resale knowledge automation monitors multiple official marketplaces instea
   assert.match(migration, /array_agg\(distinct item order by item\)/);
   assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
 });
+
+
+test("dedicated side-hustle wizard links directly to its matching roadmap", async () => {
+  const wizard = await read("components/side-hustle-wizard-page.tsx");
+  assert.match(wizard, /href=\{\"\/side-hustle-roadmaps\?roadmap=\" \+ encodeURIComponent\(definition\.slug\)\}/);
+  assert.match(wizard, /この副業のロードマップ/);
+});

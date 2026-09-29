@@ -131,3 +131,14 @@ test("roadmap empty filter state uses the full card grid width on desktop and st
   assert.match(styles, /\.side-hustle-roadmap-empty \.secondary-action/);
   assert.match(styles, /@media \(max-width: 460px\)[\s\S]*?\.side-hustle-roadmap-empty \{[\s\S]*?flex-direction:\s*column/);
 });
+
+
+test("roadmap page can deep-link to the matching side-hustle roadmap without losing stored progress", async () => {
+  const page = await read("components/side-hustle-roadmaps-page.tsx");
+
+  assert.match(page, /new URLSearchParams\(window\.location\.search\)\.get\("roadmap"\)/);
+  assert.match(page, /if \(requestedSlug && getSideHustleRoadmap\(requestedSlug\)\)/);
+  assert.match(page, /selectedFromUrl = requestedSlug/);
+  assert.match(page, /if \(!selectedFromUrl && parsed\.selectedSlug/);
+  assert.match(page, /専用副業機能から対応するロードマップを開きました/);
+});

@@ -228,6 +228,9 @@ function SideHustleWizardContent({ slug }: { slug: string }) {
         </div>
         <div className="side-hustle-head-actions">
           <Link className="route-back" href="/tools">← 機能一覧</Link>
+          <Link className="secondary-action" href={"/side-hustle-roadmaps?roadmap=" + encodeURIComponent(definition.slug)}>
+            この副業のロードマップ
+          </Link>
           <button type="button" className="secondary-action" onClick={reset}>入力をリセット</button>
         </div>
       </header>
