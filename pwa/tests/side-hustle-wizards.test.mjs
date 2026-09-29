@@ -402,3 +402,18 @@ test("side-hustle wizard protects destructive reset and lets users jump back to 
   assert.match(styles, /\.side-hustle-step-rail li > button/);
   assert.match(styles, /\.side-hustle-step-rail li\.done > button:not\(:disabled\):hover/);
 });
+
+
+test("resale knowledge automation monitors multiple official marketplaces instead of relying on Mercari alone", async () => {
+  const migration = await readRepo("supabase/migrations/20260929234306_side_hustle_resale_source_diversity_v1.sql");
+
+  assert.match(migration, /paypayfleamarket\.yahoo\.co\.jp\/guide\/beginner/);
+  assert.match(migration, /paypayfleamarket\.yahoo\.co\.jp\/guide\/guideline/);
+  assert.match(migration, /paypayfleamarket\.yahoo\.co\.jp\/notice\/rule/);
+  assert.match(migration, /faq\.fril\.jp\/hc\/ja\/articles\/39032852808973/);
+  assert.match(migration, /faq\.fril\.jp\/hc\/ja\/sections\/39849581863309/);
+  assert.match(migration, /array\['sidejob_resale'\]::text\[\]/);
+  assert.match(migration, /official_changelog/);
+  assert.match(migration, /array_agg\(distinct item order by item\)/);
+  assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
+});
