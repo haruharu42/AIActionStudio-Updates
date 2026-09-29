@@ -70,6 +70,14 @@ const quickActions: readonly ActionCard[] = [
     tone: "pink",
   },
   {
+    title: "副業ロードマップ",
+    description: "副業ごとの準備・初成果物・公開/受注・改善・継続運用を確認。",
+    icon: "◎",
+    href: "/side-hustle-roadmaps",
+    badge: "NEW",
+    tone: "cyan",
+  },
+  {
     title: "副業機能",
     description: "SNS・動画・販売・受託・リサーチなどをジャンル別に開く。",
     icon: "▦",

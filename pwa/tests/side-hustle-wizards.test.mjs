@@ -364,3 +364,17 @@ test("side-hustle scenario and combination knowledge only reference live definit
     }
   }
 });
+
+
+test("side-hustle roadmaps are exposed from the feature list and home", async () => {
+  const [toolCatalog, home, layout] = await Promise.all([
+    read("features/tools/tool-catalog.ts"),
+    read("components/action-studio-home-hub.tsx"),
+    read("app/layout.tsx"),
+  ]);
+
+  assert.match(toolCatalog, /href: "\/side-hustle-roadmaps"/);
+  assert.match(toolCatalog, /title: "副業ロードマップ"/);
+  assert.match(home, /href: "\/side-hustle-roadmaps"/);
+  assert.match(layout, /phase56-side-hustle-roadmaps\.css/);
+});

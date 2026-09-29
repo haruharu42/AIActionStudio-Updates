@@ -15,6 +15,20 @@ export type ToolGroup = {
 
 export const MEMBER_TOOL_GROUPS: readonly ToolGroup[] = [
   {
+    id: "roadmaps",
+    title: "副業ロードマップ",
+    description: "副業ごとの開始準備、最初の成果物、公開・受注、改善、継続運用を段階的に進めます。",
+    tools: [
+      {
+        href: "/side-hustle-roadmaps",
+        category: "副業設計",
+        title: "副業ロードマップ",
+        description: "AAS内の全副業を5フェーズで確認し、公式情報・完了条件・進捗を見ながら次の行動を決めます。",
+        badge: "NEW",
+      },
+    ],
+  },
+  {
     id: "content",
     title: "記事・コンテンツ",
     description: "note・ブログ・コンテンツ販売など、文章を中心にした副業・発信をまとめています。",
@@ -206,6 +220,7 @@ export const MEMBER_TOOL_GROUPS: readonly ToolGroup[] = [
 ];
 
 export const SIDE_HUSTLE_TOOL_TITLES = [
+  "副業ロードマップ",
   "note運営アシスタント",
   "記事・ブログ・コンテンツ販売",
   "SNS運用・集客",

@@ -54,6 +54,7 @@ import "./phase52-infrastructure-usage.css";
 import "./phase53-crystal-ui.css";
 import "./phase54-feature-control.css";
 import "./phase55-notifications.css";
+import "./phase56-side-hustle-roadmaps.css";
 
 export const metadata: Metadata = {
   title: "AI Action Studio PWA",
