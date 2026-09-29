@@ -45,16 +45,6 @@ const DIRECT_HEADER_SELECTOR = [
 
 const INTERACTIVE_SELECTOR = "button,a,input,select,textarea,label,summary,[role='button']";
 
-function collapseSlug(value: string): string {
-  const normalized = value
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^0-9a-z\u3040-\u30ff\u3400-\u9fff_-]/g, "")
-    .slice(0, 72);
-  return normalized || "section";
-}
-
 function directHeader(panel: HTMLElement): HTMLElement | null {
   const known = panel.querySelector<HTMLElement>(DIRECT_HEADER_SELECTOR);
   if (known) return known;
@@ -87,8 +77,6 @@ export function SectionCollapseManager() {
     const scan = () => {
       scheduled = 0;
       const panels = Array.from(document.querySelectorAll<HTMLElement>(PANEL_SELECTOR));
-      const keyCounts = new Map<string, number>();
-
       for (const panel of panels) {
         if (cleanups.has(panel)) continue;
         if (panel.closest("details")) continue;
@@ -99,20 +87,7 @@ export function SectionCollapseManager() {
         if (!header) continue;
 
         const label = headingLabel(panel, header);
-        const classKey = Array.from(panel.classList).slice(0, 3).join("-");
-        const baseKey = `${pathname}:${collapseSlug(classKey)}:${collapseSlug(label)}`;
-        const count = (keyCounts.get(baseKey) ?? 0) + 1;
-        keyCounts.set(baseKey, count);
-        const storageKey = `aas:section-collapse:${baseKey}:${count}`;
-
         let collapsed = true;
-        try {
-          const saved = window.localStorage.getItem(storageKey);
-          if (saved === "1") collapsed = true;
-          if (saved === "0") collapsed = false;
-        } catch {
-          // Storage can be unavailable in restricted/private browser contexts.
-        }
 
         panel.classList.add("aas-collapsible-panel");
         header.classList.add("aas-section-collapse-header");
@@ -120,21 +95,14 @@ export function SectionCollapseManager() {
         header.setAttribute("tabindex", "0");
         header.setAttribute("aria-label", `${label}を開閉`);
 
-        const apply = (nextCollapsed: boolean, persist: boolean) => {
+        const apply = (nextCollapsed: boolean) => {
           collapsed = nextCollapsed;
           panel.classList.toggle("aas-section-collapsed", collapsed);
           header.setAttribute("aria-expanded", collapsed ? "false" : "true");
           header.setAttribute("data-aas-collapse-label", collapsed ? "開く ▼" : "閉じる ▲");
-          if (persist) {
-            try {
-              window.localStorage.setItem(storageKey, collapsed ? "1" : "0");
-            } catch {
-              // Keep the in-memory UI state even if persistence fails.
-            }
-          }
         };
 
-        const toggle = () => apply(!collapsed, true);
+        const toggle = () => apply(!collapsed);
 
         const onClick = (event: Event) => {
           const target = event.target;
@@ -151,7 +119,7 @@ export function SectionCollapseManager() {
 
         header.addEventListener("click", onClick);
         header.addEventListener("keydown", onKeyDown);
-        apply(collapsed, false);
+        apply(collapsed);
 
         cleanups.set(panel, () => {
           header.removeEventListener("click", onClick);
