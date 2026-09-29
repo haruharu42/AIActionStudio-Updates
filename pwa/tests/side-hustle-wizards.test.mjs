@@ -378,3 +378,27 @@ test("side-hustle roadmaps are exposed from the feature list and home", async ()
   assert.match(home, /href: "\/side-hustle-roadmaps"/);
   assert.match(layout, /phase56-side-hustle-roadmaps\.css/);
 });
+
+
+test("side-hustle wizard protects destructive reset and lets users jump back to completed steps", async () => {
+  const [wizard, rail, styles] = await Promise.all([
+    read("components/side-hustle-wizard-page.tsx"),
+    read("components/side-hustles/side-hustle-step-rail.tsx"),
+    read("app/phase51-side-hustle-wizard.css"),
+  ]);
+
+  assert.match(wizard, /window\.confirm\(warning\)/);
+  assert.match(wizard, /AIの完成結果をすべてリセットします/);
+  assert.match(wizard, /fresh\.selectedAi = draft\.selectedAi/);
+  assert.match(wizard, /fresh\.selectedPlan = draft\.selectedPlan/);
+  assert.match(wizard, /const jumpBackToStep = \(targetStep: number\)/);
+  assert.match(wizard, /targetStep >= draft\.step/);
+  assert.match(wizard, /<SideHustleStepRail step=\{draft\.step\} onStepChange=\{jumpBackToStep\}/);
+
+  assert.match(rail, /onStepChange\?: \(step: number\) => void/);
+  assert.match(rail, /const canReturn = index < step/);
+  assert.match(rail, /disabled=\{!canReturn\}/);
+  assert.match(rail, /このSTEPへ戻って修正/);
+  assert.match(styles, /\.side-hustle-step-rail li > button/);
+  assert.match(styles, /\.side-hustle-step-rail li\.done > button:not\(:disabled\):hover/);
+});

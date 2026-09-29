@@ -21,18 +21,46 @@
 }
 
 .side-hustle-step-rail li {
-  display: flex;
-  align-items: center;
-  gap: 9px;
+  min-width: 0;
   min-height: 54px;
-  padding: 10px 12px;
   border: 1px solid #2d405f;
   border-radius: 13px;
   background: #0d1a30;
   color: #8699b6;
 }
 
-.side-hustle-step-rail li > span {
+.side-hustle-step-rail li > button {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+}
+
+.side-hustle-step-rail li.done > button:not(:disabled) {
+  cursor: pointer;
+}
+
+.side-hustle-step-rail li.done > button:not(:disabled):hover,
+.side-hustle-step-rail li.done > button:not(:disabled):focus-visible {
+  background: rgb(126 225 192 / 8%);
+  outline: 2px solid rgb(126 225 192 / 30%);
+  outline-offset: 2px;
+}
+
+.side-hustle-step-rail li > button:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.side-hustle-step-rail li > button > span {
   display: grid;
   place-items: center;
   flex: 0 0 28px;
@@ -44,7 +72,7 @@
   font-weight: 900;
 }
 
-.side-hustle-step-rail li > b {
+.side-hustle-step-rail li > button > b {
   font-size: 11px;
 }
 
@@ -54,7 +82,7 @@
   color: #f7f4ff;
 }
 
-.side-hustle-step-rail li.active > span {
+.side-hustle-step-rail li.active > button > span {
   background: #7b5be0;
   color: #fff;
 }
@@ -64,7 +92,7 @@
   border-color: #2d6656;
 }
 
-.side-hustle-step-rail li.done > span {
+.side-hustle-step-rail li.done > button > span {
   background: #183d35;
   color: #83e5c2;
 }
@@ -405,10 +433,14 @@
 
   .side-hustle-step-rail li {
     min-height: 48px;
+  }
+
+  .side-hustle-step-rail li > button {
+    min-height: 46px;
     padding: 8px;
   }
 
-  .side-hustle-step-rail li > b {
+  .side-hustle-step-rail li > button > b {
     font-size: 10px;
   }
 

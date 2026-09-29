@@ -144,10 +144,24 @@ function SideHustleWizardContent({ slug }: { slug: string }) {
   };
 
   const reset = () => {
+    const warning = draft.resultText.trim()
+      ? "入力内容とAIの完成結果をすべてリセットします。元に戻せません。続けますか？"
+      : "入力内容をすべてリセットします。元に戻せません。続けますか？";
+    if (!window.confirm(warning)) return;
+
     clearSideHustleDraft(userId, definition);
-    setDraft(initialSideHustleDraft(definition));
+    const fresh = initialSideHustleDraft(definition);
+    fresh.selectedAi = draft.selectedAi;
+    fresh.selectedPlan = draft.selectedPlan;
+    setDraft(fresh);
     setHydrated(true);
-    setMessage("入力内容をリセットしました。");
+    setMessage("入力内容をリセットしました。使用AIと利用プランの設定は保持しています。");
+  };
+
+  const jumpBackToStep = (targetStep: number) => {
+    if (targetStep < 0 || targetStep >= draft.step) return;
+    setMessage("");
+    patchDraft({ step: targetStep });
   };
 
   const copyPrompt = async (openAi?: AiAppKey) => {
@@ -218,7 +232,7 @@ function SideHustleWizardContent({ slug }: { slug: string }) {
         </div>
       </header>
 
-      <SideHustleStepRail step={draft.step} />
+      <SideHustleStepRail step={draft.step} onStepChange={jumpBackToStep} />
 
       <section className="side-hustle-knowledge-status" aria-label="ナレッジ更新状態">
         <div>
