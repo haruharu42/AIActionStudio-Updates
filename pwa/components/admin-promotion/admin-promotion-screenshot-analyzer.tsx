@@ -233,8 +233,8 @@ export function AdminPromotionScreenshotAnalyzer({
     if (storageBusy || !items.length) return;
     setStorageBusy(true);
     setMessage("");
+    const client = getSupabaseClient();
     try {
-      const client = getSupabaseClient();
       for (const item of items) {
         if (item.asset) await deleteAdminPromotionContentAsset(client, item.asset);
       }
