@@ -403,7 +403,7 @@ export function AdminPromotionChannelBuilder({
             {meta.kind === "social" && socialPlatform ? (
               <>
                 <div className="admin-promo-channel-optional">
-                  <strong>スクショ解析を使う場合</strong>
+                  <strong>紹介したいスクショを追加</strong>
                   <p>{meta.screenshotSummary}</p>
                   <AdminPromotionScreenshotAnalyzer
                     key={channel}
