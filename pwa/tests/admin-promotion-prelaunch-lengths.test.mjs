@@ -201,7 +201,7 @@ test("promotion articles return manual screenshot placement instructions without
   assert.match(lib, /ユーザー本人がスクリーンショットを撮影する前提/);
   assert.doesNotMatch(page, /AdminPromotionScreenshotTool/);
   assert.match(page, /AdminPromotionChannelBuilder/);
-  assert.match(channelBuilder, /スクリーンショットは自分で撮影/);
+  assert.match(channelBuilder, /STEP 8で実際のスクショをAAS本体へ保存して本文へ差し込み/);
   assert.match(screenshotTool, /記事用スクショ撮影指示/);
   assert.match(screenshotTool, /撮影は自分で行う/);
   assert.match(screenshotTool, /画像取得用ではありません/);
