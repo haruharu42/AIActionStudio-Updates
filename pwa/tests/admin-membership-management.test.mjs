@@ -228,3 +228,17 @@ test("article library save limits are configurable for free and paid membership 
   assert.match(library, /保存数:/);
   assert.match(library, /残り/);
 });
+
+
+test("membership admin controls are collapsible and closed by default", () => {
+  const page = read("components/admin-membership-page.tsx");
+  const css = read("app/globals.css");
+
+  assert.match(page, /<details className="membership-admin-collapsible">/);
+  assert.match(page, /メンバーシップ管理を開く/);
+  assert.match(page, /membership-admin-collapsible-body/);
+  assert.doesNotMatch(page, /<details className="membership-admin-collapsible"\s+open/);
+  assert.match(css, /\.membership-admin-collapsible/);
+  assert.match(css, /\.membership-admin-collapsible\[open\]/);
+  assert.match(css, /閉じる ▲/);
+});
