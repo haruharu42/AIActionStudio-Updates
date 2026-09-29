@@ -212,10 +212,7 @@ export async function updateMembershipPlan(
     articleLibraryLimit: number | null;
   },
 ): Promise<void> {
-  const rpcName = input.articleLibraryLimit === null
-    ? "admin_update_creator_membership_plan_v2"
-    : "admin_update_creator_membership_plan_v2";
-  const { error } = await client.rpc(rpcName, {
+  const { error } = await client.rpc("admin_update_creator_membership_plan_v2", {
     p_plan_code: input.planCode,
     p_display_name: input.displayName.trim(),
     p_monthly_price_yen: input.monthlyPriceYen,
