@@ -105,6 +105,15 @@ export function SideHustleRoadmapsPage() {
   const selectedTotal = roadmapTaskCount(selected);
   const selectedDone = roadmapCompletedCount(selected, completed);
   const selectedPercent = percent(selectedDone, selectedTotal);
+  const nextTasks = selected.phases
+    .flatMap((phase) => phase.tasks.map((task, taskIndex) => ({
+      key: roadmapTaskKey(selected.slug, phase.id, taskIndex),
+      phaseTitle: phase.title,
+      window: phase.window,
+      task,
+    })))
+    .filter((item) => !completed.has(item.key))
+    .slice(0, 3);
 
   const allTotal = SIDE_HUSTLE_ROADMAPS.reduce((total, roadmap) => total + roadmapTaskCount(roadmap), 0);
   const allDone = SIDE_HUSTLE_ROADMAPS.reduce(
@@ -131,6 +140,27 @@ export function SideHustleRoadmapsPage() {
       return next;
     });
     setMessage(selected.title + " の進捗をリセットしました。");
+  };
+
+  const copyNextActions = async () => {
+    if (!nextTasks.length) {
+      setMessage("この副業のロードマップはすべて完了しています。");
+      return;
+    }
+    const lines = [
+      "【AAS 次にやる3つ】",
+      "副業: " + selected.title,
+      "",
+      ...nextTasks.map((item, index) =>
+        (index + 1) + ". [" + item.window + "｜" + item.phaseTitle + "] " + item.task,
+      ),
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setMessage("次にやることをコピーしました。");
+    } catch {
+      setMessage("次にやることをコピーできませんでした。");
+    }
   };
 
   const copyProgress = async () => {
@@ -254,6 +284,34 @@ export function SideHustleRoadmapsPage() {
           <button className="secondary-action" type="button" onClick={() => void copyProgress()}>進捗をコピー</button>
           <button className="secondary-action" type="button" onClick={resetSelected}>この副業だけリセット</button>
         </div>
+
+        <section className="side-hustle-roadmap-focus" aria-labelledby="roadmap-next-actions-title">
+          <div className="side-hustle-roadmap-focus-head">
+            <div>
+              <p className="eyebrow">NEXT ACTIONS</p>
+              <h3 id="roadmap-next-actions-title">{nextTasks.length ? "次にやる3つ" : "このロードマップは完了です"}</h3>
+              <p>{nextTasks.length ? "未完了タスクの中から、前のフェーズを優先して自動表示します。" : "必要に応じて進捗を見直すか、次の副業ロードマップへ進めます。"}</p>
+            </div>
+            {nextTasks.length > 0 && (
+              <button className="secondary-action" type="button" onClick={() => void copyNextActions()}>
+                次にやる3つをコピー
+              </button>
+            )}
+          </div>
+          {nextTasks.length > 0 && (
+            <div className="side-hustle-roadmap-focus-list">
+              {nextTasks.map((item, index) => (
+                <label key={item.key}>
+                  <input type="checkbox" checked={false} onChange={() => toggleTask(item.key)} />
+                  <span>
+                    <small>{index + 1} · {item.window}｜{item.phaseTitle}</small>
+                    <strong>{item.task}</strong>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="side-hustle-roadmap-phases">
           {selected.phases.map((phase, phaseIndex) => {

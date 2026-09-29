@@ -87,3 +87,23 @@ test("roadmap UI persists progress, supports filtering, copying, and direct AAS 
   assert.match(toolCatalog, /\/side-hustle-roadmaps/);
   assert.match(home, /\/side-hustle-roadmaps/);
 });
+
+
+test("roadmap surfaces the next three incomplete actions and lets users complete or copy them", async () => {
+  const [page, styles] = await Promise.all([
+    read("components/side-hustle-roadmaps-page.tsx"),
+    read("app/phase56-side-hustle-roadmaps.css"),
+  ]);
+
+  assert.match(page, /const nextTasks = selected\.phases/);
+  assert.match(page, /\.filter\(\(item\) => !completed\.has\(item\.key\)\)/);
+  assert.match(page, /\.slice\(0, 3\)/);
+  assert.match(page, /次にやる3つ/);
+  assert.match(page, /copyNextActions/);
+  assert.match(page, /次にやる3つをコピー/);
+  assert.match(page, /toggleTask\(item\.key\)/);
+  assert.match(page, /このロードマップは完了です/);
+  assert.match(styles, /\.side-hustle-roadmap-focus/);
+  assert.match(styles, /\.side-hustle-roadmap-focus-list/);
+  assert.match(styles, /@media \(max-width: 760px\)/);
+});

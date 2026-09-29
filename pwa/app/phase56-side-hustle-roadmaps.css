@@ -540,3 +540,84 @@
     text-align: center;
   }
 }
+
+.side-hustle-roadmap-focus {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #cfe0f3;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgb(247 252 255 / 95%), rgb(248 245 255 / 92%));
+  padding: 15px;
+}
+
+.side-hustle-roadmap-focus-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: end;
+}
+
+.side-hustle-roadmap-focus-head h3 {
+  margin: 3px 0 4px;
+  color: #2e4e6e;
+  font-size: 15px;
+}
+
+.side-hustle-roadmap-focus-head p:not(.eyebrow) {
+  margin: 0;
+  color: #7186a1;
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.side-hustle-roadmap-focus-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.side-hustle-roadmap-focus-list label {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  border: 1px solid #d8e4f2;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 86%);
+  padding: 11px;
+  cursor: pointer;
+}
+
+.side-hustle-roadmap-focus-list label:hover {
+  border-color: #9ebce8;
+  background: #fff;
+}
+
+.side-hustle-roadmap-focus-list span {
+  display: grid;
+  gap: 4px;
+}
+
+.side-hustle-roadmap-focus-list small {
+  color: #8878d2;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.side-hustle-roadmap-focus-list strong {
+  color: #355471;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  .side-hustle-roadmap-focus-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .side-hustle-roadmap-focus-list {
+    grid-template-columns: 1fr;
+  }
+}
