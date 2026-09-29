@@ -22,7 +22,15 @@ import {
   type PromotionRichImage,
 } from "@/lib/promotion-rich-text";
 
-export function AdminPromotionContentWorkspace({ channel }: { channel: AdminPromotionChannel }) {
+export function AdminPromotionContentWorkspace({
+  channel,
+  initialBody = "",
+  onBodyChange,
+}: {
+  channel: AdminPromotionChannel;
+  initialBody?: string;
+  onBodyChange?: (value: string) => void;
+}) {
   const [body, setBody] = useState("");
   const [assets, setAssets] = useState<PromotionContentAsset[]>([]);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
@@ -33,7 +41,11 @@ export function AdminPromotionContentWorkspace({ channel }: { channel: AdminProm
   const refresh = async () => {
     const client = getSupabaseClient();
     const workspace = await loadPromotionContentWorkspace(client, channel);
-    setBody(workspace.draft?.bodyMarkdown ?? "");
+    const nextBody = workspace.draft?.bodyMarkdown?.trim()
+      ? workspace.draft.bodyMarkdown
+      : initialBody;
+    setBody(nextBody);
+    onBodyChange?.(nextBody);
     setAssets(workspace.assets);
 
     const urls: Record<string, string> = {};
@@ -97,6 +109,7 @@ export function AdminPromotionContentWorkspace({ channel }: { channel: AdminProm
       const next = body.replaceAll(promotionScreenshotMarker(asset.id), "").replace(/\n{3,}/g, "\n\n");
       await savePromotionContentDraft(getSupabaseClient(), channel, next);
       setBody(next);
+      onBodyChange?.(next);
       await refresh();
       setMessage("スクショをAAS本体から削除しました。");
     } catch (error) {
@@ -172,7 +185,17 @@ export function AdminPromotionContentWorkspace({ channel }: { channel: AdminProm
 
       <label className="admin-promo-field">
         <span>完成原稿（Markdown）</span>
-        <textarea ref={textareaRef} className="admin-promo-final-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="AIで作成した完成原稿を貼り付け" />
+        <textarea
+          ref={textareaRef}
+          className="admin-promo-final-body"
+          value={body}
+          onChange={(e) => {
+            const next = e.target.value;
+            setBody(next);
+            onBodyChange?.(next);
+          }}
+          placeholder="AIで作成した完成原稿を貼り付け"
+        />
       </label>
 
       <div className="admin-promo-content-actions">
