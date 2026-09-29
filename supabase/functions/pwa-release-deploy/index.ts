@@ -4,7 +4,8 @@ type JsonRecord = Record<string, unknown>;
 
 const REPO = "haruharu42/AIArticleStudio-Updates";
 const WORKFLOW = "pwa-admin-public-release.yml";
-const PREVIEW_BRANCH = "preview/current";
+const DEFAULT_PREVIEW_BRANCH = "main";
+const ALLOWED_PREVIEW_BRANCHES = new Set(["main", "preview/current"]);
 const PUBLIC_URL = "https://ai-article-studio-pwa.ai-article-studio.workers.dev/";
 const ALLOWED_ORIGINS = new Set([
   "https://aas-preview-ai-article-studio-pwa-preview.ai-article-studio.workers.dev",
@@ -257,7 +258,7 @@ Deno.serve(async (request: Request) => {
       const refreshed = requestId && tokenConfigured ? await listDeployments(request) : deployments;
       return json(request, {
         configured: tokenConfigured,
-        previewBranch: PREVIEW_BRANCH,
+        previewBranch: DEFAULT_PREVIEW_BRANCH,
         publicUrl: PUBLIC_URL,
         deployments: refreshed,
       });
@@ -288,7 +289,7 @@ Deno.serve(async (request: Request) => {
       const refreshed = requestId && tokenConfigured ? await listDeployments(request) : deployments;
       return json(request, {
         configured: tokenConfigured,
-        previewBranch: PREVIEW_BRANCH,
+        previewBranch: DEFAULT_PREVIEW_BRANCH,
         publicUrl: PUBLIC_URL,
         deployments: refreshed,
       });
@@ -307,12 +308,12 @@ Deno.serve(async (request: Request) => {
 
     const releaseId = clean(body.releaseId);
     const sourceSha = clean(body.sourceSha).toLowerCase();
-    const sourceBranch = clean(body.sourceBranch) || PREVIEW_BRANCH;
+    const sourceBranch = clean(body.sourceBranch) || DEFAULT_PREVIEW_BRANCH;
 
     if (!/^[0-9a-f-]{36}$/.test(releaseId)) {
       return json(request, { error: "invalid_release_id" }, 400);
     }
-    if (sourceBranch !== PREVIEW_BRANCH || !/^[0-9a-f]{40}$/.test(sourceSha)) {
+    if (!ALLOWED_PREVIEW_BRANCHES.has(sourceBranch) || !/^[0-9a-f]{40}$/.test(sourceSha)) {
       return json(request, { error: "invalid_preview_source" }, 400);
     }
 
