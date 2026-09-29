@@ -438,3 +438,18 @@ test("side-hustle wizard never shows a blank screen while restoring or on an unk
   assert.match(wizard, /<AppLoadingScreen message="副業ワークフローを復元しています…"/);
   assert.doesNotMatch(wizard, /if \(!definition \|\| !draft \|\| !hydrated\) return null/);
 });
+
+
+test("side-hustle monitoring has official fallback sources for X analytics/policy and resale shipping", async () => {
+  const migration = await readRepo("supabase/migrations/20260929235118_side_hustle_official_fallback_sources_v1.sql");
+
+  assert.match(migration, /business\.x\.com\/en\/help\/campaign-measurement-and-analytics\/tweet-activity-dashboard/);
+  assert.match(migration, /business\.x\.com\/en\/help\/ads-policies/);
+  assert.match(migration, /post\.japanpost\.jp\/service\/send\/domestic\/delivery\/yu-pack/);
+  assert.match(migration, /array\['sidejob_sns','sidejob_video'\]::text\[\]/);
+  assert.match(migration, /array\['sidejob_resale'\]::text\[\]/);
+  assert.match(migration, /official_policy/);
+  assert.match(migration, /official_page/);
+  assert.match(migration, /array_agg\(distinct item order by item\)/);
+  assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
+});
