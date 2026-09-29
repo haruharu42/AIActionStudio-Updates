@@ -821,9 +821,9 @@ test("note membership cockpit covers grounded improvement metrics and article so
 
 test("membership advisor restores account-scoped selections and only opens external AI after a successful copy", async () => {
   const [advisor, advisorLib, cockpit] = await Promise.all([
-    read("components/note-operations/note-membership-advisor.tsx"),
-    read("lib/note-membership-advisor.ts"),
-    read("components/note-operations/note-membership-cockpit.tsx"),
+    readPwa("components/note-operations/note-membership-advisor.tsx"),
+    readPwa("lib/note-membership-advisor.ts"),
+    readPwa("components/note-operations/note-membership-cockpit.tsx"),
   ]);
 
   assert.match(advisorLib, /DEFAULT_NOTE_MEMBERSHIP_ADVISOR_INPUT/);
@@ -844,8 +844,8 @@ test("membership advisor restores account-scoped selections and only opens exter
 
 test("membership cockpit restores every planning workspace per account and persists before leaving", async () => {
   const [cockpit, cockpitLib] = await Promise.all([
-    read("components/note-operations/note-membership-cockpit.tsx"),
-    read("lib/note-membership-cockpit.ts"),
+    readPwa("components/note-operations/note-membership-cockpit.tsx"),
+    readPwa("lib/note-membership-cockpit.ts"),
   ]);
 
   for (const marker of [
@@ -878,7 +878,7 @@ test("membership cockpit restores every planning workspace per account and persi
 
 
 test("membership knowledge records the 2026-09-30 official billing recheck and legacy-membership exception", async () => {
-  const source = await read("lib/note-membership-advisor.ts");
+  const source = await readPwa("lib/note-membership-advisor.ts");
   assert.match(source, /checkedAt: "2026-09-30"/);
   assert.match(source, /2026年8月3日以降の新規加入では入会日基準の1か月ごとの請求/);
   assert.match(source, /2026年8月2日以前に開設されたメンバーシップ/);
@@ -888,7 +888,7 @@ test("membership knowledge records the 2026-09-30 official billing recheck and l
 
 
 test("membership cockpit never writes a previous account workspace into a newly selected account", async () => {
-  const cockpit = await read("components/note-operations/note-membership-cockpit.tsx");
+  const cockpit = await readPwa("components/note-operations/note-membership-cockpit.tsx");
   assert.match(cockpit, /const workspaceOwnerRef = useRef\(""/);
   assert.match(cockpit, /workspaceOwnerRef\.current = ""/);
   assert.doesNotMatch(cockpit, /setWorkspaceHydrated\(false\)/);
@@ -900,8 +900,8 @@ test("membership cockpit never writes a previous account workspace into a newly 
 
 test("note operations restores the last account-scoped tab and only launches AI after clipboard success", async () => {
   const [page, helpers] = await Promise.all([
-    read("components/note-operations-page.tsx"),
-    read("components/note-operations/note-operations-page-helpers.ts"),
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-operations/note-operations-page-helpers.ts"),
   ]);
 
   assert.match(helpers, /type NoteOperationsTab = "start" \| "profile" \| "plan" \| "calendar" \| "membership"/);
@@ -919,6 +919,6 @@ test("note operations restores the last account-scoped tab and only launches AI 
 
 
 test("note membership cockpit remounts per account so another account never sees the previous local workspace", async () => {
-  const page = await read("components/note-operations-page.tsx");
+  const page = await readPwa("components/note-operations-page.tsx");
   assert.match(page, /<NoteMembershipCockpit[\s\S]*?key=\{gate\.userId\}[\s\S]*?userId=\{gate\.userId\}/);
 });
