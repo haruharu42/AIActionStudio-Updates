@@ -128,7 +128,9 @@ test("desktop navigation can add hide reorder reset and persist items", async ()
 
   assert.match(prefs, /DESKTOP_NAV_ITEMS_KEY/);
   assert.match(prefs, /MAX_DESKTOP_NAV_ITEMS = 8/);
-  assert.match(prefs, /localStorage\.setItem\(DESKTOP_NAV_ITEMS_KEY/);
+  assert.match(prefs, /desktopNavItemsStorageKey\(userId\?: string \| null\)/);
+  assert.match(prefs, /DesktopNavItemsPreferenceEventDetail/);
+  assert.match(prefs, /localStorage\.setItem\(key, JSON\.stringify\(next\)\)/);
   for (const label of ["画像作成", "機能", "SNS", "公開管理", "分析", "使い方", "ミッション"]) {
     assert.match(prefs, new RegExp(label));
   }
@@ -140,7 +142,14 @@ test("desktop navigation can add hide reorder reset and persist items", async ()
   assert.match(shell, /初期状態に戻す/);
   assert.match(shell, /ホームと設定は常に表示されます/);
   assert.match(shell, /active=\{active === "settings"\}/);
-  assert.match(shell, /writeDesktopNavItems/);
+  assert.match(shell, /useSharedAccessState\(\)/);
+  assert.match(shell, /const userId = state\.kind === "ready" \? state\.profile\.id : ""/);
+  assert.match(shell, /readDesktopNavItems\(userId\)/);
+  assert.match(shell, /writeDesktopNavItems\(next, userId\)/);
+  assert.match(shell, /desktopNavItemsStorageKey\(userId\)/);
+  assert.match(shell, /detail\.userId !== userId/);
+  assert.match(shell, /window\.addEventListener\("storage"/);
+  assert.match(shell, /ログイン中のユーザーごとに保存されます/);
 
   assert.match(css, /@media \(min-width: 900px\)/);
   assert.match(css, /\.aas-reference-desktop-nav/);

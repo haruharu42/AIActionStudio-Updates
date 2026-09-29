@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { SharedMobileBottomNav } from "@/components/shared-mobile-bottom-nav";
 import { NotificationHeaderButton } from "@/components/notification-header-button";
 import type { MobileNavItemKey } from "@/lib/mobile-nav-preference";
@@ -13,9 +14,11 @@ import {
   DESKTOP_NAV_ITEM_OPTIONS,
   MAX_DESKTOP_NAV_ITEMS,
   desktopNavItemFor,
+  desktopNavItemsStorageKey,
   readDesktopNavItems,
   writeDesktopNavItems,
   type DesktopNavItemKey,
+  type DesktopNavItemsPreferenceEventDetail,
 } from "@/lib/desktop-nav-preference";
 
 export type ReferenceNavKey = "home" | MobileNavItemKey | "";
@@ -159,7 +162,7 @@ function DesktopNavCustomizer({
 
       <footer>
         <button type="button" onClick={() => onChange([...DEFAULT_DESKTOP_NAV_ITEMS])}>初期状態に戻す</button>
-        <small>ホームと設定は常に表示されます。</small>
+        <small>ログイン中のユーザーごとに保存されます。ホームと設定は常に表示されます。</small>
       </footer>
     </section>
   );
@@ -174,22 +177,32 @@ export function AasReferenceBottomNav({
   onHome?: () => void;
   onLibrary?: () => void;
 }) {
+  const { state } = useSharedAccessState();
+  const userId = state.kind === "ready" ? state.profile.id : "";
   const [desktopItems, setDesktopItems] = useState<DesktopNavItemKey[]>([...DEFAULT_DESKTOP_NAV_ITEMS]);
   const [customizing, setCustomizing] = useState(false);
 
   useEffect(() => {
-    const sync = () => setDesktopItems(readDesktopNavItems());
+    const sync = () => setDesktopItems(readDesktopNavItems(userId));
     const onPreference = (event: Event) => {
-      const custom = event as CustomEvent<DesktopNavItemKey[]>;
-      setDesktopItems(Array.isArray(custom.detail) ? custom.detail : readDesktopNavItems());
+      const custom = event as CustomEvent<DesktopNavItemsPreferenceEventDetail>;
+      if (!custom.detail || custom.detail.userId !== userId) return;
+      setDesktopItems(custom.detail.items);
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === desktopNavItemsStorageKey(userId)) sync();
     };
     queueMicrotask(sync);
     window.addEventListener(DESKTOP_NAV_ITEMS_EVENT, onPreference);
-    return () => window.removeEventListener(DESKTOP_NAV_ITEMS_EVENT, onPreference);
-  }, []);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(DESKTOP_NAV_ITEMS_EVENT, onPreference);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [userId]);
 
   const updateDesktopItems = (next: DesktopNavItemKey[]) => {
-    setDesktopItems(writeDesktopNavItems(next));
+    setDesktopItems(writeDesktopNavItems(next, userId));
   };
 
   return (

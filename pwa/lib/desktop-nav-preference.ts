@@ -1,6 +1,11 @@
 export const DESKTOP_NAV_ITEMS_KEY = "aas-pwa-desktop-nav-items";
 export const DESKTOP_NAV_ITEMS_EVENT = "aas-pwa-desktop-nav-items-preference";
 
+export type DesktopNavItemsPreferenceEventDetail = {
+  userId: string;
+  items: DesktopNavItemKey[];
+};
+
 export type DesktopNavItemKey =
   | "create"
   | "prompts"
@@ -66,9 +71,21 @@ export function normalizeDesktopNavItems(value: unknown): DesktopNavItemKey[] {
   return next.length ? next : [...DEFAULT_DESKTOP_NAV_ITEMS];
 }
 
-export function readDesktopNavItems(): DesktopNavItemKey[] {
+export function desktopNavItemsStorageKey(userId?: string | null): string {
+  const normalized = userId?.trim();
+  return normalized ? `${DESKTOP_NAV_ITEMS_KEY}:${normalized}` : DESKTOP_NAV_ITEMS_KEY;
+}
+
+export function readDesktopNavItems(userId?: string | null): DesktopNavItemKey[] {
   if (typeof window === "undefined") return [...DEFAULT_DESKTOP_NAV_ITEMS];
-  const stored = window.localStorage.getItem(DESKTOP_NAV_ITEMS_KEY);
+  const scopedKey = desktopNavItemsStorageKey(userId);
+  let stored = window.localStorage.getItem(scopedKey);
+
+  // One-way compatibility fallback: existing device-level navigation is reused
+  // until this account saves its own layout.
+  if (stored === null && scopedKey !== DESKTOP_NAV_ITEMS_KEY) {
+    stored = window.localStorage.getItem(DESKTOP_NAV_ITEMS_KEY);
+  }
   if (stored === null) return [...DEFAULT_DESKTOP_NAV_ITEMS];
   try {
     return normalizeDesktopNavItems(JSON.parse(stored));
@@ -77,11 +94,18 @@ export function readDesktopNavItems(): DesktopNavItemKey[] {
   }
 }
 
-export function writeDesktopNavItems(value: readonly DesktopNavItemKey[]): DesktopNavItemKey[] {
+export function writeDesktopNavItems(
+  value: readonly DesktopNavItemKey[],
+  userId?: string | null,
+): DesktopNavItemKey[] {
   const next = normalizeDesktopNavItems([...value]);
   if (typeof window === "undefined") return next;
-  window.localStorage.setItem(DESKTOP_NAV_ITEMS_KEY, JSON.stringify(next));
-  window.dispatchEvent(new CustomEvent<DesktopNavItemKey[]>(DESKTOP_NAV_ITEMS_EVENT, { detail: next }));
+  const normalizedUserId = userId?.trim() ?? "";
+  const key = desktopNavItemsStorageKey(normalizedUserId);
+  window.localStorage.setItem(key, JSON.stringify(next));
+  window.dispatchEvent(new CustomEvent<DesktopNavItemsPreferenceEventDetail>(DESKTOP_NAV_ITEMS_EVENT, {
+    detail: { userId: normalizedUserId, items: next },
+  }));
   return next;
 }
 
