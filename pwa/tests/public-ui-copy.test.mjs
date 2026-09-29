@@ -38,7 +38,9 @@ test("active PWA access shell avoids frozen Windows and hands successful login b
   assert.match(accessShell, /PWA ACCESS/);
   assert.doesNotMatch(accessShell, /onAccessReady/);
   assert.match(accessShell, /useSharedAccessState\(\)/);
-  assert.doesNotMatch(accessShell, /loadAccessState|アカウントと利用権を確認しています/);
+  assert.doesNotMatch(accessShell, /loadAccessState/);
+  assert.match(accessShell, /AppLoadingScreen/);
+  assert.match(accessShell, /アカウントと利用権を確認しています/);
   assert.doesNotMatch(accessShell, /recoveryRef/);
   assert.match(accessShell, /setAuthMode\("login"\);[\s\S]*?await refreshAccess\(\)/);
   assert.match(accessShell, /navigateRoute\("\/create"\)/);
