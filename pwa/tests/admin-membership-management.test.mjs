@@ -230,15 +230,26 @@ test("article library save limits are configurable for free and paid membership 
 });
 
 
-test("membership admin controls are collapsible and closed by default", () => {
+test("membership admin sections are independently collapsible and closed by default", () => {
   const page = read("components/admin-membership-page.tsx");
   const css = read("app/globals.css");
 
-  assert.match(page, /<details className="membership-admin-collapsible">/);
-  assert.match(page, /メンバーシップ管理を開く/);
-  assert.match(page, /membership-admin-collapsible-body/);
-  assert.doesNotMatch(page, /<details className="membership-admin-collapsible"\s+open/);
-  assert.match(css, /\.membership-admin-collapsible/);
-  assert.match(css, /\.membership-admin-collapsible\[open\]/);
+  assert.doesNotMatch(page, /メンバーシップ管理を開く/);
+  assert.doesNotMatch(page, /membership-admin-collapsible-body/);
+  assert.ok((page.match(/<details className="membership-admin-item">/g) ?? []).length >= 7);
+  for (const label of [
+    "現在のメンバー状況",
+    "noteメンバーシップ基本設定",
+    "3プランの料金・表示設定",
+    "プランごとの利用可能機能",
+    "ユーザーへメンバー特典を付与",
+    "メンバー特典の変更履歴",
+    "次に追加できる運用機能",
+  ]) {
+    assert.match(page, new RegExp(label));
+  }
+  assert.doesNotMatch(page, /<details className="membership-admin-item"\s+open/);
+  assert.match(css, /\.membership-admin-item-summary/);
+  assert.match(css, /\.membership-admin-item\[open\] \.membership-admin-item-state/);
   assert.match(css, /閉じる ▲/);
 });
