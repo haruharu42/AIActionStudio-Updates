@@ -1598,3 +1598,194 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* 2026-09-30: article-style 8-step promotion wizard. */
+.admin-promo-wizard-progress {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+}
+.admin-promo-wizard-progress button {
+  min-width: 0;
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  border: 1px solid #d6e3f2;
+  border-radius: 11px;
+  background: #fff;
+  color: #6d829c;
+  padding: 7px 8px;
+  text-align: left;
+  cursor: pointer;
+}
+.admin-promo-wizard-progress button > span {
+  width: 23px;
+  height: 23px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf3fa;
+  color: #66809f;
+  font-size: 8px;
+  font-weight: 900;
+}
+.admin-promo-wizard-progress button > small {
+  min-width: 0;
+  color: inherit;
+  font-size: 7.5px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+.admin-promo-wizard-progress button.done {
+  border-color: #c7e6dc;
+  background: #f5fbf9;
+  color: #4c8170;
+}
+.admin-promo-wizard-progress button.active {
+  border-color: #79aef0;
+  background: linear-gradient(145deg, #eff8ff, #f6f2ff);
+  color: #215fba;
+  box-shadow: 0 0 0 3px rgb(80 132 216 / 9%);
+}
+.admin-promo-wizard-progress button.active > span {
+  background: #1976f3;
+  color: #fff;
+}
+.admin-promo-wizard-pane {
+  min-height: 230px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border-top: 1px solid #dce9f6;
+  padding-top: 16px;
+}
+.admin-promo-wizard-pane > .admin-promo-field,
+.admin-promo-wizard-pane > .admin-promo-form-grid {
+  width: 100%;
+}
+.admin-promo-wizard-actions {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) 1fr minmax(110px, auto);
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid #dce9f6;
+  padding-top: 14px;
+}
+.admin-promo-wizard-actions > span {
+  justify-self: center;
+  color: #7388a2;
+  font-size: 9px;
+  font-weight: 850;
+}
+.admin-promo-review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.admin-promo-review-grid > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  border: 1px solid #d9e5f2;
+  border-radius: 11px;
+  background: #fff;
+  padding: 10px;
+}
+.admin-promo-review-grid span {
+  color: #7b8fa8;
+  font-size: 7.5px;
+  font-weight: 850;
+}
+.admin-promo-review-grid strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #355574;
+  font-size: 9px;
+  line-height: 1.55;
+}
+.admin-promo-result-workspace {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #cfe0f2;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fbfdff, #f7f4ff);
+  padding: 14px;
+}
+.admin-promo-result-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.admin-promo-result-head > div { min-width: 0; }
+.admin-promo-result-head span {
+  color: #7d70cc;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.admin-promo-result-head h3 {
+  margin: 3px 0 4px;
+  color: #2c4d6d;
+  font-size: 15px;
+}
+.admin-promo-result-head p {
+  margin: 0;
+  color: #70859f;
+  font-size: 9px;
+  line-height: 1.65;
+}
+.admin-promo-result-textarea {
+  width: 100%;
+  min-height: 300px;
+  resize: vertical;
+  border: 1px solid #cddff0;
+  border-radius: 12px;
+  background: #fff;
+  color: #274562;
+  padding: 13px;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.75;
+}
+.admin-promo-result-textarea:focus {
+  border-color: #78a9e8;
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(72 125 211 / 10%);
+}
+.admin-promo-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.admin-promo-result-workspace > small {
+  color: #71859e;
+  font-size: 8px;
+  line-height: 1.6;
+}
+.admin-promo-channel-optional > p {
+  margin: 0;
+  color: #6f849e;
+  font-size: 9px;
+  line-height: 1.7;
+}
+@media (max-width: 1000px) {
+  .admin-promo-wizard-progress { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .admin-promo-review-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-promo-result-head { flex-direction: column; }
+}
+@media (max-width: 560px) {
+  .admin-promo-wizard-progress { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-promo-wizard-actions { grid-template-columns: 1fr 1fr; }
+  .admin-promo-wizard-actions > span {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .admin-promo-review-grid { grid-template-columns: 1fr; }
+  .admin-promo-result-textarea { min-height: 240px; }
+}

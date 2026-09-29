@@ -54,11 +54,15 @@ test("channel-first promotion runtime covers exactly the six intended beginner c
     "threads",
     "instagram",
   ]);
-  assert.match(builderSource, /① どこでプロモーションしますか？/);
-  assert.match(builderSource, /②.*内容を選ぶ/);
-  assert.match(builderSource, /3ステップでプロモーション素材を作る/);
-  assert.match(builderSource, /②の追加設定です/);
-  assert.match(builderSource, /プロンプトをコピーしてAIへ渡す/);
+  assert.match(builderSource, /8ステップでプロモーション素材を作る/);
+  assert.match(builderSource, /PROMOTION_WIZARD_STEPS/);
+  for (const label of ["媒体選択", "発信フェーズ", "目的", "想定読者", "紹介内容", "CTA・出力設定", "画像・スクショ", "内容確認・生成"]) {
+    assert.match(builderSource, new RegExp(label));
+  }
+  assert.match(builderSource, /const \[step, setStep\] = useState\(0\)/);
+  assert.match(builderSource, /AIで生成した完成文を貼り戻す/);
+  assert.match(builderSource, /クリップボードから貼付/);
+  assert.match(builderSource, /copyNoteRichText/);
 });
 
 test("every channel prompt preserves prelaunch fact safety and confirmed product facts", () => {
@@ -203,15 +207,22 @@ test("promotion knowledge is wired into the shared knowledge compiler for all si
 });
 
 
-test("three-step promotion workflow stays responsive and visually distinguishes optional screenshot settings", async () => {
+test("eight-step promotion workflow stays responsive and keeps screenshot plus paste-back output", async () => {
   const css = await readFile(
     new URL("../app/phase24-admin-promotion.css", import.meta.url),
     "utf8",
   );
-  assert.match(builderSource, /3ステップでプロモーション素材を作る/);
-  assert.match(builderSource, /②の追加設定です/);
-  assert.match(builderSource, /<span>③<\/span><strong>プロンプトをコピーしてAIへ渡す<\/strong>/);
-  assert.doesNotMatch(builderSource, /\{meta\.kind === "social" \? "④" : "③"\}/);
+  assert.match(builderSource, /8ステップでプロモーション素材を作る/);
+  assert.match(builderSource, /step === 6/);
+  assert.match(builderSource, /AdminPromotionScreenshotAnalyzer/);
+  assert.match(builderSource, /step === 7/);
+  assert.match(builderSource, /<PromptOutput/);
+  assert.match(builderSource, /AIで生成した完成文を貼り戻す/);
+  assert.match(builderSource, /note用・装飾付きコピー/);
+  assert.match(builderSource, /SNS投稿をコピー/);
+  assert.match(builderSource, /navigator\.clipboard\?\.readText/);
+  assert.match(css, /\.admin-promo-wizard-progress/);
+  assert.match(css, /\.admin-promo-result-workspace/);
   assert.match(css, /\.admin-promo-channel-optional/);
   assert.match(css, /\.admin-promo-channel-substep/);
   assert.match(css, /\.admin-promo-cta-safety/);
