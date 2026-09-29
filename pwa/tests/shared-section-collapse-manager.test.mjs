@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("shared section collapse manager is enabled globally and defaults closed", () => {
+test("shared section collapse manager is enabled globally and resets closed on each visit", () => {
   const layout = read("app/layout.tsx");
   const manager = read("components/section-collapse-manager.tsx");
   const css = read("app/globals.css");
@@ -29,8 +29,7 @@ test("shared section collapse manager is enabled globally and defaults closed", 
     assert.ok(manager.includes(selector), `missing selector: ${selector}`);
   }
 
-  assert.match(manager, /localStorage\.getItem/);
-  assert.match(manager, /localStorage\.setItem/);
+  assert.doesNotMatch(manager, /localStorage\./);
   assert.match(manager, /let collapsed = true;/);
   assert.match(manager, /aria-expanded/);
   assert.match(manager, /MutationObserver/);
