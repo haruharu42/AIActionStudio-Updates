@@ -177,7 +177,7 @@ test("every prompt receives shared accuracy rules plus category-specific reinfor
   }
 
   assert.match(guidance, /一次情報、公式資料、原典/);
-  assert.match(guidance, /キャラクター設定表を基準/);
+  assert.match(guidance, /キャラクターは外見、衣装、配色/);
   assert.match(guidance, /タイトル、サムネイル\/カバー、冒頭、本文/);
   assert.match(guidance, /購入前に必要な素材、対象外、修正範囲/);
 });
