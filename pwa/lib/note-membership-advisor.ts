@@ -84,6 +84,21 @@ export type NoteMembershipAdvisorInput = {
   note: string;
 };
 
+export const DEFAULT_NOTE_MEMBERSHIP_ADVISOR_INPUT: NoteMembershipAdvisorInput = {
+  consultation: "new",
+  purpose: "mixed",
+  audienceStage: "free_readers",
+  planCount: 2,
+  priceBand: "ai",
+  primaryBenefit: "member_articles",
+  secondaryBenefit: "board",
+  frequency: "weekly1",
+  workload: "1_3",
+  trial: "ai",
+  visibility: "public",
+  note: "",
+};
+
 type Option<T extends string> = {
   value: T;
   label: string;
@@ -174,6 +189,65 @@ export const NOTE_MEMBERSHIP_VISIBILITIES: readonly Option<NoteMembershipVisibil
 
 function labelOf<T extends string>(options: readonly Option<T>[], value: T): string {
   return options.find((item) => item.value === value)?.label ?? value;
+}
+
+const NOTE_MEMBERSHIP_ADVISOR_STORAGE_PREFIX = "aas.note.membership.advisor.v1";
+
+function advisorStorageKey(userId: string): string {
+  return NOTE_MEMBERSHIP_ADVISOR_STORAGE_PREFIX + ":" + userId;
+}
+
+function validOption<T extends string>(options: readonly Option<T>[], value: unknown, fallback: T): T {
+  return typeof value === "string" && options.some((item) => item.value === value)
+    ? value as T
+    : fallback;
+}
+
+export function readNoteMembershipAdvisorInput(userId: string): NoteMembershipAdvisorInput {
+  const fallback = { ...DEFAULT_NOTE_MEMBERSHIP_ADVISOR_INPUT };
+  if (typeof window === "undefined" || !userId) return fallback;
+  try {
+    const raw = window.localStorage.getItem(advisorStorageKey(userId));
+    if (!raw) return fallback;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return fallback;
+    const row = parsed as Record<string, unknown>;
+    return {
+      consultation: validOption(NOTE_MEMBERSHIP_CONSULTATIONS, row.consultation, fallback.consultation),
+      purpose: validOption(NOTE_MEMBERSHIP_PURPOSES, row.purpose, fallback.purpose),
+      audienceStage: validOption(NOTE_MEMBERSHIP_AUDIENCES, row.audienceStage, fallback.audienceStage),
+      planCount: typeof row.planCount === "number" && Number.isFinite(row.planCount)
+        ? Math.max(1, Math.min(5, Math.trunc(row.planCount)))
+        : fallback.planCount,
+      priceBand: validOption(NOTE_MEMBERSHIP_PRICE_BANDS, row.priceBand, fallback.priceBand),
+      primaryBenefit: validOption(NOTE_MEMBERSHIP_BENEFITS, row.primaryBenefit, fallback.primaryBenefit),
+      secondaryBenefit: validOption(NOTE_MEMBERSHIP_BENEFITS, row.secondaryBenefit, fallback.secondaryBenefit),
+      frequency: validOption(NOTE_MEMBERSHIP_FREQUENCIES, row.frequency, fallback.frequency),
+      workload: validOption(NOTE_MEMBERSHIP_WORKLOADS, row.workload, fallback.workload),
+      trial: validOption(NOTE_MEMBERSHIP_TRIALS, row.trial, fallback.trial),
+      visibility: validOption(NOTE_MEMBERSHIP_VISIBILITIES, row.visibility, fallback.visibility),
+      note: typeof row.note === "string" ? row.note.slice(0, 2000) : "",
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeNoteMembershipAdvisorInput(
+  userId: string,
+  input: NoteMembershipAdvisorInput,
+): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  try {
+    window.localStorage.setItem(advisorStorageKey(userId), JSON.stringify({
+      ...input,
+      planCount: Math.max(1, Math.min(5, Math.trunc(input.planCount))),
+      note: input.note.slice(0, 2000),
+    }));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export const NOTE_MEMBERSHIP_KNOWLEDGE = {

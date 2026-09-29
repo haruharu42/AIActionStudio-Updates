@@ -817,3 +817,26 @@ test("note membership cockpit covers grounded improvement metrics and article so
     /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i,
   );
 });
+
+
+test("membership advisor restores account-scoped selections and only opens external AI after a successful copy", async () => {
+  const [advisor, advisorLib, cockpit] = await Promise.all([
+    read("components/note-operations/note-membership-advisor.tsx"),
+    read("lib/note-membership-advisor.ts"),
+    read("components/note-operations/note-membership-cockpit.tsx"),
+  ]);
+
+  assert.match(advisorLib, /DEFAULT_NOTE_MEMBERSHIP_ADVISOR_INPUT/);
+  assert.match(advisorLib, /aas\.note\.membership\.advisor\.v1/);
+  assert.match(advisorLib, /readNoteMembershipAdvisorInput/);
+  assert.match(advisorLib, /writeNoteMembershipAdvisorInput/);
+  assert.match(advisorLib, /localStorage\.getItem/);
+  assert.match(advisorLib, /localStorage\.setItem/);
+  assert.match(advisor, /userId: string/);
+  assert.match(advisor, /readNoteMembershipAdvisorInput\(userId\)/);
+  assert.match(advisor, /writeNoteMembershipAdvisorInput\(userId, next\)/);
+  assert.match(advisor, /const copied = await copyPrompt\(\)/);
+  assert.match(advisor, /if \(copied\) launchAiApp\(selectedAi\)/);
+  assert.match(cockpit, /<NoteMembershipAdvisor[\s\S]*?userId=\{userId\}/);
+  assert.match(cockpit, /const copied = await copy\(\);[\s\S]*?if \(copied\) launchAiApp\(selectedAi\)/);
+});

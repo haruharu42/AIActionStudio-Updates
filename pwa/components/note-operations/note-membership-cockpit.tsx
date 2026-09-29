@@ -67,9 +67,8 @@ function CopyActions({
           type="button"
           className="primary-action"
           onClick={() => void (async () => {
-            const copyTask = copy();
-            launchAiApp(selectedAi);
-            await copyTask;
+            const copied = await copy();
+            if (copied) launchAiApp(selectedAi);
           })()}
         >
           プロンプトをコピーして{AI_PROVIDER_LABELS[selectedAi]}を開く
@@ -224,6 +223,7 @@ export function NoteMembershipCockpit({
 
       {tab === "consult" && (
         <NoteMembershipAdvisor
+          userId={userId}
           profile={profile}
           selectedAi={selectedAi}
           onMessage={onMessage}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { launchAiApp } from "@/lib/ai-app-links";
 import {
+  DEFAULT_NOTE_MEMBERSHIP_ADVISOR_INPUT,
   NOTE_MEMBERSHIP_AUDIENCES,
   NOTE_MEMBERSHIP_BENEFITS,
   NOTE_MEMBERSHIP_CONSULTATIONS,
@@ -15,6 +16,8 @@ import {
   NOTE_MEMBERSHIP_VISIBILITIES,
   NOTE_MEMBERSHIP_WORKLOADS,
   buildNoteMembershipAdvisorPrompt,
+  readNoteMembershipAdvisorInput,
+  writeNoteMembershipAdvisorInput,
   type NoteMembershipAdvisorInput,
   type NoteMembershipAudienceStage,
   type NoteMembershipBenefit,
@@ -56,28 +59,26 @@ function SelectField<T extends string>({
 }
 
 export function NoteMembershipAdvisor({
+  userId,
   profile,
   selectedAi,
   onMessage,
 }: {
+  userId: string;
   profile: NoteOperationProfile;
   selectedAi: AiProvider;
   onMessage(message: string): void;
 }) {
-  const [form, setForm] = useState<NoteMembershipAdvisorInput>({
-    consultation: "new",
-    purpose: "mixed",
-    audienceStage: "free_readers",
-    planCount: 2,
-    priceBand: "ai",
-    primaryBenefit: "member_articles",
-    secondaryBenefit: "board",
-    frequency: "weekly1",
-    workload: "1_3",
-    trial: "ai",
-    visibility: "public",
-    note: "",
-  });
+  const [form, setForm] = useState<NoteMembershipAdvisorInput>({ ...DEFAULT_NOTE_MEMBERSHIP_ADVISOR_INPUT });
+
+  useEffect(() => {
+    let active = true;
+    const restored = readNoteMembershipAdvisorInput(userId);
+    queueMicrotask(() => {
+      if (active) setForm(restored);
+    });
+    return () => { active = false; };
+  }, [userId]);
 
   const prompt = useMemo(
     () => buildNoteMembershipAdvisorPrompt(profile, form),
@@ -88,7 +89,11 @@ export function NoteMembershipAdvisor({
     key: K,
     value: NoteMembershipAdvisorInput[K],
   ) => {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+      writeNoteMembershipAdvisorInput(userId, next);
+      return next;
+    });
   };
 
   const copyPrompt = async (): Promise<boolean> => {
@@ -103,9 +108,9 @@ export function NoteMembershipAdvisor({
   };
 
   const copyAndOpenAi = async () => {
-    const copyTask = copyPrompt();
-    launchAiApp(selectedAi);
-    await copyTask;
+    writeNoteMembershipAdvisorInput(userId, form);
+    const copied = await copyPrompt();
+    if (copied) launchAiApp(selectedAi);
   };
 
   return (
