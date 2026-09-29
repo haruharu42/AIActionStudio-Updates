@@ -45,7 +45,7 @@ export function AdminPromotionScreenshotAnalyzer({
   const itemsRef = useRef<LocalScreenshot[]>([]);
   const [analysis, setAnalysis] = useState<PromotionScreenshotAnalysis | null>(null);
   const [busy, setBusy] = useState(false);
-  const [storageBusy, setStorageBusy] = useState(false);
+  const [storageBusy, setStorageBusy] = useState(true);
   const [message, setMessage] = useState("");
   const [config, setConfig] = useState<PromotionScreenshotAnalysisConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
@@ -89,7 +89,6 @@ export function AdminPromotionScreenshotAnalyzer({
   useEffect(() => {
     let active = true;
     const loadSaved = async () => {
-      setStorageBusy(true);
       try {
         const client = getSupabaseClient();
         const workspace = await loadAdminPromotionContentWorkspace(client, channel);
