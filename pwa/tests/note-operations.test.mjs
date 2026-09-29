@@ -713,17 +713,17 @@ test("note membership cockpit covers grounded improvement metrics and article so
   assert.match(page, /type NoteOperationsTab/);
   assert.match(page, /5\. メンバーシップ相談/);
   assert.match(page, /NoteMembershipCockpit/);
-  assert.match(page, /onOpenCalendar=\\{\\(\\) => changeTab\\("calendar"\\)\\}/);
+  assert.match(page, /onOpenCalendar=\{\(\) => changeTab\("calendar"\)\}/);
 
   assert.match(cockpit, /noteメンバーシップ運営コックピット/);
   for (const label of ["相談・設計","料金・特典診断","開始準備","紹介ページ","告知・集客","月間運営","改善相談"]) {
     assert.match(cockpit, new RegExp(label));
   }
   assert.match(cockpit, /NoteMembershipAdvisor/);
-  assert.match(cockpit, /const copied = await copy\\(\\);[\\s\\S]*?if \\(copied\\) launchAiApp\\(selectedAi\\)/);
-  assert.doesNotMatch(cockpit, /const copyTask = copy\\(\\);[\\s\\S]*?launchAiApp\\(selectedAi\\)/);
-  assert.match(advisor, /const copied = await copyPrompt\\(\\);[\\s\\S]*?if \\(copied\\) launchAiApp\\(selectedAi\\)/);
-  assert.doesNotMatch(advisor, /const copyTask = copyPrompt\\(\\);[\\s\\S]*?launchAiApp\\(selectedAi\\)/);
+  assert.match(cockpit, /const copied = await copy\(\);[\s\S]*?if \(copied\) launchAiApp\(selectedAi\)/);
+  assert.doesNotMatch(cockpit, /const copyTask = copy\(\);[\s\S]*?launchAiApp\(selectedAi\)/);
+  assert.match(advisor, /const copied = await copyPrompt\(\);[\s\S]*?if \(copied\) launchAiApp\(selectedAi\)/);
+  assert.doesNotMatch(advisor, /const copyTask = copyPrompt\(\);[\s\S]*?launchAiApp\(selectedAi\)/);
   assert.match(cockpit, /membershipLaunchStorageKey/);
   assert.match(cockpit, /window\.localStorage\.setItem/);
   assert.match(cockpit, /buildMembershipPricingPrompt/);
