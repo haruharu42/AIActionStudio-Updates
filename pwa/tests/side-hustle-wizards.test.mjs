@@ -453,3 +453,14 @@ test("side-hustle monitoring has official fallback sources for X analytics/polic
   assert.match(migration, /array_agg\(distinct item order by item\)/);
   assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
 });
+
+
+test("unreachable X ads-policy fallback is disabled without deleting source history", async () => {
+  const migration = await readRepo("supabase/migrations/20260929235249_disable_unreachable_x_ads_policy_fallback_v1.sql");
+
+  assert.match(migration, /business\.x\.com\/en\/help\/ads-policies/);
+  assert.match(migration, /enabled=false/);
+  assert.match(migration, /last_http_status=403/);
+  assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
+  assert.doesNotMatch(migration, /tweet-activity-dashboard/);
+});
