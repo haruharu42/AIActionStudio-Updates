@@ -45,7 +45,7 @@ function inputFor(name) {
   };
 }
 
-test("channel-first promotion runtime covers exactly the six intended beginner channels", () => {
+test("promotion runtime covers exactly six channels in an article-style eight-step wizard", () => {
   assert.deepEqual(Object.keys(channel.ADMIN_PROMOTION_CHANNELS), [
     "note",
     "brain",
@@ -54,11 +54,16 @@ test("channel-first promotion runtime covers exactly the six intended beginner c
     "threads",
     "instagram",
   ]);
-  assert.match(builderSource, /① どこでプロモーションしますか？/);
-  assert.match(builderSource, /②.*内容を選ぶ/);
-  assert.match(builderSource, /3ステップでプロモーション素材を作る/);
-  assert.match(builderSource, /②の追加設定です/);
-  assert.match(builderSource, /プロンプトをコピーしてAIへ渡す/);
+  assert.match(builderSource, /PROMOTION_CREATE_STEPS/);
+  assert.match(builderSource, /8ステップで販売・プロモーション素材を作成/);
+  assert.match(builderSource, /使用AI選択/);
+  assert.match(builderSource, /媒体選択/);
+  assert.match(builderSource, /画像・スクショ/);
+  assert.match(builderSource, /発信条件/);
+  assert.match(builderSource, /タイトル・フック/);
+  assert.match(builderSource, /本文・投稿/);
+  assert.match(builderSource, /内容確認/);
+  assert.match(builderSource, /保存・コピー/);
 });
 
 test("every channel prompt preserves prelaunch fact safety and confirmed product facts", () => {
@@ -203,17 +208,17 @@ test("promotion knowledge is wired into the shared knowledge compiler for all si
 });
 
 
-test("three-step promotion workflow stays responsive and visually distinguishes optional screenshot settings", async () => {
+test("eight-step promotion workflow stays responsive and keeps screenshot settings inside step 3", async () => {
   const css = await readFile(
     new URL("../app/phase24-admin-promotion.css", import.meta.url),
     "utf8",
   );
-  assert.match(builderSource, /3ステップでプロモーション素材を作る/);
-  assert.match(builderSource, /②の追加設定です/);
-  assert.match(builderSource, /<span>③<\/span><strong>プロンプトをコピーしてAIへ渡す<\/strong>/);
-  assert.doesNotMatch(builderSource, /\{meta\.kind === "social" \? "④" : "③"\}/);
-  assert.match(css, /\.admin-promo-channel-optional/);
-  assert.match(css, /\.admin-promo-channel-substep/);
+  assert.match(builderSource, /8ステップで販売・プロモーション素材を作成/);
+  assert.match(builderSource, /STEP 3 · 画像・スクショ/);
+  assert.match(builderSource, /最終画像はSTEP 8でAAS本体へ保存/);
+  assert.match(builderSource, /AdminPromotionContentWorkspace/);
+  assert.match(css, /\.admin-promo-wizard-steps/);
+  assert.match(css, /\.admin-promo-wizard-card/);
   assert.match(css, /\.admin-promo-cta-safety/);
-  assert.match(css, /@media \(max-width: 560px\)/);
+  assert.match(css, /@media \(max-width: 760px\)/);
 });
