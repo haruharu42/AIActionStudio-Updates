@@ -92,8 +92,11 @@ test("prompt library follows filtered selection and keeps desktop prompt panes i
     read("app/phase49-prompt-library.css"),
   ]);
 
-  assert.match(page, /if \(!filtered\.length \|\| filtered\.some\(\(template\) => template\.id === selectedId\)\) return;/);
-  assert.match(page, /const next = filtered\[0\];/);
+  assert.match(page, /function filterActionPromptTemplates/);
+  assert.match(page, /const changeCategory = \(nextCategory: string\)/);
+  assert.match(page, /const changeQuery = \(nextQuery: string\)/);
+  assert.match(page, /const toggleFavoritesOnly = \(\)/);
+  assert.match(page, /keepSelectionInFilter/);
   assert.match(styles, /@media \(min-width: 900px\)/);
   assert.match(styles, /max-height: calc\(100dvh - 40px\)/);
   assert.match(styles, /scrollbar-gutter: stable/);
