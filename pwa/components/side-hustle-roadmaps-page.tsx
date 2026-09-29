@@ -109,6 +109,16 @@ export function SideHustleRoadmapsPage() {
     } catch {
       // Progress remains usable in memory when storage is unavailable.
     }
+
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("roadmap") !== selectedSlug) {
+        url.searchParams.set("roadmap", selectedSlug);
+        window.history.replaceState(window.history.state, "", url);
+      }
+    } catch {
+      // URL synchronization is optional; stored progress remains authoritative.
+    }
   }, [completed, hydrated, selectedSlug, storageKey]);
 
   const filteredRoadmaps = useMemo(

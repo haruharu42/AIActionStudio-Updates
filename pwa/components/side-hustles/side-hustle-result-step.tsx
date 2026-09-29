@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { SideHustleDefinition, SideHustleDraft } from "@/features/side-hustles/types";
 
 export function SideHustleResultStep({
@@ -65,6 +67,19 @@ export function SideHustleResultStep({
           この結果はAAS内の副業ウィザード進捗として端末へ保存します。
           パスワード・認証コード・決済情報などの機密情報は貼り付けないでください。
         </small>
+      </div>
+
+      <div className="side-hustle-result-next">
+        <div>
+          <strong>次の行動へ進む</strong>
+          <small>対応するロードマップへ戻り、完了したタスクをチェックして次の3つを確認できます。</small>
+        </div>
+        <Link
+          className="primary-action"
+          href={"/side-hustle-roadmaps?roadmap=" + encodeURIComponent(definition.slug)}
+        >
+          この副業のロードマップへ戻る
+        </Link>
       </div>
     </section>
   );

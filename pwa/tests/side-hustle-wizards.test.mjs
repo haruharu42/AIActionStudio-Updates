@@ -464,3 +464,15 @@ test("unreachable X ads-policy fallback is disabled without deleting source hist
   assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
   assert.doesNotMatch(migration, /tweet-activity-dashboard/);
 });
+
+
+test("completed side-hustle result connects back to its matching roadmap", async () => {
+  const resultStep = await read("components/side-hustles/side-hustle-result-step.tsx");
+
+  assert.match(resultStep, /import Link from "next\/link"/);
+  assert.match(resultStep, /次の行動へ進む/);
+  assert.match(resultStep, /完了したタスクをチェックして次の3つを確認/);
+  assert.match(resultStep, /\/side-hustle-roadmaps\?roadmap=/);
+  assert.match(resultStep, /encodeURIComponent\(definition\.slug\)/);
+  assert.match(resultStep, /この副業のロードマップへ戻る/);
+});

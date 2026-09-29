@@ -155,3 +155,13 @@ test("roadmap action label distinguishes prompt-library handoff from dedicated s
   assert.match(catalog, /"slug": "adult-affiliate"[\s\S]*?"actionHref": "\/prompts\?category=%E3%82%A2%E3%83%80%E3%82%A2%E3%83%95%E3%82%A3"/);
   assert.match(prompts, /"category": "アダアフィ"/);
 });
+
+
+test("selected roadmap stays in the URL so refresh returns to the currently viewed side hustle", async () => {
+  const page = await read("components/side-hustle-roadmaps-page.tsx");
+
+  assert.match(page, /new URL\(window\.location\.href\)/);
+  assert.match(page, /url\.searchParams\.get\("roadmap"\) !== selectedSlug/);
+  assert.match(page, /url\.searchParams\.set\("roadmap", selectedSlug\)/);
+  assert.match(page, /window\.history\.replaceState\(window\.history\.state, "", url\)/);
+});
