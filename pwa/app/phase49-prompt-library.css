@@ -335,3 +335,20 @@
     margin-left: auto;
   }
 }
+
+@media (min-width: 900px) {
+  .action-prompt-editor {
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .action-prompt-output textarea {
+    height: 310px;
+    max-height: min(52dvh, 520px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
