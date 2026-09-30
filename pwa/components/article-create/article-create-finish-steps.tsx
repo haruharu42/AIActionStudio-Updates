@@ -218,11 +218,11 @@ export function SaveStep({
                 <strong>{stockSummary.isUnlimited ? "保存枠: 無制限" : `保存枠: 残り${stockSummary.remainingArticles ?? 0}件 / ${stockSummary.maxArticles ?? 0}件`}</strong>
                 <span>
                   {saveQuotaReached
-                    ? "保存上限に達しています。不要な記事を整理するか、利用プランを確認してください。"
+                    ? "保存上限に達しています。不要な記事を整理するか、Creator Club特典を確認してください。"
                     : "保存ボタンを押す直前にも最新の保存枠を再確認します。"}
                 </span>
               </div>
-              {saveQuotaReached && <Link href="/plans">利用プランを確認 →</Link>}
+              {saveQuotaReached && <Link href="/membership">Creator Club特典を確認 →</Link>}
             </>
           ) : stockSummaryError ? (
             <div>
