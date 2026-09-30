@@ -11,9 +11,11 @@ import { Phase8Images } from "@/components/phase8-images";
 import { articleExportFilename, articleExportMarkdown } from "@/lib/article-export";
 import {
   duplicateCloudArticle,
+  getArticleStockSummary,
   listArticleLibraryPage,
   withNoteMagazineWorkspace,
   type ArticleLibraryItem,
+  type ArticleStockSummary,
   type NoteMagazineSettings,
 } from "@/lib/article-library-v2";
 import {
@@ -63,6 +65,8 @@ export function Phase7Library({
   const [desktopDownloads, setDesktopDownloads] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [stockSummary, setStockSummary] = useState<ArticleStockSummary | null>(null);
+  const [stockSummaryError, setStockSummaryError] = useState("");
   const listRequestIdRef = useRef(0);
   const detailRequestIdRef = useRef(0);
 
@@ -121,10 +125,23 @@ export function Phase7Library({
     await fetchPage(0, false);
   }, [fetchPage]);
 
+  const refreshStockSummary = useCallback(async () => {
+    setStockSummaryError("");
+    try {
+      setStockSummary(await getArticleStockSummary(client));
+    } catch {
+      setStockSummary(null);
+      setStockSummaryError("保存数・上限・残り件数を確認できませんでした。");
+    }
+  }, [client]);
+
   useEffect(() => {
-    const timeout = window.setTimeout(() => void reload(), 250);
+    const timeout = window.setTimeout(() => {
+      void reload();
+      void refreshStockSummary();
+    }, 250);
     return () => window.clearTimeout(timeout);
-  }, [reload]);
+  }, [reload, refreshStockSummary]);
 
   const filterOptions = useMemo(() => collectArticleLibraryFilterOptions(articles), [articles]);
   const filtersActive = useMemo(() => areLibraryFiltersActive(filters), [filters]);
@@ -206,7 +223,7 @@ export function Phase7Library({
     try {
       const id = await duplicateCloudArticle(client, ownerId, detail);
       setSuccess("記事を複製しました。複製記事は下書きとして作成されています。");
-      await reload();
+      await Promise.all([reload(), refreshStockSummary()]);
       await open(id);
     } catch (caught) {
       setError(articleLibraryMessage(caught));
@@ -289,7 +306,7 @@ export function Phase7Library({
       setDetail(null);
       setView("list");
       setSuccess("記事を完全削除しました。");
-      await reload();
+      await Promise.all([reload(), refreshStockSummary()]);
     } catch (caught) {
       setError(articleLibraryMessage(caught));
     } finally {
@@ -328,6 +345,8 @@ export function Phase7Library({
         <ArticleLibraryListView
           articles={articles}
           totalCount={totalCount}
+          stockSummary={stockSummary}
+          stockSummaryError={stockSummaryError}
           hasMore={hasMore}
           loading={loading}
           loadingMore={loadingMore}
@@ -340,7 +359,7 @@ export function Phase7Library({
           magazines={filterOptions.magazines}
           onFilterChange={changeFilter}
           onResetFilters={resetFilters}
-          onReload={() => void reload()}
+          onReload={() => void Promise.all([reload(), refreshStockSummary()])}
           onOpen={(articleId) => void open(articleId)}
           onLoadMore={() => void fetchPage(articles.length, true)}
         />
