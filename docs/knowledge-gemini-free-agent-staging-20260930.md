@@ -51,6 +51,18 @@ PRとPreviewが成功しても、既存の稼働中Supabase Edge Functionが新�
 - Knowledge automationの最小依存（空のCatalog 2テーブル、Source/Run/Candidate 3テーブル、Catalog Snapshot / Worker AI Config RPC）を構造のみ再現。全件数0を確認。
 - `knowledge-research-worker` をStagingへv1として配布し `ACTIVE` を確認。カスタムWorkerトークンは作成しておらず、設定DB側も `enabled=false` / `ai_enrichment_enabled=false` の二重ロック。実行はまだ行わない。
 
+
+### Managed Staging 実DBガード検証（2026-10-01）
+
+Staging実DB上で外部Gemini APIを呼ばず、一時データをサブトランザクション内だけに作成して自動ロールバックする方式で追加確認した。
+
+- active adminなしでは `admin_get_knowledge_gemini_free_agent_status` / `admin_set_knowledge_automation_ai_config` が `42501 active admin required` で拒否されることを確認。
+- 一時的なactive admin相当のJWT claimsで、Gemini Free status取得、許可モデル `gemini-3.5-flash-lite` の選択、1実行上限を99指定しても3へクランプされることを確認。
+- 非許可モデルは `22023` で拒否。
+- 偽キー `AAS_STAGING_FAKE_GEMINI_KEY_DO_NOT_USE` をVaultへ保存し、暗号化保存後の復号一致を確認。テスト終了後はロールバックしVaultに残っていないことを確認。
+- Managed Staging上で日次予約を12回実行し、10回許可・2回拒否。UTC日付を前日にした状態からの次回予約でcount=1へリセットされることも確認。
+- テスト終了後は `profiles=0`、Gemini secret=0、Worker token=0、AI OFF / OpenAI / `gpt-5.6` / daily count 0へ戻っている。
+
 ## 監査・エラー方針
 公開情報のハッシュ差分は変更の**兆候**であり規則の改訂を保証しない。AIによる根拠URLも未確認。HTTP403の制限を迂回しない。外部APIエラーは本文や秘密キーを記録せずHTTP番号だけを記録する。429時はその実行の残りGemini解析を停止する。日次上限に達した場合は候補を保留する。データベースの上限RPCが欠落していれば外部APIを呼ばず失敗閉鎖する。
 
