@@ -692,6 +692,34 @@ test("admins can pause and resume individual Knowledge monitoring sources withou
 });
 
 
+test("admins can manually bulk-pause repeatedly restricted Knowledge sources without deleting history", async () => {
+  const [panel, sourceHealth, css] = await Promise.all([
+    readKnowledgeRefreshSource(),
+    readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(sourceHealth, /const repeatedRestrictedSources = useMemo/);
+  assert.match(sourceHealth, /restrictedSources\.filter\(\(source\) => source\.consecutiveFailures >= 3\)/);
+  assert.match(sourceHealth, /onPauseRepeatedRestrictedSources/);
+  assert.match(sourceHealth, /繰り返しアクセス制限/);
+  assert.match(sourceHealth, /件をまとめて停止/);
+  assert.match(sourceHealth, /window\.confirm/);
+  assert.match(sourceHealth, /停止しても履歴・既存候補は削除されません/);
+  assert.match(sourceHealth, /自動で代替URLへ差し替えたり公開したりもしません/);
+  assert.doesNotMatch(sourceHealth, /adminSetKnowledgeAutomationSourceEnabled|getSupabaseClient|\.rpc\(/);
+
+  assert.match(panel, /const pauseRepeatedRestrictedSources = async/);
+  assert.match(panel, /Promise\.allSettled/);
+  assert.match(panel, /adminSetKnowledgeAutomationSourceEnabled\(client, source\.id, false\)/);
+  assert.match(panel, /監視停止 \$\{succeeded\}件 \/ 失敗 \$\{failed\}件/);
+  assert.match(panel, /onPauseRepeatedRestrictedSources=\{\(sources\)/);
+
+  assert.match(css, /\.knowledge-source-bulk-pause/);
+  assert.match(css, /\.knowledge-source-bulk-pause button:disabled/);
+});
+
+
 test("redundant X analytics Help sources stop only when the healthy X Business fallback covers the same tasks", async () => {
   const migration = await readRepo(
     "supabase/migrations/20260930004300_disable_redundant_x_analytics_help_sources_v1.sql",
