@@ -756,6 +756,25 @@
   line-height: 1.55;
 }
 
+.membership-library-mfa-status {
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.membership-library-mfa-status.ready {
+  background: #eaf8f0;
+  color: #26734c;
+}
+
+.membership-library-mfa-status.action,
+.membership-library-mfa-status.review {
+  background: #fff5df;
+  color: #95651d;
+}
+
 .membership-library-quota-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
