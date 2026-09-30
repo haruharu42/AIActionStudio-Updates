@@ -21,6 +21,8 @@ export function ArticleLibraryDetailView({
   onBack,
   onEdit,
   onDuplicate,
+  duplicateDisabled,
+  duplicateDisabledReason,
   onArchiveToggle,
   onDownload,
   onDelete,
@@ -33,6 +35,8 @@ export function ArticleLibraryDetailView({
   onBack: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
+  duplicateDisabled: boolean;
+  duplicateDisabledReason: string;
   onArchiveToggle: () => void;
   onDownload: () => void;
   onDelete: () => void;
@@ -50,7 +54,15 @@ export function ArticleLibraryDetailView({
           )}
           <Link className="secondary-action" href={`/workflow?tab=preflight&article=${encodeURIComponent(detail.id)}`}>公開前チェック</Link>
           <Link className="secondary-action" href={`/workflow?tab=reuse&article=${encodeURIComponent(detail.id)}`}>SNS再利用</Link>
-          <button className="secondary-action" type="button" onClick={onDuplicate} disabled={busy}>複製</button>
+          <button
+            className="secondary-action"
+            type="button"
+            onClick={onDuplicate}
+            disabled={busy || duplicateDisabled}
+            title={duplicateDisabled ? duplicateDisabledReason : undefined}
+          >
+            複製
+          </button>
           <button className="secondary-action" type="button" onClick={onArchiveToggle} disabled={busy}>
             {detail.status === "archived" ? "アーカイブから戻す" : "アーカイブ"}
           </button>
@@ -58,6 +70,16 @@ export function ArticleLibraryDetailView({
           <button className="danger-action" type="button" onClick={onDelete} disabled={busy}>削除</button>
         </div>
       </div>
+
+      {duplicateDisabled && (
+        <div className="library-duplicate-quota-note" role="note">
+          <div>
+            <strong>この記事は現在複製できません。</strong>
+            <span>{duplicateDisabledReason}</span>
+          </div>
+          <Link href="/plans">利用プランを確認 →</Link>
+        </div>
+      )}
 
       <article className="article-detail">
         <header>
