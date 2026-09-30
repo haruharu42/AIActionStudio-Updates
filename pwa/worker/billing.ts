@@ -433,6 +433,72 @@ async function publicConfig(env: BillingEnv): Promise<Response> {
   });
 }
 
+async function adminBillingReadiness(request: Request, env: BillingEnv): Promise<Response> {
+  let identity: Awaited<ReturnType<typeof authenticate>>;
+  try {
+    identity = await authenticate(request, env);
+  } catch {
+    return jsonResponse({ error: "管理者認証を確認できませんでした。" }, 401);
+  }
+
+  if (identity.profile.role !== "admin" || identity.profile.status !== "active") {
+    return jsonResponse({ error: "active管理者のみ確認できます。" }, 403);
+  }
+
+  const mode = commerceMode(env);
+  const supabaseConfigured = Boolean(
+    configured(env.AAS_SUPABASE_URL) && configured(env.AAS_SUPABASE_SERVICE_ROLE_KEY),
+  );
+  const stripeSecretConfigured = configured(env.AAS_STRIPE_SECRET_KEY);
+  const webhookSecretConfigured = configured(env.AAS_STRIPE_WEBHOOK_SECRET);
+  const seller = await loadSellerConfig(env);
+  const legalReady = sellerReady(seller);
+  const pwaPlans = PLANS.filter((plan) => plan.platformScope === "pwa");
+  const prices = await Promise.all(pwaPlans.map((plan) => loadPrice(env, plan)));
+
+  const plans = pwaPlans.map((plan, index) => {
+    const price = prices[index];
+    const priceConfigured = configured(env[plan.priceBinding]);
+    const modeMatches = Boolean(
+      price && (
+        (mode === "live" && price.livemode)
+        || (mode === "test" && !price.livemode)
+      ),
+    );
+    const ready = Boolean(
+      mode !== "off"
+      && stripeSecretConfigured
+      && priceConfigured
+      && price
+      && price.active
+      && modeMatches,
+    );
+    return {
+      planCode: plan.planCode,
+      priceConfigured,
+      priceReachable: Boolean(price),
+      active: price?.active === true,
+      modeMatches,
+      ready,
+    };
+  });
+
+  return jsonResponse({
+    mode,
+    supabaseConfigured,
+    stripeSecretConfigured,
+    webhookSecretConfigured,
+    sellerReady: legalReady,
+    backendReady: Boolean(
+      mode !== "off"
+      && supabaseConfigured
+      && stripeSecretConfigured
+      && webhookSecretConfigured
+    ),
+    plans,
+  });
+}
+
 async function existingCustomerId(env: BillingEnv, userId: string): Promise<string | null> {
   const rows = await supabaseRows(
     env,
@@ -849,6 +915,9 @@ export async function handleBillingRequest(
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/billing/")) return null;
 
+  if (url.pathname === "/api/billing/admin-readiness" && request.method === "GET") {
+    return adminBillingReadiness(request, env);
+  }
   if (url.pathname === "/api/billing/config" && request.method === "GET") {
     return publicConfig(env);
   }
