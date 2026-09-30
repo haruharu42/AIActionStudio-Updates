@@ -46,6 +46,16 @@ test("Stripe Checkout is gated server-side and billing portal remains available"
   assert.match(salesWorker, /PLAN_FLAGS/);
   assert.match(salesWorker, /loadEffectiveSalesSettings/);
   assert.match(salesWorker, /service_get_sales_launch_runtime/);
+  assert.match(salesWorker, /stripeWorkerConfigReady/);
+  assert.match(salesWorker, /AAS_COMMERCE_MODE/);
+  assert.match(salesWorker, /AAS_STRIPE_SECRET_KEY/);
+  assert.match(salesWorker, /AAS_STRIPE_WEBHOOK_SECRET/);
+  assert.match(salesWorker, /AAS_STRIPE_PRICE_PWA_7D/);
+  assert.match(salesWorker, /AAS_STRIPE_PRICE_PWA_MONTHLY/);
+  assert.match(salesWorker, /row\.pwa_7day_enabled === true && !clean\(env\.AAS_STRIPE_PRICE_PWA_7D\)/);
+  assert.match(salesWorker, /row\.pwa_monthly_enabled === true && !clean\(env\.AAS_STRIPE_PRICE_PWA_MONTHLY\)/);
+  assert.match(salesWorker, /row\.pwa_7day_enabled === true \|\| row\.pwa_monthly_enabled === true/);
+  assert.match(salesWorker, /runtime\.stripeRouteReady[\s\S]*?stripeWorkerConfigReady\(env, row\)/);
   assert.match(salesWorker, /publicSalesApproved/);
   assert.match(salesWorker, /販売受付設定を確認できないため、新規決済を停止しています/);
   assert.match(salesWorker, /Stripeでの新規購入受付は停止しています/);
