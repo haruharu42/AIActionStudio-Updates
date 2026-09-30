@@ -172,6 +172,40 @@ test("admin notification management supports all, tester, and admin audiences", 
   assert.match(nav, /"adminNotifications"/);
 });
 
+test("admin notification readiness is read-only, admin-guarded, and visible before rollout", async () => {
+  const [migration, page, client, css] = await Promise.all([
+    readRepo("supabase/migrations/20260930013709_notification_readiness_snapshot_v1.sql"),
+    readPwa("components/admin-notifications-page.tsx"),
+    readPwa("lib/notifications.ts"),
+    readPwa("app/phase55-notifications.css"),
+  ]);
+
+  assert.match(migration, /function public\.admin_get_notification_readiness\(\)/);
+  assert.match(migration, /security definer/);
+  assert.match(migration, /set search_path=''/);
+  assert.match(migration, /auth\.uid\(\)/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /app_release_testers/);
+  assert.match(migration, /user_push_subscriptions/);
+  assert.match(migration, /app_notification_push_deliveries/);
+  assert.match(migration, /automated_checks_pass/);
+  assert.match(migration, /manual_checks_required/);
+  assert.match(migration, /revoke all on function public\.admin_get_notification_readiness\(\) from public,anon,authenticated/);
+  assert.match(migration, /grant execute on function public\.admin_get_notification_readiness\(\) to authenticated/);
+  assert.doesNotMatch(migration, /update public\.app_feature_controls|insert into public\.app_feature_controls|delete from public\.app_feature_controls/i);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+
+  assert.match(client, /AdminNotificationReadiness/);
+  assert.match(client, /adminGetNotificationReadiness/);
+  assert.match(client, /admin_get_notification_readiness/);
+  assert.match(page, /通知センター公開準備状況/);
+  assert.match(page, /実機でのPush受信・通知タップ・PC\/スマホ主要導線/);
+  assert.match(page, /この画面から公開段階は変更しません/);
+  assert.match(page, /testerPushUsers/);
+  assert.match(page, /deliveries\.pending/);
+  assert.match(css, /\.admin-notification-readiness-grid/);
+});
+
 test("push worker has immediate trigger and cron recovery", async () => {
   const migration = await readRepo("supabase/migrations/20260925012520_app_notification_center_and_web_push_v1.sql");
 
