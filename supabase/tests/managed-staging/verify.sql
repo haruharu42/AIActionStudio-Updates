@@ -29,6 +29,17 @@ begin
   )) then
     raise exception 'fixture must not create secrets';
   end if;
+
+  if has_schema_privilege('anon','vault','USAGE')
+     or has_schema_privilege('authenticated','vault','USAGE') then
+    raise exception 'browser roles must not have direct Vault schema usage';
+  end if;
+  if has_table_privilege('anon','vault.secrets','SELECT')
+     or has_table_privilege('authenticated','vault.secrets','SELECT')
+     or has_table_privilege('anon','vault.decrypted_secrets','SELECT')
+     or has_table_privilege('authenticated','vault.decrypted_secrets','SELECT') then
+    raise exception 'browser roles must not directly read Vault secrets';
+  end if;
   snapshot := public.get_knowledge_automation_catalog_snapshot();
   if snapshot <> '{"knowledge":[],"prompts":[]}'::jsonb then
     raise exception 'empty catalog snapshot mismatch: %',snapshot;
