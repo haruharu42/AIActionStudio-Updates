@@ -448,6 +448,36 @@ test("recheck candidates support safe five-item manual verification batches with
   assert.match(css, /\.knowledge-recheck-batch/);
 });
 
+test("Knowledge candidate review supports read-only text search across review metadata", async () => {
+  const [panel, css] = await Promise.all([
+    readKnowledgeRefreshSource(),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.ok(panel.includes('const [candidateSearch, setCandidateSearch] = useState("");'));
+  assert.ok(panel.includes("const normalizedCandidateSearch = candidateSearch.trim().toLowerCase();"));
+  assert.ok(panel.includes("candidate.sourceTitle"));
+  assert.ok(panel.includes("candidate.sourceUrl"));
+  assert.ok(panel.includes("candidate.existingItemKey"));
+  assert.ok(panel.includes("candidate.existingItemType"));
+  assert.ok(panel.includes("candidate.candidateAction"));
+  assert.ok(panel.includes("candidate.reason"));
+  assert.ok(panel.includes("candidate.analysisReason"));
+  assert.ok(panel.includes("...candidate.matchedTasks"));
+  assert.ok(panel.includes("searchable.includes(normalizedCandidateSearch)"));
+  assert.ok(panel.includes("表示 {visibleAutomationCandidates.length}件"));
+  assert.ok(panel.includes('id="knowledge-candidate-search-input"'));
+  assert.ok(panel.includes('type="search"'));
+  assert.ok(panel.includes("タイトル・URL・カテゴリ・理由・現行キーで検索"));
+  assert.ok(panel.includes("検索をクリア"));
+  assert.ok(panel.includes("表示だけを絞り込みます。候補状態・監視設定・公開状態は変更しません"));
+  assert.ok(panel.includes("検索条件に一致する候補はありません"));
+
+  assert.match(css, /\.knowledge-candidate-search/);
+  assert.match(css, /\.knowledge-candidate-search input/);
+  assert.match(css, /\.knowledge-candidate-search button:disabled/);
+});
+
 test("candidate reviews can store bounded manual verification notes without bypassing publication gates", async () => {
   const [panel, client, css] = await Promise.all([
     readKnowledgeRefreshSource(),
