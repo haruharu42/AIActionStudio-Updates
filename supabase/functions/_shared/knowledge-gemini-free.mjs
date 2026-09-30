@@ -39,7 +39,7 @@ export function geminiPublicSourceEligible(candidate) {
     if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(body)) return false;
     if (/\b(?:AIza[A-Za-z0-9_-]{18,}|sk-(?:proj-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,})\b/.test(body)) return false;
     if (/\bbearer\s+[A-Za-z0-9._-]{16,}/i.test(body)) return false;
-    if (/(?:^|[\s?&])(?:api[_-]?key|access[_-]?token|client[_-]?secret|password|authorization)\s*[:=]\s*[^\s&,;]{5,}/i.test(body)) return false;
+    if (/(?:^|[\s?&#;/])(?:x[-_]?api[-_]?key|api[-_]?key|access[-_]?token|refresh[-_]?token|id[-_]?token|session(?:[-_]?(?:id|token))?|token|client[-_]?secret|private[-_]?key|secret|password|authorization|set[-_]?cookie|cookie)\s*[:=]\s*["']?[^\s&,;'"<>]{5,}/i.test(body)) return false;
     return true;
   } catch {
     return false;
