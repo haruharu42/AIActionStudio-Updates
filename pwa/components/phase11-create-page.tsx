@@ -270,11 +270,11 @@ export function Phase11CreatePage() {
   useEffect(() => {
     if (gate.kind !== "ready" || step !== ARTICLE_CREATE_STEPS.length - 1 || createdId) return;
     let active = true;
-    setArticleStockSummaryError("");
     void getArticleStockSummary(getSupabaseClient()).then(
       (summary) => {
         if (!active) return;
         setArticleStockSummary(summary);
+        setArticleStockSummaryError("");
       },
       () => {
         if (!active) return;
