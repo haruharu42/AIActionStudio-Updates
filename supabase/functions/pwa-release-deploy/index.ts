@@ -258,6 +258,7 @@ Deno.serve(async (request: Request) => {
       const refreshed = requestId && tokenConfigured ? await listDeployments(request) : deployments;
       return json(request, {
         configured: tokenConfigured,
+        supportsGithubReadiness: true,
         previewBranch: DEFAULT_PREVIEW_BRANCH,
         publicUrl: PUBLIC_URL,
         deployments: refreshed,
@@ -276,6 +277,30 @@ Deno.serve(async (request: Request) => {
     }
 
     const action = clean(body.action) || "start";
+    if (action === "github_readiness") {
+      // The caller must pass the same admin-only RPC gate as the status endpoint.
+      // No deployment rows, repository payloads, token values, or error bodies are returned.
+      await listDeployments(request);
+      const configured = Boolean(githubToken());
+      if (!configured) {
+        return json(request, {
+          supported: true, configured: false, repositoryReadable: false,
+          workflowReadable: false, dispatchPermissionTested: false,
+        });
+      }
+      const [repositoryResponse, workflowResponse] = await Promise.all([
+        github(""),
+        github(`/actions/workflows/${WORKFLOW}`),
+      ]);
+      return json(request, {
+        supported: true,
+        configured: true,
+        repositoryReadable: repositoryResponse.ok,
+        workflowReadable: workflowResponse.ok,
+        // Read-only GitHub checks CANNOT prove Actions:write or dispatch success.
+        dispatchPermissionTested: false,
+      });
+    }
     if (action === "status") {
       const deployments = await listDeployments(request);
       const tokenConfigured = Boolean(githubToken());
@@ -289,6 +314,7 @@ Deno.serve(async (request: Request) => {
       const refreshed = requestId && tokenConfigured ? await listDeployments(request) : deployments;
       return json(request, {
         configured: tokenConfigured,
+        supportsGithubReadiness: true,
         previewBranch: DEFAULT_PREVIEW_BRANCH,
         publicUrl: PUBLIC_URL,
         deployments: refreshed,

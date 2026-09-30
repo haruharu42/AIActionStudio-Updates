@@ -17,10 +17,12 @@ import {
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   AAS_PREVIEW_RELEASE_BRANCH,
+  checkGithubReleaseReadiness,
   loadPublicPwaDeployments,
   requestPublicPwaDeployment,
   type PublicDeployment,
   type PublicDeploymentSnapshot,
+  type GithubReleaseReadiness,
 } from "@/lib/release-deployment";
 
 type FormState = {
@@ -106,6 +108,7 @@ export function AdminReleasePage() {
   const [currentSessionAal, setCurrentSessionAal] = useState<"aal1" | "aal2" | null>(null);
   const [aalCheckFailed, setAalCheckFailed] = useState(false);
   const [deploymentSnapshot, setDeploymentSnapshot] = useState<PublicDeploymentSnapshot | null>(null);
+  const [githubReadiness, setGithubReadiness] = useState<GithubReleaseReadiness | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -215,6 +218,21 @@ export function AdminReleasePage() {
       }
       return next;
     });
+  };
+
+  const diagnoseGithub = async () => {
+    if (busy || !deploymentSnapshot?.supportsGithubReadiness) return;
+    setBusy(true);
+    setError("");
+    setGithubReadiness(null);
+    try {
+      const readiness = await checkGithubReleaseReadiness(getSupabaseClient());
+      setGithubReadiness(readiness);
+    } catch {
+      setError("GitHub公開連携の読み取り診断に失敗しました。公開操作は開始していません。");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const createCandidate = async () => {
@@ -568,6 +586,23 @@ export function AdminReleasePage() {
             <p className="route-notice error">
               管理画面からの一般公開連携は初回設定待ちです。Supabase Edge Function secret「AAS_GITHUB_RELEASE_TOKEN」を設定すると有効になります。
             </p>
+          )}
+          {IS_PREVIEW_DEPLOYMENT && deploymentSnapshot?.supportsGithubReadiness && (
+            <div className="admin-safety-confirm">
+              <strong>GitHub公開連携の読み取り診断</strong>
+              <p>対象リポジトリとワークフローへ、サーバー側の設定済みトークンでGET要求するだけです。公開やDB変更は行いません。</p>
+              <button type="button" disabled={busy} onClick={() => void diagnoseGithub()}>
+                GitHub公開連携を安全に確認
+              </button>
+              {githubReadiness && (
+                <p role="status">
+                  トークン設定: {githubReadiness.configured ? "あり" : "なし"}<br />
+                  新リポジトリ読み取り: {githubReadiness.repositoryReadable ? "成功" : "未確認・失敗"}<br />
+                  公開ワークフロー読み取り: {githubReadiness.workflowReadable ? "成功" : "未確認・失敗"}<br />
+                  公開実行権限: 未検証（この診断ではdispatchしません）
+                </p>
+              )}
+            </div>
           )}
           {!IS_PREVIEW_DEPLOYMENT && (
             <p className="route-notice error">一般公開PWAへの反映操作はPreview PWAでのみ有効です。</p>
