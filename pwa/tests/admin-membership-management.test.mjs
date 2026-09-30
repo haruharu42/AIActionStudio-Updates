@@ -244,12 +244,23 @@ test("article library quota activation requires aggregate readiness and AAL2 whi
   assert.match(page, /プラン別上限を発効（MFA必須）/);
   assert.match(page, /従来上限へ戻す（緊急停止）/);
   assert.match(page, /管理者MFAを確認/);
+  assert.match(page, /getAuthenticatorAssuranceLevel/);
+  assert.match(page, /articleLibraryCurrentAal/);
+  assert.match(page, /articleLibraryAalCheckFailed/);
+  assert.match(page, /articleLibraryCurrentAal !== "aal2"/);
+  assert.match(page, /MFA状態: AAL2認証済み/);
+  assert.match(page, /MFA状態: AAL2未認証/);
+  assert.match(page, /MFA認証状態がAAL2ではないため、プラン別保存上限を発効しませんでした/);
+  assert.match(page, /disabled=\{[\s\S]*?articleLibraryCurrentAal !== "aal2"[\s\S]*?\}/);
   assert.match(page, /window\.confirm\(warning\)/);
   assert.match(css, /\.membership-library-readiness/);
   assert.match(css, /\.membership-library-readiness-blockers/);
   assert.match(css, /\.membership-library-readiness-blocker-list/);
   assert.match(css, /\.membership-library-readiness-grid/);
   assert.match(css, /\.membership-library-activation-actions/);
+  assert.match(css, /\.membership-library-mfa-status/);
+  assert.match(css, /\.membership-library-mfa-status\.ready/);
+  assert.match(css, /\.membership-library-mfa-status\.action/);
 });
 
 test("membership defaults make cloud image storage a member-only capability across active plans", () => {
