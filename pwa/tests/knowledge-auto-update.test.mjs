@@ -391,10 +391,18 @@ test("knowledge candidate dashboard distinguishes deterministic results from int
   assert.match(panel, /レビュー待ち/);
   assert.match(panel, /無料判定済み/);
   assert.match(panel, /AI保留/);
+  assert.match(panel, /AI解析待ち/);
   assert.match(panel, /無料判定待ち/);
   assert.match(panel, /解析失敗/);
+  assert.match(panel, /candidateAnalysisPresentation\(candidate, automationAiConfig\)\.className === "held"/);
+  assert.match(panel, /candidateAnalysisSummary\.aiPending/);
+  for (const view of ["held", "failed"]) {
+    assert.match(panel, new RegExp(`key: "${view}"`));
+    assert.match(panel, new RegExp(`candidateView === "${view}"`));
+  }
   assert.match(css, /\.knowledge-ai-mode-status/);
   assert.match(css, /\.knowledge-candidate-analysis-summary/);
+  assert.match(css, /repeat\(auto-fit, minmax\(100px, 1fr\)\)/);
   assert.match(css, /\.knowledge-ai-analysis\.deterministic/);
   assert.match(css, /\.knowledge-ai-analysis\.held/);
   assert.match(css, /\.knowledge-ai-analysis\.automatic/);
