@@ -909,6 +909,71 @@
   font-size: 9px;
   line-height: 1.65;
 }
+.knowledge-held-batch {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid #b8d4c7;
+  border-radius: 11px;
+  background: #f2faf6;
+}
+.knowledge-held-batch > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+.knowledge-held-batch strong {
+  color: #2d6652;
+  font-size: 11px;
+}
+.knowledge-held-batch p {
+  margin: 0;
+  color: #58776c;
+  font-size: 9px;
+  line-height: 1.6;
+}
+.knowledge-held-batch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+.knowledge-held-batch-actions span {
+  margin-right: auto;
+  color: #456b5c;
+  font-size: 9px;
+  font-weight: 800;
+}
+.knowledge-held-batch-actions button {
+  min-height: 36px;
+  border: 1px solid #aacabd;
+  border-radius: 8px;
+  background: #fff;
+  color: #296750;
+  padding: 7px 9px;
+  font-size: 9px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.knowledge-held-batch-actions button:focus-visible {
+  outline: 2px solid #23674e;
+  outline-offset: 2px;
+}
+.knowledge-held-batch-actions button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+.knowledge-held-batch-actions button:last-child {
+  background: #287454;
+  color: #fff;
+}
+@media (max-width: 560px) {
+  .knowledge-held-batch-actions button {
+    flex: 1 1 calc(50% - 7px);
+  }
+  .knowledge-held-batch-actions button:last-child {
+    flex-basis: 100%;
+  }
+}
 @media (max-width: 560px) {
   .knowledge-candidate-triage-filters button {
     flex: 1 1 calc(50% - 7px);
