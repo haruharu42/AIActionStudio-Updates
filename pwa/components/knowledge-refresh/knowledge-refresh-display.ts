@@ -25,6 +25,18 @@ export function knowledgeRefreshStatusLabel(status: KnowledgeRefreshRequest["sta
   }
 }
 
+export function isKnowledgeRefreshAutoRecovery(errorMessage: string): boolean {
+  return errorMessage.startsWith("AAS auto-recovery: processing exceeded 24 hours")
+    || errorMessage.startsWith("AAS auto-recovery: pending request exceeded its channel refresh cycle");
+}
+
+export function knowledgeRefreshHistoryStatusLabel(request: KnowledgeRefreshRequest): string {
+  if (request.status === "failed" && isKnowledgeRefreshAutoRecovery(request.errorMessage)) {
+    return "自動回復済み";
+  }
+  return knowledgeRefreshStatusLabel(request.status);
+}
+
 export function knowledgeAutomationActionLabel(
   action: KnowledgeAutomationCandidate["candidateAction"],
 ): string {

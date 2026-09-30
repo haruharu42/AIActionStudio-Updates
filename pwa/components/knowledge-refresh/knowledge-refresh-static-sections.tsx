@@ -4,8 +4,9 @@ import { KnowledgeDiffSummary } from "@/components/knowledge-refresh/knowledge-d
 import {
   formatKnowledgeCycle,
   formatKnowledgeDate,
+  isKnowledgeRefreshAutoRecovery,
   knowledgeRefreshErrorLabel,
-  knowledgeRefreshStatusLabel,
+  knowledgeRefreshHistoryStatusLabel,
 } from "@/components/knowledge-refresh/knowledge-refresh-display";
 import type {
   KnowledgeRefreshChannelState,
@@ -85,11 +86,12 @@ export function KnowledgeRefreshHistory({
       {recentRequests.map((request) => {
         const diff = request.changeDetails;
         const hasDetails = diff.knowledge.items.length > 0 || diff.prompt.items.length > 0;
+        const autoRecovered = request.status === "failed" && isKnowledgeRefreshAutoRecovery(request.errorMessage);
         return (
           <article key={request.id}>
             <div className="knowledge-history-head">
               <span className={"channel-label " + request.channel}>
-                {request.channel === "fresh" ? "Fresh・先行確認" : "Stable・標準版"} / {knowledgeRefreshStatusLabel(request.status)}
+                {request.channel === "fresh" ? "Fresh・先行確認" : "Stable・標準版"} / {knowledgeRefreshHistoryStatusLabel(request)}
               </span>
               <small>
                 v{request.publishedVersion ?? "-"} / {formatKnowledgeDate(request.completedAt)}
@@ -109,7 +111,11 @@ export function KnowledgeRefreshHistory({
             {!hasDetails && request.status === "completed" && (
               <small>この更新は旧形式の履歴のため詳細差分は記録されていません。</small>
             )}
-            {request.errorMessage && <p className="error">{knowledgeRefreshErrorLabel(request.errorMessage)}</p>}
+            {request.errorMessage && (
+              <p className={autoRecovered ? "recovery" : "error"}>
+                {knowledgeRefreshErrorLabel(request.errorMessage)}
+              </p>
+            )}
           </article>
         );
       })}

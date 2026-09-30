@@ -56,6 +56,30 @@ test("knowledge refresh scheduler keeps unstarted admin review tasks pending acr
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
 });
 
+test("knowledge refresh history labels scheduler auto-recovery separately from real failures", async () => {
+  const [staticSections, display, css] = await Promise.all([
+    readPwa("components/knowledge-refresh/knowledge-refresh-static-sections.tsx"),
+    readPwa("components/knowledge-refresh/knowledge-refresh-display.ts"),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(display, /export function isKnowledgeRefreshAutoRecovery/);
+  assert.match(display, /AAS auto-recovery: processing exceeded 24 hours/);
+  assert.match(display, /AAS auto-recovery: pending request exceeded its channel refresh cycle/);
+  assert.match(display, /export function knowledgeRefreshHistoryStatusLabel/);
+  assert.match(display, /return "自動回復済み"/);
+  assert.match(display, /return knowledgeRefreshStatusLabel\(request\.status\)/);
+
+  assert.match(staticSections, /const autoRecovered = request\.status === "failed" && isKnowledgeRefreshAutoRecovery\(request\.errorMessage\)/);
+  assert.match(staticSections, /knowledgeRefreshHistoryStatusLabel\(request\)/);
+  assert.match(staticSections, /className=\{autoRecovered \? "recovery" : "error"\}/);
+  assert.doesNotMatch(staticSections, /getSupabaseClient|\.rpc\(/);
+
+  assert.match(css, /\.knowledge-refresh-history p\.recovery/);
+  assert.match(css, /background: #f0f6fb/);
+});
+
+
 test("knowledge auto-update control plane keeps Fresh and Stable review-gated and versioned", async () => {
   const migration = await readRepo("supabase/migrations/20260919083000_knowledge_prompt_auto_update.sql");
 
