@@ -196,14 +196,28 @@ test("admin notification readiness is read-only, admin-guarded, and visible befo
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
 
   assert.match(client, /AdminNotificationReadiness/);
+  assert.match(client, /AdminNotificationReadinessIssue/);
+  assert.match(client, /notificationReadinessIssues/);
+  for (const code of ["maintenance","push_disabled","push_config","no_testers","tester_push","queue","failed"]) {
+    assert.match(client, new RegExp(`code: "${code}"`));
+  }
+  assert.match(client, /testerCount - readiness\.testerPushUsers/);
+  assert.match(client, /readiness\.deliveries\.pending \+ readiness\.deliveries\.processing/);
+  assert.match(client, /actionHref: "\/admin\/releases"/);
+  assert.match(client, /actionHref: "\/admin\/features"/);
   assert.match(client, /adminGetNotificationReadiness/);
   assert.match(client, /admin_get_notification_readiness/);
   assert.match(page, /通知センター公開準備状況/);
+  assert.match(page, /公開前に解消する項目/);
+  assert.match(page, /自動確認のブロッカーはありません/);
+  assert.match(page, /notificationReadinessIssues\(readiness\)/);
   assert.match(page, /実機でのPush受信・通知タップ・PC\/スマホ主要導線/);
   assert.match(page, /この画面から公開段階は変更しません/);
   assert.match(page, /testerPushUsers/);
   assert.match(page, /deliveries\.pending/);
   assert.match(css, /\.admin-notification-readiness-grid/);
+  assert.match(css, /\.admin-notification-readiness-blockers/);
+  assert.match(css, /\.admin-notification-readiness-blocker-list/);
 });
 
 test("push worker has immediate trigger and cron recovery", async () => {
