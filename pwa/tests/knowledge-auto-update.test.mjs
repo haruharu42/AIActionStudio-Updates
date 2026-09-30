@@ -592,6 +592,26 @@ test("Knowledge candidate review text search combines with existing filters with
   assert.ok(css.includes(".knowledge-candidate-search button:disabled"));
 });
 
+test("Knowledge candidate review supports exact ID navigation, historical 403 filtering and repeated URL counts", async () => {
+  const panel = await readKnowledgeRefreshSource();
+  const a = panel.indexOf("const normalizedCandidateSearch");
+  const b = panel.indexOf("const heldCandidates", a);
+  assert.ok(a > 0 && b > a);
+  const readOnly = panel.slice(a, b);
+  assert.match(readOnly, /parseKnowledgeCandidateIdQuery\(normalizedCandidateSearch\)/);
+  assert.match(readOnly, /normalizedCandidateSearch\.startsWith\("#"\)/);
+  assert.match(readOnly, /candidate\.id === exactCandidateIdQuery/);
+  assert.match(readOnly, /candidateView === "history403"/);
+  assert.match(readOnly, /candidate\.sourceHttpStatus === 403/);
+  assert.match(readOnly, /candidateSourceOccurrences = useMemo/);
+  assert.match(panel, /key: "history403", label: "検出時403"/);
+  assert.match(panel, /候補 #\{candidate\.id\}/);
+  assert.match(panel, /同一URLの確認待ち候補/);
+  assert.match(panel, /現在の監視HTTP状態ではありません/);
+  assert.match(panel, /候補一覧と5件一括検証には同じ検索条件が適用されます/);
+  assert.doesNotMatch(readOnly, /adminReviewKnowledgeAutomationCandidate|adminPublishKnowledgeRefreshBundle|adminSetKnowledgeAutomationSourceEnabled|\.rpc\(/);
+});
+
 test("Knowledge candidate search includes saved review evidence without changing review or publication", async () => {
   const panel = await readKnowledgeRefreshSource();
   const start = panel.indexOf("const searchedAutomationCandidates = useMemo");
@@ -603,7 +623,7 @@ test("Knowledge candidate search includes saved review evidence without changing
   assert.ok(searchable.includes("candidate.analysisError"));
   assert.ok(searchable.includes("candidate.sourceTitle"));
   assert.ok(searchable.includes("candidate.existingItemKey"));
-  assert.ok(panel.includes("placeholder=\"タイトル・URL・カテゴリ・理由・レビュー記録で検索\""));
+  assert.ok(panel.includes("placeholder=\"候補ID（例：#73）・タイトル・URL・カテゴリ・レビュー記録\""));
   assert.ok(!searchable.includes("adminReviewKnowledgeAutomationCandidate"));
   assert.ok(!searchable.includes("adminPublishKnowledgeRefreshBundle"));
   assert.ok(!searchable.includes("adminSetKnowledgeAutomationSourceEnabled"));
