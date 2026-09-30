@@ -173,6 +173,37 @@ test("membership plan pricing is admin-editable and exposed to the user plan com
   assert.match(userPage, /このプランで利用できる機能/);
 });
 
+test("membership admin exposes article library plan quotas without activating them implicitly", () => {
+  const page = readAdminMembershipSource();
+  const client = read("lib/admin-membership.ts");
+  const quotaMigration = readRepo("supabase/migrations/20260929013207_article_library_plan_limits_v1.sql");
+  const unlimitedMigration = readRepo("supabase/migrations/20260929013814_article_library_plan_limit_unlimited_guard.sql");
+  const css = read("app/phase47-admin-usability.css");
+
+  assert.match(client, /admin_list_creator_membership_plans_v3/);
+  assert.match(client, /admin_get_article_library_quota_settings/);
+  assert.match(client, /admin_update_article_library_quota_settings/);
+  assert.match(client, /admin_update_creator_membership_plan_v2/);
+  assert.match(client, /articleLibraryLimit/);
+  assert.match(client, /articleLibraryUnlimited/);
+  assert.match(page, /記事ライブラリ保存上限/);
+  assert.match(page, /無料ユーザー/);
+  assert.match(page, /保存数を無制限にする/);
+  assert.match(page, /準備済み・未発効/);
+  assert.match(page, /発効は公開前の安全確認後に行います/);
+  assert.match(page, /saveArticleLibraryFreeLimit/);
+  assert.match(page, /savePlanArticleLibraryQuota/);
+  assert.match(css, /\.membership-library-quota-grid/);
+  assert.match(css, /\.membership-library-unlimited/);
+
+  assert.match(quotaMigration, /plan_limits_enabled boolean not null default false/);
+  assert.match(quotaMigration, /when 'CREATOR_CLUB' then 15/);
+  assert.match(quotaMigration, /when 'CREATOR_CLUB_PLUS' then 30/);
+  assert.match(unlimitedMigration, /plan_code = 'CREATOR_CLUB_PRO'/);
+  assert.match(unlimitedMigration, /article_library_unlimited/);
+  assert.doesNotMatch(page, /admin_update_article_library_quota_settings|plan_limits_enabled\s*=\s*true/i);
+});
+
 test("membership defaults make cloud image storage a member-only capability across active plans", () => {
   const migration = readRepo("supabase/migrations/20260924034928_membership_management_center.sql");
 
