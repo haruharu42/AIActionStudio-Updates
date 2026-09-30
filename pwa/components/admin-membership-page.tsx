@@ -6,6 +6,7 @@ import { SelectWithCustom } from "@/components/select-with-custom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  getArticleLibraryQuotaSettings,
   getMembershipSettings,
   listMembershipAuditActions,
   listMembershipAssignments,
@@ -13,8 +14,11 @@ import {
   listMembershipPlanFeatures,
   listMembershipPlans,
   setMembershipPlanFeature,
+  updateArticleLibraryFreeLimit,
   updateMembershipPlan,
+  updateMembershipPlanArticleQuota,
   updateMembershipSettings,
+  type ArticleLibraryQuotaSettings,
   type MembershipAssignment,
   type MembershipAuditAction,
   type MembershipFeature,
@@ -83,6 +87,8 @@ export function AdminMembershipPage() {
   const [assignments, setAssignments] = useState<MembershipAssignment[]>([]);
   const [auditActions, setAuditActions] = useState<MembershipAuditAction[]>([]);
   const [referenceNow, setReferenceNow] = useState(0);
+  const [articleLibraryQuota, setArticleLibraryQuota] = useState<ArticleLibraryQuotaSettings | null>(null);
+  const [articleLibraryQuotaReady, setArticleLibraryQuotaReady] = useState(true);
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -106,6 +112,11 @@ export function AdminMembershipPage() {
 
   const pricingReady = useMemo(
     () => plans.length > 0 && plans.every((plan) => plan.pricingManaged),
+    [plans],
+  );
+
+  const articleLibraryPlanLimitsReady = useMemo(
+    () => plans.length > 0 && plans.every((plan) => plan.articleLibraryManaged),
     [plans],
   );
 
@@ -144,6 +155,15 @@ export function AdminMembershipPage() {
       setConfigReady(true);
     } catch {
       setConfigReady(false);
+    }
+
+    try {
+      const nextQuota = await getArticleLibraryQuotaSettings(client);
+      setArticleLibraryQuota(nextQuota);
+      setArticleLibraryQuotaReady(true);
+    } catch {
+      setArticleLibraryQuota(null);
+      setArticleLibraryQuotaReady(false);
     }
 
     try {
@@ -269,6 +289,52 @@ export function AdminMembershipPage() {
       setMessage(`${plan.displayName}の料金・表示設定を保存しました。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "プラン設定を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveArticleLibraryFreeLimit = async () => {
+    if (busy || !articleLibraryQuota) return;
+    const limit = articleLibraryQuota.freeLimit;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100000) {
+      setMessage("無料ユーザーの保存上限は1〜100,000件で入力してください。");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      await updateArticleLibraryFreeLimit(getSupabaseClient(), limit);
+      setArticleLibraryQuota(await getArticleLibraryQuotaSettings(getSupabaseClient()));
+      setMessage(`無料ユーザーの記事ライブラリ保存上限を${limit}件に保存しました。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "無料ユーザーの保存上限を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const savePlanArticleLibraryQuota = async (plan: MembershipPlan) => {
+    if (busy) return;
+    if (!plan.articleLibraryManaged) {
+      setMessage("記事ライブラリ上限管理用のDB migrationがまだ未適用です。");
+      return;
+    }
+    if (!plan.articleLibraryUnlimited) {
+      const limit = plan.articleLibraryLimit;
+      if (limit === null || !Number.isInteger(limit) || limit < 1 || limit > 100000) {
+        setMessage("プラン別の保存上限は1〜100,000件で入力してください。");
+        return;
+      }
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      await updateMembershipPlanArticleQuota(getSupabaseClient(), plan);
+      setPlans(await listMembershipPlans(getSupabaseClient()));
+      setMessage(`${plan.displayName}の記事ライブラリ保存上限を保存しました。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "プラン別の保存上限を保存できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -553,10 +619,109 @@ export function AdminMembershipPage() {
         </div>
       </section>
 
-      <section className="admin-panel membership-admin-section">
+      <section className="admin-panel membership-admin-section membership-library-quota-section">
         <div className="admin-panel-heading">
           <div>
             <p className="eyebrow">STEP 3</p>
+            <h2>記事ライブラリ保存上限</h2>
+          </div>
+          <span className={articleLibraryQuota?.planLimitsEnabled ? "availability-badge active" : "availability-badge"}>
+            {articleLibraryQuota?.planLimitsEnabled ? "プラン上限 発効中" : "準備済み・未発効"}
+          </span>
+        </div>
+        <p className="trial-admin-note">
+          無料ユーザーとCreator Club各プランの記事保存上限を管理します。値の保存と、本番でプラン別上限を発効する操作は分離しています。
+        </p>
+
+        {!articleLibraryQuotaReady || !articleLibraryPlanLimitsReady ? (
+          <div className="route-notice" role="note">
+            記事ライブラリ上限管理用のDB migrationがまだ未適用です。現在の保存上限は従来設定のままです。
+          </div>
+        ) : articleLibraryQuota && !articleLibraryQuota.planLimitsEnabled ? (
+          <div className="route-notice" role="note">
+            現在は従来の保存上限が有効です。ここで無料5件・各有料プランの上限を準備しても、一般ユーザーの実上限はまだ切り替わりません。発効は公開前の安全確認後に行います。
+          </div>
+        ) : null}
+
+        {articleLibraryQuota && articleLibraryQuotaReady && (
+          <div className="membership-library-quota-grid">
+            <article className="membership-library-quota-card">
+              <div>
+                <span>FREE</span>
+                <strong>無料ユーザー</strong>
+              </div>
+              <label className="route-field">
+                <span>保存上限（件）</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100000}
+                  value={articleLibraryQuota.freeLimit}
+                  onChange={(event) => setArticleLibraryQuota((current) => current ? {
+                    ...current,
+                    freeLimit: Math.max(1, Math.min(100000, Number(event.target.value) || 1)),
+                  } : current)}
+                />
+              </label>
+              <button type="button" disabled={busy} onClick={() => void saveArticleLibraryFreeLimit()}>
+                無料上限を保存
+              </button>
+            </article>
+
+            {plans.map((plan) => (
+              <article className="membership-library-quota-card" key={"library-" + plan.planCode}>
+                <div>
+                  <span>PLAN {plan.tierRank}</span>
+                  <strong>{plan.displayName}</strong>
+                </div>
+                <label className="membership-library-unlimited">
+                  <input
+                    type="checkbox"
+                    checked={plan.articleLibraryUnlimited}
+                    disabled={busy || !plan.articleLibraryManaged}
+                    onChange={(event) => patchPlan(plan.planCode, {
+                      articleLibraryUnlimited: event.target.checked,
+                      articleLibraryLimit: event.target.checked ? null : (plan.articleLibraryLimit ?? 5),
+                    })}
+                  />
+                  <span>保存数を無制限にする</span>
+                </label>
+                {!plan.articleLibraryUnlimited && (
+                  <label className="route-field">
+                    <span>保存上限（件）</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100000}
+                      value={plan.articleLibraryLimit ?? ""}
+                      disabled={busy || !plan.articleLibraryManaged}
+                      onChange={(event) => patchPlan(plan.planCode, {
+                        articleLibraryLimit: Math.max(1, Math.min(100000, Number(event.target.value) || 1)),
+                      })}
+                    />
+                  </label>
+                )}
+                <div className="membership-plan-feature-summary">
+                  <span>現在の設定</span>
+                  <strong>{plan.articleLibraryUnlimited ? "無制限" : `${plan.articleLibraryLimit ?? "—"}件`}</strong>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy || !plan.articleLibraryManaged}
+                  onClick={() => void savePlanArticleLibraryQuota(plan)}
+                >
+                  保存上限を保存
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="admin-panel membership-admin-section">
+        <div className="admin-panel-heading">
+          <div>
+            <p className="eyebrow">STEP 4</p>
             <h2>プランごとの利用可能機能</h2>
           </div>
           <span className="availability-badge active">自由に割り振り</span>
@@ -600,7 +765,7 @@ export function AdminMembershipPage() {
       <section className="admin-panel membership-admin-section">
         <div className="admin-panel-heading">
           <div>
-            <p className="eyebrow">STEP 4</p>
+            <p className="eyebrow">STEP 5</p>
             <h2>ユーザーへメンバー特典を付与</h2>
           </div>
           <span className="availability-badge">手動確認</span>
