@@ -362,7 +362,7 @@ test("article save step prechecks the effective library quota and blocks a full 
   assert.match(page, /getArticleStockSummary/);
   assert.match(page, /articleSaveQuotaReached/);
   assert.match(page, /remainingArticles === 0/);
-  assert.match(page, /保存ボタンを押す直前にも最新の保存枠を再確認/);
+  assert.match(finish, /保存ボタンを押す直前にも最新の保存枠を再確認/);
   assert.match(page, /const latestStock = await getArticleStockSummary\(client\)/);
   assert.match(page, /記事ライブラリの保存上限に達しています/);
   const createLib = await readFile(new URL("../lib/phase11-create.ts", import.meta.url), "utf8");
