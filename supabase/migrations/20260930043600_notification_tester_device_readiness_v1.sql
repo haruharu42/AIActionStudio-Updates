@@ -33,7 +33,8 @@ begin
         and coalesce(s.last_error,'')=''
     )::integer,
     count(s.id) filter(
-      where coalesce(s.last_error,'')<>''
+      where s.enabled=true
+        and coalesce(s.last_error,'')<>''
     )::integer,
     max(s.updated_at)
   from public.app_release_testers t
