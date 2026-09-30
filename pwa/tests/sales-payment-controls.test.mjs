@@ -240,8 +240,10 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(preflight, /loadSalesLaunchReadiness/);
   assert.match(preflight, /loadPublicSalesApproval/);
   assert.match(preflight, /setPublicSalesApproval/);
-  assert.match(preflight, /addEventListener\(SALES_LAUNCH_STATE_EVENT, refresh\)/);
-  assert.match(preflight, /removeEventListener\(SALES_LAUNCH_STATE_EVENT, refresh\)/);
+  assert.match(preflight, /const handleSalesStateChange = \(\) =>/);
+  assert.match(preflight, /setManualReviewKeys\(\[\]\)/);
+  assert.match(preflight, /addEventListener\(SALES_LAUNCH_STATE_EVENT, handleSalesStateChange\)/);
+  assert.match(preflight, /removeEventListener\(SALES_LAUNCH_STATE_EVENT, handleSalesStateChange\)/);
   assert.match(preflight, /販売開始保留/);
   assert.match(preflight, /自動確認は通過/);
   assert.match(preflight, /販売用の利用コード/);
@@ -254,7 +256,31 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(preflight, /公開販売：ロック中/);
   assert.match(preflight, /公開販売を承認する/);
   assert.match(preflight, /公開販売を停止する/);
-  assert.match(preflight, /手動確認項目を確認済み/);
+  assert.match(preflight, /MANUAL_REVIEW_TOTAL = REVIEW_LINKS\.length \+ OPERATOR_RELEASE_CHECKS\.length/);
+  assert.match(preflight, /manualReviewKeys\.length === MANUAL_REVIEW_TOTAL/);
+  assert.match(preflight, /toggleManualReview/);
+  assert.match(preflight, /sales-manual-approval-progress/);
+  assert.match(preflight, /手動確認 \{manualReviewKeys\.length\} \/ \{MANUAL_REVIEW_TOTAL\}/);
+  assert.match(preflight, /販売設定または販売者情報が変わると、この確認状態はリセット/);
+  assert.match(preflight, /sales-review-check/);
+  assert.match(preflight, /内容を確認した/);
+  assert.match(preflight, /実機・運用で確認した/);
+  assert.match(preflight, /id="sales-manual-review"/);
+  for (const key of [
+    "legal-commercial",
+    "legal-terms",
+    "legal-privacy",
+    "legal-ai-terms",
+    "legal-support",
+    "operator-price-refund",
+    "operator-purchase-flow",
+    "operator-tester-push",
+    "operator-closed-beta",
+    "operator-rc-device",
+    "operator-production-approval",
+  ]) {
+    assert.ok(preflight.includes(key), `missing manual review key: ${key}`);
+  }
   assert.match(preflight, /getAuthenticatorAssuranceLevel/);
   assert.match(preflight, /currentSessionAal/);
   assert.match(preflight, /currentSessionAal === "aal2"/);
@@ -343,7 +369,10 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(css, /\.sales-public-approval/);
   assert.match(css, /\.sales-public-approval\.locked/);
   assert.match(css, /\.sales-public-approval\.approved/);
-  assert.match(css, /\.sales-manual-approval-check/);
+  assert.match(css, /\.sales-manual-approval-progress/);
+  assert.match(css, /\.sales-manual-approval-progress\.ready/);
+  assert.match(css, /\.sales-review-check/);
+  assert.doesNotMatch(css, /\.sales-manual-approval-check/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.sales-release-preflight-grid/);
 });
 
