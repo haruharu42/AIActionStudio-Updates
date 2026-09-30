@@ -47,7 +47,7 @@ export function ActionPromptEditor({
 
       <div className="action-prompt-input-status">
         <span>入力 {filledCount} / {selected.fields.length}</span>
-        <button type="button" onClick={onReset}>入力をリセット</button>
+        <button type="button" disabled={filledCount === 0} onClick={onReset}>入力をリセット</button>
       </div>
 
       <div className="action-prompt-fields">

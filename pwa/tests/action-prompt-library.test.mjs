@@ -441,3 +441,16 @@ test("prompt library opens external AI only after its prompt was copied successf
   assert.doesNotMatch(page, /if \(openAi\) launchAiApp\(openAi\)/);
   assert.match(page, /writeActionPromptProgress\(userId/);
 });
+
+
+test("prompt reset is guarded against accidental data loss", async () => {
+  const [page, editor] = await Promise.all([
+    read("components/action-prompt-library-page.tsx"),
+    read("components/action-prompt-library/action-prompt-editor.tsx"),
+  ]);
+
+  assert.match(page, /const hasInput = selected\.fields\.some/);
+  assert.match(page, /window\.confirm\("このプロンプトの入力内容をリセットしますか？元に戻せません。"/);
+  assert.match(editor, /disabled=\{filledCount === 0\}/);
+  assert.match(editor, /入力をリセット/);
+});

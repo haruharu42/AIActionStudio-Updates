@@ -362,6 +362,8 @@ export function ActionPromptLibraryPage() {
             onAiChange={setSelectedAi}
             onCopy={(openAi) => void copyPrompt(openAi)}
             onReset={() => {
+              const hasInput = selected.fields.some((field) => (values[field.key] ?? "").trim());
+              if (hasInput && !window.confirm("このプロンプトの入力内容をリセットしますか？元に戻せません。")) return;
               setValues(initialActionPromptValues(selected));
               setMessage("入力内容をリセットしました。");
             }}
