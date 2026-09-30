@@ -89,3 +89,19 @@ Staging実DB上で外部Gemini APIを呼ばず、一時データをサブトラ�
 
 Next boundary: configure a real Staging-only Gemini key securely and a controlled worker token/source only when explicitly ready to perform external AI/network E2E. Production Gemini remains untouched.
 
+
+
+## Managed Staging safety checkpoint（2026-10-01）
+
+- GitHub main checkpoint: `38bf002d52a5da7958d479ddb140198d1b0bcd87`.
+- PR #246 / GitHub Actions run `36790799520`: disposable local Supabaseで、`pwa-release-deploy` の未認証GETが401、`knowledge-research-worker` のWorker tokenなしPOSTが401 / `{"error":"unauthorized"}` で失敗閉鎖し、Source/Run/Candidate・AI設定に副作用がないことを回帰テスト化。
+- PR #247 / run `36791066783`: `anon` からKnowledge/Release内部テーブルへの直接アクセスなし、`authenticated` はRLS付き `profiles` と意図した管理RPCだけ、Worker専用RPCは `service_role` 限定であることをCIに固定。
+- PR #248 / run `36791332108`: `anon` / `authenticated` が `vault` schemaを直接利用できず、`vault.secrets` / `vault.decrypted_secrets` をSELECTできないことをCIに固定。
+- Managed Staging実環境でも同じ最小権限を確認済み。Geminiキーを後から登録してもブラウザロールからVaultを直接読めない前提を確認した。
+- Hosted Auth公開設定はEmail signup有効、`mailer_autoconfirm=false`、Phone/Anonymous/外部OAuthは無効。現在のブラウザセッションはSupabase Dashboard未認証で、確認メールを出さずに安全なHostedテストユーザーを作る管理操作も連携にないため、`auth.users` への直接SQL挿入は行わない。
+- Hosted real-JWT E2Eは、確認済みStagingテストユーザーを正規経路で用意できるまで保留。これはローカルGoTrue/Auth JWT E2Eとは別ゲート。
+- Supabase Managed StagingのRealtime内部テーブル未初期化はIssue #244で分離追跡。AASからSupabase所有の `realtime` 内部オブジェクトを作成・修復しない。
+- Stagingの永続状態はautomation OFF / AI enrichment OFF / OpenAI / `gpt-5.6` / Gemini日次0 / 実Geminiキーなし / Worker tokenなし / Knowledge・Source・Run・Candidate 0件のまま。
+- Managed Stagingから実Gemini APIはまだ呼んでいない。本番Gemini migration / Worker / AI設定にも変更なし。
+
+次のHosted境界は、正規のStaging Authテストユーザーを用意した上でreal-JWT E2Eを行うこと。その後、別工程でStaging専用GeminiキーとWorker tokenをSupabase側へ直接登録し、限定した公式ソース1件で外部AI/network E2Eを行う。秘密値はチャット・GitHub・CIログへ貼らない。
