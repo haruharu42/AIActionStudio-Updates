@@ -79,9 +79,9 @@ jobs:
           grep -Fq '/api/' public/sw.js
           grep -Fq 'access_token' public/sw.js
           grep -Fq 'refresh_token' public/sw.js
-          grep -Fq 'aas-pwa-phase17-prod-v2' public/sw.js
-          if grep -Fq 'aas-pwa-phase8-v1' public/sw.js; then
-            echo 'Stale Phase 8 production cache generation remains.' >&2
+          grep -Fq 'aas-pwa-phase56-runtime-v12-axia-generated' public/sw.js
+          if grep -Fq 'aas-pwa-phase17-prod-v2' public/sw.js || grep -Fq 'aas-pwa-phase8-v1' public/sw.js; then
+            echo 'Stale production cache generation remains.' >&2
             exit 1
           fi
 
