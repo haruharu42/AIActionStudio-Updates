@@ -424,6 +424,36 @@ test("recheck candidates support safe five-item manual verification batches with
   assert.match(css, /\.knowledge-recheck-batch/);
 });
 
+test("Knowledge candidate review supports read-only text search across review metadata", async () => {
+  const [panel, css] = await Promise.all([
+    readKnowledgeRefreshSource(),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(panel, /const \[candidateSearch, setCandidateSearch\] = useState\("")/);
+  assert.match(panel, /const normalizedCandidateSearch = candidateSearch\.trim\(\)\.toLowerCase\(\)/);
+  assert.match(panel, /candidate\.sourceTitle/);
+  assert.match(panel, /candidate\.sourceUrl/);
+  assert.match(panel, /candidate\.existingItemKey/);
+  assert.match(panel, /candidate\.existingItemType/);
+  assert.match(panel, /candidate\.candidateAction/);
+  assert.match(panel, /candidate\.reason/);
+  assert.match(panel, /candidate\.analysisReason/);
+  assert.match(panel, /\.\.\.candidate\.matchedTasks/);
+  assert.match(panel, /searchable\.includes\(normalizedCandidateSearch\)/);
+  assert.match(panel, /表示 \{visibleAutomationCandidates\.length\}件/);
+  assert.match(panel, /id="knowledge-candidate-search-input"/);
+  assert.match(panel, /type="search"/);
+  assert.match(panel, /タイトル・URL・カテゴリ・理由・現行キーで検索/);
+  assert.match(panel, /検索をクリア/);
+  assert.match(panel, /表示だけを絞り込みます。候補状態・監視設定・公開状態は変更しません/);
+  assert.match(panel, /検索条件に一致する候補はありません/);
+
+  assert.match(css, /\.knowledge-candidate-search/);
+  assert.match(css, /\.knowledge-candidate-search input/);
+  assert.match(css, /\.knowledge-candidate-search button:disabled/);
+});
+
 test("knowledge candidate dashboard distinguishes deterministic results from intentionally held AI work", async () => {
   const [panel, css] = await Promise.all([
     readKnowledgeRefreshSource(),
