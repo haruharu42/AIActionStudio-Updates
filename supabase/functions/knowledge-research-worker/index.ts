@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
-import { callGeminiFreeJson, GEMINI_FREE_MODEL, GEMINI_FREE_RUN_LIMIT } from "../_shared/knowledge-gemini-free.mjs";
+import { callGeminiFreeJson, geminiPublicSourceEligible, GEMINI_FREE_MODEL, GEMINI_FREE_RUN_LIMIT } from "../_shared/knowledge-gemini-free.mjs";
 
 const url = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -326,7 +326,7 @@ async function enrichCandidate(candidate: any, config: any): Promise<{ analyzed:
         proposed_payload:null,
         analysis_provider:"deterministic",
         analysis_model:"",
-        analysis_reason:"公式ソース本文が十分に取得できていないため、AI提案は作成せず再確認に回しました。",
+        analysis_reason:candidate.gemini_skip_reason ?? "公式ソース本文が十分に取得できていないため、AI提案は作成せず再確認に回しました。",
         analysis_error:"",
         verified_source_urls:candidate.source_url ? [candidate.source_url] : [],
         analyzed_at:now
@@ -433,9 +433,13 @@ async function enrichPendingCandidates() {
       // The reserve function atomically caps outbound calls at 10 per UTC day.
       // A missing migration fails closed; 429 never changes to a paid model.
       // Inadequate or restricted source evidence is classified locally at no API cost.
-      if (item.source_http_status !== 200 || String(item.source_excerpt || "").trim().length < 80) {
+      if (!geminiPublicSourceEligible(item)) {
         const result = await enrichCandidate(
-          { ...item, source_excerpt:"" },
+          {
+            ...item,
+            source_excerpt:"",
+            gemini_skip_reason:"外部AI送信の安全条件（HTTP状態・本文長・個人情報や認証情報の可能性）を満たさないため、無料の定型判定で手動確認へ回しました。",
+          },
           { provider:"deterministic",model:"",api_key:"" },
         );
         analyzed += result.analyzed;
