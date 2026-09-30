@@ -7,9 +7,11 @@ import {
   SALES_LAUNCH_STATE_EVENT,
   loadPublicSalesApproval,
   loadSalesLaunchReadiness,
+  loadStripeBillingReadiness,
   setPublicSalesApproval,
   type PublicSalesApproval,
   type SalesLaunchReadinessSnapshot,
+  type StripeBillingReadiness,
 } from "@/lib/sales-launch-readiness";
 import type { SalesSettings } from "@/lib/sales-settings";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -76,6 +78,8 @@ export function SalesReleasePreflightPanel({
   const purchaseUrl = externalPurchaseUrl(settings.externalSalesUrl);
   const [snapshot, setSnapshot] = useState<SalesLaunchReadinessSnapshot | null>(null);
   const [snapshotFailed, setSnapshotFailed] = useState(false);
+  const [stripeReadiness, setStripeReadiness] = useState<StripeBillingReadiness | null>(null);
+  const [stripeReadinessFailed, setStripeReadinessFailed] = useState(false);
   const [approval, setApproval] = useState<PublicSalesApproval | null>(null);
   const [approvalFailed, setApprovalFailed] = useState(false);
   const [approvalBusy, setApprovalBusy] = useState(false);
@@ -109,6 +113,18 @@ export function SalesReleasePreflightPanel({
             setApprovalFailed(true);
           },
         );
+        void loadStripeBillingReadiness(client).then(
+          (next) => {
+            if (!active) return;
+            setStripeReadiness(next);
+            setStripeReadinessFailed(false);
+          },
+          () => {
+            if (!active) return;
+            setStripeReadiness(null);
+            setStripeReadinessFailed(true);
+          },
+        );
         void client.auth.mfa.getAuthenticatorAssuranceLevel().then(
           ({ data, error }) => {
             if (!active) return;
@@ -130,8 +146,10 @@ export function SalesReleasePreflightPanel({
         queueMicrotask(() => {
           if (!active) return;
           setSnapshot(null);
+          setStripeReadiness(null);
           setApproval(null);
           setSnapshotFailed(true);
+          setStripeReadinessFailed(true);
           setApprovalFailed(true);
         });
       }
@@ -158,6 +176,16 @@ export function SalesReleasePreflightPanel({
         : "未登録";
 
   const stripePlanSelected = settings.pwa7DayEnabled || settings.pwaMonthlyEnabled;
+  const stripePlansByCode = new Map(
+    (stripeReadiness?.plans ?? []).map((plan) => [plan.planCode, plan] as const),
+  );
+  const pwa7DayWorkerReady = stripePlansByCode.get("AAS-PWA-7DAY")?.ready === true;
+  const pwaMonthlyWorkerReady = stripePlansByCode.get("AAS-PWA-MONTHLY")?.ready === true;
+  const selectedStripePlansReady = Boolean(
+    stripeReadiness
+      && (!settings.pwa7DayEnabled || pwa7DayWorkerReady)
+      && (!settings.pwaMonthlyEnabled || pwaMonthlyWorkerReady),
+  );
   const externalRouteConfigured = Boolean(
     settings.externalSalesEnabled
       && settings.accessCodeEnabled
@@ -165,7 +193,13 @@ export function SalesReleasePreflightPanel({
       && snapshot
       && snapshot.usableInviteCount > 0,
   );
-  const stripeRouteConfigured = settings.stripeCheckoutEnabled && stripePlanSelected;
+  const stripeRouteConfigured = Boolean(
+    settings.stripeCheckoutEnabled
+      && stripePlanSelected
+      && stripeReadiness
+      && stripeReadiness.backendReady
+      && selectedStripePlansReady,
+  );
 
   const automatedBlockers = [
     !settings.externalSalesEnabled && !settings.stripeCheckoutEnabled
@@ -179,6 +213,24 @@ export function SalesReleasePreflightPanel({
       : "",
     settings.stripeCheckoutEnabled && !stripePlanSelected
       ? "Stripe受付をONにしているため、7日券または月額プランを1つ以上ONにしてください。"
+      : "",
+    settings.stripeCheckoutEnabled && stripeReadinessFailed
+      ? "Stripe Workerの実設定を確認できません。管理者ログインとWorker設定を確認してください。"
+      : "",
+    settings.stripeCheckoutEnabled && !stripeReadinessFailed && stripeReadiness === null
+      ? "Stripe Workerの実設定を確認中です。"
+      : "",
+    settings.stripeCheckoutEnabled && stripeReadiness?.mode === "off"
+      ? "Stripe WorkerのAAS_COMMERCE_MODEがoffです。testまたはliveへ設定してください。"
+      : "",
+    settings.stripeCheckoutEnabled && stripeReadiness && !stripeReadiness.backendReady
+      ? "Stripe WorkerのSupabase接続・Stripe秘密鍵・Webhook秘密鍵のいずれかが未設定です。"
+      : "",
+    settings.stripeCheckoutEnabled && settings.pwa7DayEnabled && stripeReadiness && !pwa7DayWorkerReady
+      ? "PWA 7日利用パスのStripe Priceが未設定・無効・到達不可・モード不一致のいずれかです。"
+      : "",
+    settings.stripeCheckoutEnabled && settings.pwaMonthlyEnabled && stripeReadiness && !pwaMonthlyWorkerReady
+      ? "PWA 月額プランのStripe Priceが未設定・無効・到達不可・モード不一致のいずれかです。"
       : "",
     snapshotFailed ? "販売前のセキュリティ状態を確認できません。" : "",
     !snapshotFailed && snapshot === null ? "販売前のセキュリティ状態を確認中です。" : "",
@@ -249,11 +301,32 @@ export function SalesReleasePreflightPanel({
         <article className={settings.stripeCheckoutEnabled ? (stripeRouteConfigured ? "ready" : "action") : "off"}>
           <div>
             <strong>Stripe PWA販売</strong>
-            <span>{!settings.stripeCheckoutEnabled ? "OFF" : stripeRouteConfigured ? "経路設定済み" : "要対応"}</span>
+            <span>{!settings.stripeCheckoutEnabled ? "OFF" : stripeRouteConfigured ? "Worker実設定まで確認済み" : "要対応"}</span>
           </div>
-          <small>ONの場合は7日券または月額プランを1つ以上有効にします。</small>
+          <small>ONの場合は選択プランに加え、Worker秘密値・Webhook・Priceの実設定も確認します。</small>
         </article>
       </div>
+
+      {settings.stripeCheckoutEnabled && (
+        <div className="sales-stripe-worker-readiness" aria-label="Stripe Worker実設定">
+          <article>
+            <span>Commerce mode</span>
+            <strong>{stripeReadinessFailed ? "確認失敗" : stripeReadiness?.mode ?? "確認中"}</strong>
+          </article>
+          <article>
+            <span>Worker backend</span>
+            <strong>{stripeReadinessFailed ? "確認失敗" : stripeReadiness?.backendReady ? "準備済み" : stripeReadiness ? "要設定" : "確認中"}</strong>
+          </article>
+          <article>
+            <span>PWA 7日 Price</span>
+            <strong>{!settings.pwa7DayEnabled ? "未使用" : stripeReadinessFailed ? "確認失敗" : pwa7DayWorkerReady ? "準備済み" : stripeReadiness ? "要確認" : "確認中"}</strong>
+          </article>
+          <article>
+            <span>PWA 月額 Price</span>
+            <strong>{!settings.pwaMonthlyEnabled ? "未使用" : stripeReadinessFailed ? "確認失敗" : pwaMonthlyWorkerReady ? "準備済み" : stripeReadiness ? "要確認" : "確認中"}</strong>
+          </article>
+        </div>
+      )}
 
       <div className={`sales-release-gate ${automatedReady ? "review" : "blocked"}`} role="status">
         <div>
