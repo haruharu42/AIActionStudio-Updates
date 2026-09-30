@@ -291,7 +291,6 @@ export function NoteMembershipCockpit({
   useEffect(() => {
     let active = true;
     launchOwnerRef.current = "";
-    setLaunchHydrated(false);
 
     let restored: MembershipLaunchChecklistKey[] = [];
     try {
