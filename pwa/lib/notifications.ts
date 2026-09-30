@@ -60,6 +60,21 @@ export type AdminNotificationReadiness = {
   manualChecksRequired: string[];
 };
 
+export type AdminNotificationReadinessIssue = {
+  code:
+    | "maintenance"
+    | "push_disabled"
+    | "push_config"
+    | "no_testers"
+    | "tester_push"
+    | "queue"
+    | "failed";
+  title: string;
+  detail: string;
+  actionHref?: string;
+  actionLabel?: string;
+};
+
 export const NOTIFICATION_REFRESH_EVENT = "aas-notifications-refresh";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -292,6 +307,74 @@ function normalizeAdminNotificationReadiness(value: unknown): AdminNotificationR
       ? row.manual_checks_required.filter((item): item is string => typeof item === "string")
       : [],
   };
+}
+
+export function notificationReadinessIssues(
+  readiness: AdminNotificationReadiness,
+): AdminNotificationReadinessIssue[] {
+  const issues: AdminNotificationReadinessIssue[] = [];
+
+  if (readiness.maintenanceMode) {
+    issues.push({
+      code: "maintenance",
+      title: "通知センターがメンテナンス中です",
+      detail: "公開前にメンテナンスを解除し、通常稼働状態で実機確認してください。",
+      actionHref: "/admin/features",
+      actionLabel: "全機能管理を確認",
+    });
+  }
+
+  if (!readiness.pushEnabled) {
+    issues.push({
+      code: "push_disabled",
+      title: "Web Push配信が無効です",
+      detail: "Push設定が無効のため、端末通知の公開確認を完了できません。",
+    });
+  } else if (!readiness.pushConfigReady) {
+    issues.push({
+      code: "push_config",
+      title: "Web Push設定が未完了です",
+      detail: "公開URL・worker token hash・VAPID公開鍵・subjectの設定状態を確認してください。",
+    });
+  }
+
+  if (readiness.testerCount === 0) {
+    issues.push({
+      code: "no_testers",
+      title: "一般ユーザーテスターが未登録です",
+      detail: "activeな一般ユーザーを最低1名テスターへ設定して、一般ユーザー権限で確認してください。",
+      actionHref: "/admin/releases",
+      actionLabel: "テスター設定を開く",
+    });
+  } else if (readiness.testerPushUsers < readiness.testerCount) {
+    const missing = readiness.testerCount - readiness.testerPushUsers;
+    issues.push({
+      code: "tester_push",
+      title: "Push未確認のテスター端末があります",
+      detail: `${missing}名分不足しています。対象テスター本人の端末でPWAへログインし、設定から端末通知をONにして実機確認してください。`,
+      actionHref: "/admin/releases",
+      actionLabel: "テスター設定を確認",
+    });
+  }
+
+  const queued = readiness.deliveries.pending + readiness.deliveries.processing;
+  if (queued > 0) {
+    issues.push({
+      code: "queue",
+      title: "未処理のPush配信があります",
+      detail: `${queued}件がpending / processingです。worker処理後に再確認してください。`,
+    });
+  }
+
+  if (readiness.deliveries.failed > 0) {
+    issues.push({
+      code: "failed",
+      title: "Push配信失敗が残っています",
+      detail: `${readiness.deliveries.failed}件の失敗があります。失効端末や配信設定を確認してから公開判定してください。`,
+    });
+  }
+
+  return issues;
 }
 
 export async function adminGetNotificationReadiness(client: SupabaseClient): Promise<AdminNotificationReadiness> {
