@@ -8,13 +8,12 @@ begin
   if not exists (select 1 from pg_roles where rolname='service_role') then create role service_role nologin; end if;
 end; $$;
 
-create schema if not exists auth;
 create schema if not exists private;
 create schema if not exists vault;
 create extension if not exists supabase_vault with schema vault cascade;
 
--- Use Supabase's built-in auth.uid() and emulate only the JWT claim on this fixture.
--- Unlike the mock-Postgres fixture, do not replace or grant on the protected auth schema.
+-- The bare PostgreSQL image has Vault but not hosted Auth helper functions.
+-- Admin authorization is separately exercised by the mock fixture's smoke.sql.
 create or replace function private.is_active_admin() returns boolean language sql stable as $$
   select coalesce(nullif(current_setting('test.mock_admin',true),'')::boolean,false);
 $$;
