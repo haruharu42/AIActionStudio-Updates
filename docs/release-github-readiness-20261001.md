@@ -9,7 +9,7 @@
 - 現行mainの `pwa-release-deploy` をStagingへv1として配布し、`ACTIVE` / `verify_jwt=true` を確認。
 - 配布済みコードは `haruharu42/AIActionStudio-Updates` を参照し、`github_readiness` を含むことを取得済みFunction sourceで確認。
 - Stagingには本番のGitHub release tokenをコピーしていない。実トークンのread/write/dispatch権限確認は未実施。
-- Release用DB RPC/管理者AuthのStaging再現は次工程。JWT付き管理者E2Eが揃うまでworkflow dispatchは実行しない。
+- Release読み取り用DB RPCはStagingへ再現済み。write/dispatch RPCとHosted real-JWT管理者E2Eは未実施で、これらが揃うまでworkflow dispatchは実行しない。
 
 ## 目的と制限
 
@@ -66,3 +66,17 @@ Production remains unchanged: the production release Worker and DB constraint mu
 
 Supabase Managed StagingのRealtime内部スキーマ未初期化はAAS release pathとは別件で、Issue #244として追跡する。AASからSupabase所有の`realtime`内部テーブルを作成・修復しない。
 
+
+
+## Managed Staging safety checkpoint（2026-10-01）
+
+- GitHub main checkpoint: `38bf002d52a5da7958d479ddb140198d1b0bcd87`.
+- PR #246 / run `36790799520` で、Release WorkerのJWTゲートとKnowledge WorkerのWorker-tokenゲートを使い捨てSupabase上のHTTP回帰テストとして固定。拒否リクエスト後もDB副作用0を確認。
+- PR #247 / run `36791066783` で、Release/Knowledge内部テーブルの直接アクセスをservice roleへ限定し、管理者RPCだけを `authenticated` の入口として残す最小権限モデルをCIに固定。
+- PR #248 / run `36791332108` で、ブラウザロールからVaultを直接読めないことをCIに固定。
+- Productionの `app_release_deployments_run_url_check` は再確認時点でも旧 `AIArticleStudio-Updates` のみ。Managed Stagingは正式migration `20260930210846_update_release_github_run_url_constraint.sql` 適用済みで、新旧リポジトリURLの両方を許可する。
+- Issue #240を最新状態へ更新済み。本番では**DB制約migration → advisor再確認 → Production release Worker更新 → read-only `github_readiness` → workflow dispatch**を必ず別工程にする。
+- Managed Stagingへ実 `AAS_GITHUB_RELEASE_TOKEN` は登録しておらず、GitHub workflow dispatch・Production URLへの公開処理は未実施。
+- Hosted AuthはEmail確認必須で、現在のSupabase Dashboardブラウザセッションは未認証。正規の確認済みStagingテストユーザーが用意できるまでHosted real-JWTのadmin/general-user E2Eは保留し、`auth.users` へ直接SQL挿入しない。
+- Realtime内部スキーマ未初期化はIssue #244としてrelease pathと分離。AASから手修復しない。
+- Production Supabase / Production Worker / 一般公開PWAには、このManaged Staging安全テストによる変更はない。
