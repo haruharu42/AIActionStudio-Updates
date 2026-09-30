@@ -383,7 +383,7 @@ test("held candidates are separate from runnable AI work and support safe five-i
   assert.match(panel, /HELD_RESEARCH_BATCH_SIZE = 5/);
   assert.match(panel, /key: "unanalysed", label: "AI解析待ち"/);
   assert.match(panel, /unanalysed: automationCandidates\.filter\(\(candidate\) =>\s*candidateAnalysisPresentation\(candidate, automationAiConfig\)\.className === "pending"/);
-  assert.match(panel, /candidateView === "unanalysed"\) return candidateAnalysisPresentation\(candidate, automationAiConfig\)\.className === "pending"/);
+  assert.match(panel, /candidateView === "unanalysed" && candidateAnalysisPresentation\(candidate, automationAiConfig\)\.className !== "pending"\) return false/);
   assert.match(panel, /const heldCandidates = useMemo/);
   assert.match(panel, /const currentHeldBatch = heldCandidates\.slice/);
   assert.match(panel, /copyHeldResearchBatch/);
