@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { useState } from "react";
+
+import type { ArticleStockSummary } from "@/lib/article-library-v2";
 
 import {
   publicationBodyForCopy,
@@ -126,6 +129,9 @@ export function SaveStep({
   createdId,
   onSave,
   setMessage,
+  stockSummary,
+  stockSummaryError,
+  saveQuotaReached,
 }: {
   draft: ArticleCreationDraft;
   patch: ArticleDraftPatch;
@@ -135,6 +141,9 @@ export function SaveStep({
   createdId: string;
   onSave: () => Promise<void>;
   setMessage: MessageSetter;
+  stockSummary: ArticleStockSummary | null;
+  stockSummaryError: string;
+  saveQuotaReached: boolean;
 }) {
   const [publicationCopied, setPublicationCopied] = useState(false);
   const publicationBody = publicationBodyForCopy(draft.body, draft.title, {
@@ -201,7 +210,34 @@ export function SaveStep({
       <label className="route-field"><span>タグ（任意・投稿前に設定）</span><input value={tagsText} onChange={(event) => setTagsText(event.target.value)} placeholder="例：恋愛, 人間関係, 職場" /></label>
       <label className="route-field"><span>保存状態</span><select value={draft.saveStatus} onChange={(event) => patch("saveStatus", event.target.value as SaveStatus)}><option value="draft">下書き</option><option value="writing">執筆中</option><option value="ready">完成</option></select></label>
       <dl className="route-meta"><div><dt>タイトル</dt><dd>{draft.title || "未入力"}</dd></div><div><dt>掲載先</dt><dd>{draft.publicationTarget}</dd></div><div><dt>ジャンル</dt><dd>{draft.genre} / {draft.subgenre}</dd></div><div><dt>本文</dt><dd>{draft.body.length.toLocaleString()}文字</dd></div><div><dt>画像</dt><dd>cover {draft.coverEnabled ? "ON" : "OFF"} / inline {draft.inlineEnabled ? draft.inlineCount : 0}</dd></div></dl>
-      {!createdId && <button className="primary-action" type="button" disabled={busy || !draft.title.trim()} onClick={() => void onSave()}>{busy ? "保存中…" : "記事ライブラリへ保存"}</button>}
+      {!createdId && (
+        <div className={`article-create-stock-status ${saveQuotaReached ? "reached" : ""}`}>
+          {stockSummary ? (
+            <>
+              <div>
+                <strong>{stockSummary.isUnlimited ? "保存枠: 無制限" : `保存枠: 残り${stockSummary.remainingArticles ?? 0}件 / ${stockSummary.maxArticles ?? 0}件`}</strong>
+                <span>
+                  {saveQuotaReached
+                    ? "保存上限に達しています。不要な記事を整理するか、Creator Club特典を確認してください。"
+                    : "保存ボタンを押す直前にも最新の保存枠を再確認します。"}
+                </span>
+              </div>
+              {saveQuotaReached && <Link href="/membership">Creator Club特典を確認 →</Link>}
+            </>
+          ) : stockSummaryError ? (
+            <div>
+              <strong>保存枠を事前確認できませんでした。</strong>
+              <span>{stockSummaryError}</span>
+            </div>
+          ) : (
+            <div>
+              <strong>保存枠を確認しています。</strong>
+              <span>記事ライブラリの残り保存件数を確認中です。</span>
+            </div>
+          )}
+        </div>
+      )}
+      {!createdId && <button className="primary-action" type="button" disabled={busy || !draft.title.trim() || saveQuotaReached} onClick={() => void onSave()}>{busy ? "保存中…" : "記事ライブラリへ保存"}</button>}
       {createdId && <div className="route-notice"><strong>保存完了</strong><br />Article ID: {createdId}</div>}
     </div>
   );

@@ -202,14 +202,14 @@ export function ArticleLibraryListView({
             {stockState === "reached" ? (
               <>
                 <strong>保存上限に達しています。</strong>
-                <span>不要な記事を整理するか、利用プランを確認してください。</span>
-                <Link href="/plans">プランを確認 →</Link>
+                <span>不要な記事を整理するか、Creator Club特典を確認してください。</span>
+                <Link href="/membership">Creator Club特典を確認 →</Link>
               </>
             ) : stockState === "warning" ? (
               <>
                 <strong>保存上限が近づいています。</strong>
                 <span>新しい記事を作る前に残り件数を確認してください。</span>
-                <Link href="/plans">プランを確認 →</Link>
+                <Link href="/membership">Creator Club特典を確認 →</Link>
               </>
             ) : (
               <>

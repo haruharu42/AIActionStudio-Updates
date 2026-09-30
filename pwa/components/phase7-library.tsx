@@ -216,6 +216,10 @@ export function Phase7Library({
 
   const duplicate = async () => {
     if (!detail || busy) return;
+    if (stockSummary && !stockSummary.isUnlimited && stockSummary.remainingArticles === 0) {
+      setError("記事ライブラリの保存上限に達しているため複製できません。不要な記事を整理するか、利用プランを確認してください。");
+      return;
+    }
     setBusy(true);
     setError("");
     setSuccess("");
@@ -373,6 +377,8 @@ export function Phase7Library({
           onBack={back}
           onEdit={() => { if (leaveImages()) setView("edit"); }}
           onDuplicate={() => void duplicate()}
+          duplicateDisabled={Boolean(stockSummary && !stockSummary.isUnlimited && stockSummary.remainingArticles === 0)}
+          duplicateDisabledReason="記事ライブラリの保存上限に達しています。不要な記事を整理するか、利用プランを確認してください。"
           onArchiveToggle={() => void archiveToggle()}
           onDownload={downloadCurrent}
           onDelete={() => void remove()}

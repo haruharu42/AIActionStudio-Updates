@@ -422,6 +422,55 @@
   font: 12px/1.9 "Yu Gothic UI", Meiryo, sans-serif;
 }
 
+.article-create-stock-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin: 16px 0 12px;
+  border: 1px solid #31506d;
+  border-radius: 11px;
+  background: #0b1b2d;
+  padding: 11px 12px;
+}
+
+.article-create-stock-status > div {
+  display: grid;
+  gap: 3px;
+}
+
+.article-create-stock-status strong {
+  color: #c9ddf4;
+  font-size: 11px;
+}
+
+.article-create-stock-status span {
+  color: #8ea4bd;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.article-create-stock-status.reached {
+  border-color: #733947;
+  background: #341a27;
+}
+
+.article-create-stock-status.reached strong {
+  color: #ffb4c1;
+}
+
+.article-create-stock-status.reached span {
+  color: #e3a2ae;
+}
+
+.article-create-stock-status > a {
+  flex: 0 0 auto;
+  color: #c9b8ff;
+  font-size: 9px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .wizard-actions,
 .admin-actions,
 .admin-search {
@@ -610,6 +659,10 @@
     overflow-x: auto;
     justify-content: start;
     padding-bottom: 5px;
+  }
+
+  .article-create-stock-status {
+    display: grid;
   }
 
   .clipboard-edit-actions,

@@ -6,6 +6,7 @@ import { SelectWithCustom } from "@/components/select-with-custom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  articleLibraryQuotaReadinessIssues,
   getArticleLibraryQuotaReadiness,
   getArticleLibraryQuotaSettings,
   getMembershipSettings,
@@ -123,6 +124,11 @@ export function AdminMembershipPage() {
   const articleLibraryPlanLimitsReady = useMemo(
     () => plans.length > 0 && plans.every((plan) => plan.articleLibraryManaged),
     [plans],
+  );
+
+  const articleLibraryReadinessIssues = useMemo(
+    () => articleLibraryReadiness ? articleLibraryQuotaReadinessIssues(articleLibraryReadiness) : [],
+    [articleLibraryReadiness],
   );
 
   const expiringSoon = useMemo(() => {
@@ -727,6 +733,28 @@ export function AdminMembershipPage() {
                 再確認
               </button>
             </div>
+            {articleLibraryReadinessIssues.length > 0 ? (
+              <div className="membership-library-readiness-blockers" aria-label="記事ライブラリ上限の発効ブロッカー">
+                <div className="membership-library-readiness-blockers-head">
+                  <strong>発効前に解消する項目</strong>
+                  <span>{articleLibraryReadinessIssues.length}件</span>
+                </div>
+                <div className="membership-library-readiness-blocker-list">
+                  {articleLibraryReadinessIssues.map((issue) => (
+                    <article key={issue.code}>
+                      <span>要対応</span>
+                      <strong>{issue.title}</strong>
+                      <p>{issue.detail}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="membership-library-readiness-clear">
+                <strong>自動確認のブロッカーはありません。</strong>
+                <span>発効操作には現在の管理者セッションでMFA（AAL2）が必要です。</span>
+              </div>
+            )}
             <div className="membership-library-readiness-grid">
               <article><span>対象プラン</span><strong>{articleLibraryReadiness.activeExpectedPlans} / 3</strong><small>{articleLibraryReadiness.planConfigReady ? "設定正常" : "設定要確認"}</small></article>
               <article><span>active一般ユーザー</span><strong>{articleLibraryReadiness.activeGeneralUsers}</strong><small>個人情報は表示しません</small></article>

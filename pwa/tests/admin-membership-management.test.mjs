@@ -225,10 +225,20 @@ test("article library quota activation requires aggregate readiness and AAL2 whi
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
 
   assert.match(client, /ArticleLibraryQuotaReadiness/);
+  assert.match(client, /ArticleLibraryQuotaReadinessIssue/);
+  assert.match(client, /articleLibraryQuotaReadinessIssues/);
+  for (const code of ["free_limit", "plan_count", "plan_config", "future_overage"]) {
+    assert.match(client, new RegExp(`code: "${code}"`));
+  }
+  assert.match(client, /usersOverFutureLimit > 0/);
+  assert.match(client, /maxOverage/);
   assert.match(client, /admin_get_article_library_quota_readiness/);
   assert.match(client, /admin_set_article_library_plan_limits_enabled/);
   assert.match(client, /aal2 required for article library quota activation/);
   assert.match(page, /自動確認 通過/);
+  assert.match(page, /発効前に解消する項目/);
+  assert.match(page, /自動確認のブロッカーはありません/);
+  assert.match(page, /articleLibraryQuotaReadinessIssues\(articleLibraryReadiness\)/);
   assert.match(page, /将来上限の超過/);
   assert.match(page, /0名のみ発効可能/);
   assert.match(page, /プラン別上限を発効（MFA必須）/);
@@ -236,6 +246,8 @@ test("article library quota activation requires aggregate readiness and AAL2 whi
   assert.match(page, /管理者MFAを確認/);
   assert.match(page, /window\.confirm\(warning\)/);
   assert.match(css, /\.membership-library-readiness/);
+  assert.match(css, /\.membership-library-readiness-blockers/);
+  assert.match(css, /\.membership-library-readiness-blocker-list/);
   assert.match(css, /\.membership-library-readiness-grid/);
   assert.match(css, /\.membership-library-activation-actions/);
 });

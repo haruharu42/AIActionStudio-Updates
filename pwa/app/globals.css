@@ -387,6 +387,46 @@ button:disabled { cursor: not-allowed; }
 }
 
 .library-stock-summary.reached {
+
+.library-duplicate-quota-note {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin: 10px 0 14px;
+  border: 1px solid #efc8c8;
+  border-radius: 14px;
+  background: #fff6f6;
+  padding: 11px 13px;
+}
+
+.library-duplicate-quota-note > div {
+  display: grid;
+  gap: 3px;
+}
+
+.library-duplicate-quota-note strong {
+  color: #8a2d2d;
+  font-size: 11px;
+}
+
+.library-duplicate-quota-note span {
+  color: #765858;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.library-duplicate-quota-note a {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+@media (max-width: 700px) {
+  .library-duplicate-quota-note {
+    display: grid;
+  }
+}
   border-color: #7f3f4b;
   background: #2a1720;
 }

@@ -9,6 +9,7 @@ const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 test("pins patched framework versions, current release metadata, and PWA cache generation", async () => {
   const packageJson = JSON.parse(await read("package.json"));
+  const packageLock = JSON.parse(await read("package-lock.json"));
   const layout = await read("app/layout.tsx");
   const worker = await read("public/sw.js");
   const productionHelper = await read("../scripts/Prepare-AAS-PWA-Production.ps1");
@@ -21,6 +22,12 @@ test("pins patched framework versions, current release metadata, and PWA cache g
   assert.equal(packageJson.devDependencies.vite, "8.2.2");
   assert.equal(packageJson.devDependencies.wrangler, "4.129.0");
   assert.equal(packageJson.devDependencies["eslint-config-next"], "16.3.4");
+  assert.equal(packageLock.packages["node_modules/brace-expansion"].version, "1.1.21");
+  assert.equal(
+    packageLock.packages["node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion"].version,
+    "5.0.12",
+  );
+  assert.equal(packageLock.packages["node_modules/fast-uri"].version, "3.1.8");
   assert.match(layout, /"aas-phase": "56"/);
   assert.match(layout, /"aas-release-stage": process\.env\.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE \?\? "development"/);
   assert.doesNotMatch(layout, /phase8-local/);

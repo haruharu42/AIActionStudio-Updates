@@ -47,6 +47,7 @@ import {
   type PlatformAccountDesign,
 } from "@/features/account-design";
 import { buildCombinedImagePrompt, buildImagePromptPlan } from "@/lib/phase13-image-prompts";
+import { getArticleStockSummary, type ArticleStockSummary } from "@/lib/article-library-v2";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   createDefaultWritingProfile,
@@ -79,6 +80,8 @@ export function Phase11CreatePage() {
   const [articleBusy, setArticleBusy] = useState(false);
   const [articlePromptAuthorized, setArticlePromptAuthorized] = useState("");
   const [createdId, setCreatedId] = useState("");
+  const [articleStockSummary, setArticleStockSummary] = useState<ArticleStockSummary | null>(null);
+  const [articleStockSummaryError, setArticleStockSummaryError] = useState("");
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [wizardRestored, setWizardRestored] = useState<boolean | null>(null);
   const [, setAccountDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
@@ -258,6 +261,29 @@ export function Phase11CreatePage() {
   const imagePrompts = buildImagePromptPlan(imagePromptInput);
   const combinedImagePrompt = buildCombinedImagePrompt(imagePrompts, imagePromptInput);
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
+  const articleSaveQuotaReached = Boolean(
+    articleStockSummary
+      && !articleStockSummary.isUnlimited
+      && articleStockSummary.remainingArticles === 0,
+  );
+
+  useEffect(() => {
+    if (gate.kind !== "ready" || step !== ARTICLE_CREATE_STEPS.length - 1 || createdId) return;
+    let active = true;
+    void getArticleStockSummary(getSupabaseClient()).then(
+      (summary) => {
+        if (!active) return;
+        setArticleStockSummary(summary);
+        setArticleStockSummaryError("");
+      },
+      () => {
+        if (!active) return;
+        setArticleStockSummary(null);
+        setArticleStockSummaryError("保存枠を事前確認できませんでした。保存時にサーバー側で再確認します。");
+      },
+    );
+    return () => { active = false; };
+  }, [createdId, gate.kind, step]);
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -384,11 +410,28 @@ export function Phase11CreatePage() {
 
   const save = async () => {
     if (gate.kind !== "ready") return;
+    if (articleSaveQuotaReached) {
+      setMessage("記事ライブラリの保存上限に達しています。不要な記事を整理するか、利用プランを確認してください。");
+      return;
+    }
     setBusy(true);
     setMessage("");
     try {
+      const client = getSupabaseClient();
+      try {
+        const latestStock = await getArticleStockSummary(client);
+        setArticleStockSummary(latestStock);
+        setArticleStockSummaryError("");
+        if (!latestStock.isUnlimited && latestStock.remainingArticles === 0) {
+          setMessage("記事ライブラリの保存上限に達しています。不要な記事を整理するか、利用プランを確認してください。");
+          return;
+        }
+      } catch {
+        setArticleStockSummaryError("保存枠を事前確認できませんでした。保存時にサーバー側で再確認します。");
+      }
+
       const result = await createArticleFromWizard(
-        getSupabaseClient(),
+        client,
         gate.ownerId,
         articleDraft,
         draft.magazineEnabled ? magazinePlan : undefined,
@@ -532,7 +575,21 @@ export function Phase11CreatePage() {
             setMessage={setMessage}
           />
         )}
-        {step === 7 && <SaveStep draft={draft} patch={patch} tagsText={tagsText} setTagsText={setTagsText} busy={busy} createdId={createdId} onSave={save} setMessage={setMessage} />}
+        {step === 7 && (
+          <SaveStep
+            draft={draft}
+            patch={patch}
+            tagsText={tagsText}
+            setTagsText={setTagsText}
+            busy={busy}
+            createdId={createdId}
+            onSave={save}
+            setMessage={setMessage}
+            stockSummary={articleStockSummary}
+            stockSummaryError={articleStockSummaryError}
+            saveQuotaReached={articleSaveQuotaReached}
+          />
+        )}
 
         {message && <div className="route-notice" role="status" aria-live="polite">{message}</div>}
 
