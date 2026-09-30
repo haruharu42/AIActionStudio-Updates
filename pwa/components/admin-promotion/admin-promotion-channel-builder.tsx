@@ -312,6 +312,13 @@ export function AdminPromotionChannelBuilder({
   const goPrevious = () => setStep((current) => Math.max(0, current - 1));
   const goNext = () => setStep((current) => Math.min(PROMOTION_WIZARD_STEPS.length - 1, current + 1));
 
+  const copyDirectScreenshotAndOpen = async () => {
+    persistWizardProgress();
+    const copied = await onCopy(directScreenshotPrompt);
+    if (!copied) return;
+    launchAiApp("chatgpt");
+  };
+
   const pasteGeneratedContent = async () => {
     try {
       if (!navigator.clipboard?.readText) throw new Error("clipboard-read-unavailable");
@@ -553,15 +560,15 @@ export function AdminPromotionChannelBuilder({
                   </summary>
                   <div className="admin-promo-direct-screenshot-body">
                     <p>
-                      ① 下の専用プロンプトをコピー → ② ChatGPTを開く → ③ 紹介したいスクショを同じチャットへ添付 →
-                      ④ プロンプトを送信、の順で使います。
+                      ① 「コピーしてChatGPTを開く」 → ② 紹介したいスクショを同じチャットへ添付 →
+                      ③ コピー済みプロンプトを送信、の順で使います。コピーに失敗した場合はChatGPTを自動で開きません。
                     </p>
                     <div className="admin-promo-direct-screenshot-actions">
-                      <button type="button" className="primary-action" onClick={() => void onCopy(directScreenshotPrompt)}>
-                        ChatGPT直接添付用プロンプトをコピー
+                      <button type="button" className="primary-action" onClick={() => void copyDirectScreenshotAndOpen()}>
+                        コピーしてChatGPTを開く
                       </button>
-                      <button type="button" className="secondary-action" onClick={() => { persistWizardProgress(); launchAiApp("chatgpt"); }}>
-                        ChatGPTを開く
+                      <button type="button" className="secondary-action" onClick={() => void onCopy(directScreenshotPrompt)}>
+                        プロンプトだけコピー
                       </button>
                     </div>
                     <pre>{directScreenshotPrompt}</pre>

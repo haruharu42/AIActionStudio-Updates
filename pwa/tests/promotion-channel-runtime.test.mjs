@@ -247,7 +247,8 @@ test("eight-step promotion wizard restores user-scoped progress across reloads a
   assert.match(builderSource, /window\.addEventListener\("pagehide"/);
   assert.match(builderSource, /window\.addEventListener\("beforeunload"/);
   assert.match(builderSource, /document\.addEventListener\("visibilitychange"/);
-  assert.match(builderSource, /persistWizardProgress\(\); launchAiApp\("chatgpt"\)/);
+  assert.match(builderSource, /const copyDirectScreenshotAndOpen = async \(\)/);
+  assert.match(builderSource, /persistWizardProgress\(\);[\s\S]*?const copied = await onCopy\(directScreenshotPrompt\);[\s\S]*?if \(!copied\) return;[\s\S]*?launchAiApp\("chatgpt"\)/);
   assert.match(pageSource, /const adminUserId = state\.kind === "ready" \? state\.profile\.id : ""/);
   assert.match(pageSource, /userId=\{adminUserId\}/);
 });
@@ -272,7 +273,11 @@ test("promotion AI handoff persists first, copies the prompt, and opens AI only 
 
   assert.match(builderSource, /onCopy\(prompt: string\): Promise<boolean>/);
   assert.match(builderSource, /onBeforeExternalLaunch=\{persistWizardProgress\}/);
+  assert.match(builderSource, /onClick=\{\(\) => void copyDirectScreenshotAndOpen\(\)\}/);
+  assert.match(builderSource, /コピーしてChatGPTを開く/);
+  assert.match(builderSource, /コピーに失敗した場合はChatGPTを自動で開きません/);
   assert.match(builderSource, /onClick=\{\(\) => void onCopy\(directScreenshotPrompt\)\}/);
+  assert.match(builderSource, /プロンプトだけコピー/);
 });
 
 
