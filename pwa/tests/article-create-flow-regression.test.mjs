@@ -352,6 +352,28 @@ test("article external AI handoff copies safely before opening", async () => {
 });
 
 
+test("article save step prechecks the effective library quota and blocks a full slot before RPC", async () => {
+  const [page, finish, css] = await Promise.all([
+    readFile(new URL("../components/phase11-create-page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/article-create/article-create-finish-steps.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/phase9-11.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /getArticleStockSummary/);
+  assert.match(page, /articleSaveQuotaReached/);
+  assert.match(page, /remainingArticles === 0/);
+  assert.match(page, /保存ボタンを押す直前にも最新の保存枠を再確認/);
+  assert.match(page, /const latestStock = await getArticleStockSummary\(client\)/);
+  assert.match(page, /記事ライブラリの保存上限に達しています/);
+  assert.match(finish, /stockSummary/);
+  assert.match(finish, /saveQuotaReached/);
+  assert.match(finish, /保存枠: 残り/);
+  assert.match(finish, /利用プランを確認/);
+  assert.match(finish, /disabled=\{busy \|\| !draft\.title\.trim\(\) \|\| saveQuotaReached\}/);
+  assert.match(css, /\.article-create-stock-status/);
+  assert.match(css, /\.article-create-stock-status\.reached/);
+});
+
 test("article creation shows a safe loading shell instead of a blank screen during access verification", async () => {
   const source = await readFile(
     new URL("../components/phase11-create-page.tsx", import.meta.url),
