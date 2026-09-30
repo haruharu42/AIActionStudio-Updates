@@ -39,6 +39,12 @@ export type ArticleLibraryQuotaReadiness = {
   automatedChecksPass: boolean;
 };
 
+export type ArticleLibraryQuotaReadinessIssue = {
+  code: "free_limit" | "plan_count" | "plan_config" | "future_overage";
+  title: string;
+  detail: string;
+};
+
 export type MembershipFeature = {
   featureKey: string;
   displayName: string;
@@ -257,6 +263,46 @@ function normalizeArticleLibraryQuotaReadiness(value: unknown): ArticleLibraryQu
     maxOverage: integer(row.max_overage, "max_overage"),
     automatedChecksPass: row.automated_checks_pass === true,
   };
+}
+
+export function articleLibraryQuotaReadinessIssues(
+  readiness: ArticleLibraryQuotaReadiness,
+): ArticleLibraryQuotaReadinessIssue[] {
+  const issues: ArticleLibraryQuotaReadinessIssue[] = [];
+
+  if (readiness.freeLimit < 1 || readiness.freeLimit > 100000) {
+    issues.push({
+      code: "free_limit",
+      title: "無料ユーザー上限の設定を確認してください",
+      detail: "無料ユーザーの保存上限は1〜100,000件の範囲で設定する必要があります。",
+    });
+  }
+
+  if (readiness.activeExpectedPlans !== 3) {
+    issues.push({
+      code: "plan_count",
+      title: "対象プランが3つ揃っていません",
+      detail: `activeなCreator Club対象プランが${readiness.activeExpectedPlans}件です。Creator Club / Plus / Proの3プランを確認してください。`,
+    });
+  }
+
+  if (!readiness.planConfigReady) {
+    issues.push({
+      code: "plan_config",
+      title: "プラン別保存上限の設定が未完成です",
+      detail: "Creator ClubとPlusは有限上限、Proは無制限として設定されているか確認してください。",
+    });
+  }
+
+  if (readiness.usersOverFutureLimit > 0) {
+    issues.push({
+      code: "future_overage",
+      title: "将来上限を超える一般ユーザーがいます",
+      detail: `${readiness.usersOverFutureLimit}名が発効後の上限を超えます。最大超過は${readiness.maxOverage}件です。発効前に上限値または既存記事数を確認してください。`,
+    });
+  }
+
+  return issues;
 }
 
 export async function getArticleLibraryQuotaReadiness(
