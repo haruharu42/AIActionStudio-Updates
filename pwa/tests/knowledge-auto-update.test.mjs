@@ -556,3 +556,22 @@ test("admins can pause and resume individual Knowledge monitoring sources withou
   assert.notEqual(syncEnd, -1);
   assert.doesNotMatch(worker.slice(syncStart, syncEnd), /enabled:true/);
 });
+
+
+test("redundant X analytics Help sources stop only when the healthy X Business fallback covers the same tasks", async () => {
+  const migration = await readRepo(
+    "supabase/migrations/20260930004300_disable_redundant_x_analytics_help_sources_v1.sql",
+  );
+
+  assert.match(migration, /media-studio-analytics/);
+  assert.match(migration, /view-counts/);
+  assert.match(migration, /tweet-activity-dashboard/);
+  assert.match(migration, /source\.last_http_status=403/);
+  assert.match(migration, /source\.consecutive_failures>=3/);
+  assert.match(migration, /fallback\.enabled=true/);
+  assert.match(migration, /fallback\.last_http_status between 200 and 399/);
+  assert.match(migration, /fallback\.consecutive_failures=0/);
+  assert.match(migration, /fallback\.tasks @> source\.tasks/);
+  assert.match(migration, /enabled=false/);
+  assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
+});
