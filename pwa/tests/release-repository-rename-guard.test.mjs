@@ -7,15 +7,15 @@ import { fileURLToPath } from "node:url";
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
-test("release Worker targets renamed GitHub repository without changing existing public URL", async () => {
+test("release Worker targets the renamed GitHub repository and retains existing public URL", async () => {
   const worker = await readRepo("supabase/functions/pwa-release-deploy/index.ts");
-  assert.match(worker, /const REPO = "haruharu42\\/AIActionStudio-Updates";/);
-  assert.doesNotMatch(worker, /haruharu42\\/AIArticleStudio-Updates/);
-  assert.match(worker, /const WORKFLOW = "pwa-admin-public-release\\.yml";/);
-  assert.match(worker, /AAS_GITHUB_RELEASE_TOKEN/);
-  assert.match(worker, /const PUBLIC_URL = "https:\\/\\/ai-article-studio-pwa\\.ai-article-studio\\.workers\\.dev\\/";/);
-  assert.match(worker, /const DEFAULT_PREVIEW_BRANCH = "main";/);
-  assert.match(worker, /"preview\\/current"/);
+  assert.ok(worker.includes('const REPO = "haruharu42/AIActionStudio-Updates";'));
+  assert.ok(!worker.includes('const REPO = "haruharu42/AIArticleStudio-Updates";'));
+  assert.ok(worker.includes('const WORKFLOW = "pwa-admin-public-release.yml";'));
+  assert.ok(worker.includes("AAS_GITHUB_RELEASE_TOKEN"));
+  assert.ok(worker.includes('const PUBLIC_URL = "https://ai-article-studio-pwa.ai-article-studio.workers.dev/";'));
+  assert.ok(worker.includes('const DEFAULT_PREVIEW_BRANCH = "main";'));
+  assert.ok(worker.includes('"preview/current"'));
 });
 
 test("renamed release target retains approved workflow-dispatch safety checks", async () => {
@@ -23,13 +23,13 @@ test("renamed release target retains approved workflow-dispatch safety checks", 
     readRepo("supabase/functions/pwa-release-deploy/index.ts"),
     readRepo(".github/workflows/pwa-admin-public-release.yml"),
   ]);
-  assert.match(worker, /github\\(\`\\/actions\\/workflows\\/\\$\\{WORKFLOW\\}\\/dispatches\`/);
-  assert.match(worker, /if \\(dispatch\\.status !== 204\\)/);
-  assert.match(workflow, /workflow_dispatch:/);
+  assert.ok(worker.includes('github(`/actions/workflows/${WORKFLOW}/dispatches`'));
+  assert.ok(worker.includes("if (dispatch.status !== 204)"));
+  assert.ok(workflow.includes("workflow_dispatch:"));
   for (const input of ["request_id", "release_id", "source_branch", "source_sha"]) {
-    assert.match(workflow, new RegExp("^      " + input + ":", "m"));
+    assert.ok(workflow.includes("      " + input + ":"), "missing dispatch input: " + input);
   }
-  assert.match(workflow, /Only main or preview\\/current may be promoted/);
-  assert.match(workflow, /git merge-base --is-ancestor/);
-  assert.match(workflow, /Admin public release Cloudflare contract: PASS/);
+  assert.ok(workflow.includes("Only main or preview/current may be promoted"));
+  assert.ok(workflow.includes("git merge-base --is-ancestor"));
+  assert.ok(workflow.includes("Admin public release Cloudflare contract: PASS"));
 });
