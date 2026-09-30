@@ -220,6 +220,50 @@ test("admin notification readiness is read-only, admin-guarded, and visible befo
   assert.match(css, /\.admin-notification-readiness-blocker-list/);
 });
 
+test("admin notification readiness identifies each tester without exposing Push secrets", async () => {
+  const [migration, page, client, css] = await Promise.all([
+    readRepo("supabase/migrations/20260930043600_notification_tester_device_readiness_v1.sql"),
+    readPwa("components/admin-notifications-page.tsx"),
+    readPwa("lib/notifications.ts"),
+    readPwa("app/phase55-notifications.css"),
+  ]);
+
+  assert.match(migration, /admin_list_notification_tester_readiness/);
+  assert.match(migration, /security definer/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /p\.aas_user_id/);
+  assert.match(migration, /p\.display_name/);
+  assert.match(migration, /pref\.push_enabled/);
+  assert.match(migration, /healthy_device_count/);
+  assert.match(migration, /error_device_count/);
+  assert.match(migration, /latest_device_updated_at/);
+  assert.match(migration, /revoke all on function public\.admin_list_notification_tester_readiness\(\)[\s\S]*?from public,anon,authenticated/);
+  assert.match(migration, /grant execute on function public\.admin_list_notification_tester_readiness\(\)[\s\S]*?to authenticated/);
+  assert.doesNotMatch(migration, /select[\s\S]*?s\.endpoint|select[\s\S]*?s\.p256dh|select[\s\S]*?s\.auth_key/i);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+
+  assert.match(client, /AdminNotificationTesterReadiness/);
+  assert.match(client, /adminListNotificationTesterReadiness/);
+  assert.match(client, /admin_list_notification_tester_readiness/);
+  assert.match(client, /healthyDeviceCount/);
+  assert.match(client, /errorDeviceCount/);
+
+  assert.match(page, /指定テスターの実機Push状況/);
+  assert.match(page, /endpoint・P-256鍵・auth鍵は表示せず/);
+  assert.match(page, /正常端末/);
+  assert.match(page, /エラー端末/);
+  assert.match(page, /端末通知OFF/);
+  assert.match(page, /端末登録待ち/);
+  assert.match(page, /配信エラー確認/);
+  assert.match(page, /設定 → 通知 → スマホ・PCへの端末通知/);
+  assert.match(page, /adminListNotificationTesterReadiness/);
+
+  assert.match(css, /\.admin-notification-tester-readiness/);
+  assert.match(css, /\.admin-notification-tester-readiness-list/);
+  assert.match(css, /\.admin-notification-tester-metrics/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.admin-notification-tester-state/);
+});
+
 test("push worker has immediate trigger and cron recovery", async () => {
   const migration = await readRepo("supabase/migrations/20260925012520_app_notification_center_and_web_push_v1.sql");
 
