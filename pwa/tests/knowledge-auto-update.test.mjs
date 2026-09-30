@@ -424,6 +424,41 @@ test("recheck candidates support safe five-item manual verification batches with
   assert.match(css, /\.knowledge-recheck-batch/);
 });
 
+test("candidate reviews can store bounded manual verification notes without bypassing publication gates", async () => {
+  const [panel, client, css] = await Promise.all([
+    readKnowledgeRefreshSource(),
+    readPwa("lib/knowledge-auto-update.ts"),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(panel, /CANDIDATE_REVIEW_NOTE_MAX = 1600/);
+  assert.match(panel, /const \[candidateReviewNotes, setCandidateReviewNotes\] = useState<Record<number, string>>\(\{\}\)/);
+  assert.match(panel, /手動検証メモ（任意）/);
+  assert.match(panel, /maxLength=\{CANDIDATE_REVIEW_NOTE_MAX\}/);
+  assert.match(panel, /根拠URL・確認日・判断理由を要約してください/);
+  assert.match(panel, /秘密情報は入力しないでください/);
+  assert.match(panel, /このメモだけで候補承認・監視変更・Fresh \/ Stable公開は行われません/);
+  assert.match(panel, /manualNote = \(candidateReviewNotes\[candidate\.id\] \?\? ""\)\.trim\(\)\.slice\(0, CANDIDATE_REVIEW_NOTE_MAX\)/);
+  assert.match(panel, /【手動検証メモ】/);
+  assert.match(panel, /window\.confirm/);
+  assert.match(panel, /手動検証メモは監査用に保存されますが、この操作だけではFresh \/ Stableへ公開されません/);
+  assert.match(panel, /adminReviewKnowledgeAutomationCandidate\([\s\S]*reviewNotes/);
+  assert.match(panel, /delete next\[candidate\.id\]/);
+  assert.match(panel, /candidate\.reviewNotes/);
+  assert.match(client, /p_notes: notes\.slice\(0, 2000\)/);
+  assert.match(css, /\.knowledge-candidate-review-note/);
+  assert.match(css, /\.knowledge-candidate-review-note textarea/);
+  assert.match(css, /\.knowledge-candidate-existing-review-note/);
+
+  const reviewStart = panel.indexOf("const reviewAutomationCandidate");
+  const reviewEnd = panel.indexOf("const enqueue", reviewStart);
+  assert.notEqual(reviewStart, -1);
+  assert.notEqual(reviewEnd, -1);
+  const reviewSource = panel.slice(reviewStart, reviewEnd);
+  assert.doesNotMatch(reviewSource, /adminPublishKnowledgeRefreshBundle|adminSetKnowledgeAutomationSourceEnabled/);
+});
+
+
 test("knowledge candidate dashboard distinguishes deterministic results from intentionally held AI work", async () => {
   const [panel, css] = await Promise.all([
     readKnowledgeRefreshSource(),

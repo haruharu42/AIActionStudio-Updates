@@ -50,6 +50,7 @@ import { getSupabaseClient } from "@/lib/supabase";
 const AUTOMATION_CANDIDATE_LIMIT = 200;
 const HELD_RESEARCH_BATCH_SIZE = 5;
 const RECHECK_RESEARCH_BATCH_SIZE = 5;
+const CANDIDATE_REVIEW_NOTE_MAX = 1600;
 type AutomationCandidateView = "all" | "ready" | "recheck" | "unanalysed" | "held" | "failed";
 const AUTOMATION_CANDIDATE_VIEWS: { key: AutomationCandidateView; label: string }[] = [
   { key: "all", label: "すべて" },
@@ -106,6 +107,7 @@ export function KnowledgeRefreshPanel() {
   const [candidateView, setCandidateView] = useState<AutomationCandidateView>("all");
   const [heldBatchIndex, setHeldBatchIndex] = useState(0);
   const [recheckBatchIndex, setRecheckBatchIndex] = useState(0);
+  const [candidateReviewNotes, setCandidateReviewNotes] = useState<Record<number, string>>({});
   const [automationAiConfig, setAutomationAiConfig] = useState<KnowledgeAutomationAiConfig | null>(null);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiModel, setAiModel] = useState("gpt-5.6");
@@ -471,6 +473,18 @@ export function KnowledgeRefreshPanel() {
     candidate: KnowledgeAutomationCandidate,
     decision: "approved" | "rejected",
   ) => {
+    const manualNote = (candidateReviewNotes[candidate.id] ?? "").trim().slice(0, CANDIDATE_REVIEW_NOTE_MAX);
+    const actionLabel = decision === "approved" ? "承認" : "却下";
+    if (!window.confirm(
+      `候補 #${candidate.id} を${actionLabel}しますか？\n\n手動検証メモは監査用に保存されますが、この操作だけではFresh / Stableへ公開されません。`,
+    )) return;
+    const reviewPrefix = decision === "approved"
+      ? "管理者が調査継続候補として承認。正式公開は別途Quality Gateと差分確認が必要。"
+      : "管理者が自動調査候補を却下。";
+    const reviewNotes = manualNote
+      ? `${reviewPrefix}\n\n【手動検証メモ】\n${manualNote}`
+      : reviewPrefix;
+
     setBusy(true);
     setMessage("");
     try {
@@ -478,14 +492,17 @@ export function KnowledgeRefreshPanel() {
         getSupabaseClient(),
         candidate.id,
         decision,
-        decision === "approved"
-          ? "管理者が調査継続候補として承認。正式公開は別途Quality Gateと差分確認が必要。"
-          : "管理者が自動調査候補を却下。",
+        reviewNotes,
       );
+      setCandidateReviewNotes((current) => {
+        const next = { ...current };
+        delete next[candidate.id];
+        return next;
+      });
       await reload();
       setMessage(decision === "approved"
-        ? "候補を承認しました。まだ正式Knowledgeには公開されていません。"
-        : "候補を却下しました。");
+        ? "候補を承認しました。検証メモを保存しましたが、まだ正式Knowledgeには公開されていません。"
+        : "候補を却下し、検証メモを保存しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "候補のレビュー結果を保存できませんでした。");
     } finally {
@@ -895,6 +912,31 @@ export function KnowledgeRefreshPanel() {
                     </details>
                   )}
                 </div>
+
+                <label className="knowledge-candidate-review-note">
+                  <span>手動検証メモ（任意）</span>
+                  <textarea
+                    rows={4}
+                    value={candidateReviewNotes[candidate.id] ?? ""}
+                    maxLength={CANDIDATE_REVIEW_NOTE_MAX}
+                    onChange={(event) => setCandidateReviewNotes((current) => ({
+                      ...current,
+                      [candidate.id]: event.target.value.slice(0, CANDIDATE_REVIEW_NOTE_MAX),
+                    }))}
+                    placeholder="例: 2026-09-30確認。公式URL○○で現行仕様を確認。変更点は△△。採用/見送り理由は□□。"
+                  />
+                  <small>
+                    根拠URL・確認日・判断理由を要約してください。外部AIの回答やWeb本文をそのまま信頼せず、秘密情報は入力しないでください。
+                    このメモだけで候補承認・監視変更・Fresh / Stable公開は行われません。
+                  </small>
+                  <em>{(candidateReviewNotes[candidate.id] ?? "").length} / {CANDIDATE_REVIEW_NOTE_MAX}</em>
+                </label>
+                {candidate.reviewNotes && (
+                  <details className="knowledge-candidate-existing-review-note">
+                    <summary>既存のレビュー記録を見る</summary>
+                    <p>{candidate.reviewNotes}</p>
+                  </details>
+                )}
 
                 <div className="knowledge-automation-actions">
                   <a href={candidate.sourceUrl} target="_blank" rel="noreferrer">公式ソースを開く</a>
