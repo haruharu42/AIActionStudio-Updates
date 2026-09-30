@@ -47,6 +47,30 @@ import {
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
 
+function candidateAnalysisPresentation(
+  candidate: KnowledgeAutomationCandidate,
+  config: KnowledgeAutomationAiConfig | null,
+): { className: string; label: string; note: string } {
+  if (candidate.analysisStatus === "failed") {
+    return { className: "failed", label: "解析失敗", note: "エラー内容を確認して再試行できます。" };
+  }
+  if (candidate.analysisStatus === "completed") {
+    return candidate.analysisProvider === "deterministic"
+      ? { className: "deterministic", label: "自動判定済み", note: "モデルAPIを使わずに安全な定型判定を完了しています。" }
+      : { className: "completed", label: "AI解析完了", note: "提案内容は管理者レビュー後も自動公開されません。" };
+  }
+  if (candidate.candidateAction === "recheck" || candidate.candidateAction === "retire") {
+    return { className: "automatic", label: "自動判定待ち", note: "次回Worker実行でモデルAPIを使わずに判定します。" };
+  }
+  if (!config?.enabled) {
+    return { className: "held", label: "AI OFF・手動確認待ち", note: "AI APIは呼び出しません。公式ソース監視だけ継続しています。" };
+  }
+  if (!config.apiKeyConfigured) {
+    return { className: "held", label: "APIキー未設定・保留", note: "APIキーをVaultへ設定するまでAI APIは呼び出しません。" };
+  }
+  return { className: "pending", label: "AI解析待ち", note: "次回Worker実行で設定済みAIによる候補JSON生成を行います。" };
+}
+
 export function KnowledgeRefreshPanel() {
   const [requests, setRequests] = useState<KnowledgeRefreshRequest[]>([]);
   const [channels, setChannels] = useState<KnowledgeRefreshChannelState[]>([]);
@@ -73,6 +97,33 @@ export function KnowledgeRefreshPanel() {
   );
   const freshState = channels.find((channel) => channel.channel === "fresh") ?? null;
   const stableState = channels.find((channel) => channel.channel === "stable") ?? null;
+  const candidateAnalysisSummary = useMemo(() => {
+    let deterministicCompleted = 0;
+    let aiCompleted = 0;
+    let held = 0;
+    let failed = 0;
+    let automaticPending = 0;
+    for (const candidate of automationCandidates) {
+      if (candidate.analysisStatus === "failed") {
+        failed += 1;
+      } else if (candidate.analysisStatus === "completed") {
+        if (candidate.analysisProvider === "deterministic") deterministicCompleted += 1;
+        else aiCompleted += 1;
+      } else if (candidate.candidateAction === "recheck" || candidate.candidateAction === "retire") {
+        automaticPending += 1;
+      } else {
+        held += 1;
+      }
+    }
+    return {
+      total: automationCandidates.length,
+      deterministicCompleted,
+      aiCompleted,
+      held,
+      failed,
+      automaticPending,
+    };
+  }, [automationCandidates]);
   const reload = async () => {
     const client = getSupabaseClient();
     const [nextRequests, nextChannels, nextAutomationStatus, nextProductionHealth, nextSourceRiskReport, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
@@ -82,7 +133,7 @@ export function KnowledgeRefreshPanel() {
       adminGetKnowledgeProductionHealth(client),
       adminGetKnowledgeSourceRiskReport(client),
       adminListKnowledgeAutomationSources(client, 200),
-      adminListKnowledgeAutomationCandidates(client, "pending", 50),
+      adminListKnowledgeAutomationCandidates(client, "pending", 200),
       adminGetKnowledgeAutomationAiConfig(client),
     ]);
     setRequests(nextRequests);
@@ -114,7 +165,7 @@ export function KnowledgeRefreshPanel() {
           adminGetKnowledgeProductionHealth(client),
           adminGetKnowledgeSourceRiskReport(client),
           adminListKnowledgeAutomationSources(client, 200),
-          adminListKnowledgeAutomationCandidates(client, "pending", 50),
+          adminListKnowledgeAutomationCandidates(client, "pending", 200),
           adminGetKnowledgeAutomationAiConfig(client),
         ]);
         if (!active) return;
@@ -526,6 +577,35 @@ export function KnowledgeRefreshPanel() {
           <p className="knowledge-automation-error">直近エラー: {automationStatus.lastError}</p>
         )}
 
+        <div className={`knowledge-ai-mode-status ${automationAiConfig?.enabled ? (automationAiConfig.apiKeyConfigured ? "ready" : "action") : "paused"}`}>
+          <div>
+            <strong>
+              {automationAiConfig?.enabled
+                ? automationAiConfig.apiKeyConfigured
+                  ? "AI候補生成: ON"
+                  : "AI候補生成: APIキー未設定"
+                : "AI候補生成: OFF"}
+            </strong>
+            <span>
+              {automationAiConfig?.enabled
+                ? automationAiConfig.apiKeyConfigured
+                  ? "new / update候補は次回WorkerでAI解析します。公開は管理者レビュー後のみです。"
+                  : "VaultへAPIキーを設定するまでnew / update候補は保留し、APIは呼び出しません。"
+                : "new / update候補は保留し、AI APIは呼び出しません。recheck / retireの無料自動判定と公式ソース監視は継続します。"}
+            </span>
+          </div>
+          <small>{automationAiConfig?.model ?? "gpt-5.6"} / 1回最大 {automationAiConfig?.maxCandidatesPerRun ?? 6}候補</small>
+        </div>
+
+        <div className="knowledge-candidate-analysis-summary" aria-label="自動調査候補の解析状態">
+          <div><small>レビュー待ち</small><strong>{candidateAnalysisSummary.total}</strong></div>
+          <div><small>無料判定済み</small><strong>{candidateAnalysisSummary.deterministicCompleted}</strong></div>
+          <div><small>AI解析済み</small><strong>{candidateAnalysisSummary.aiCompleted}</strong></div>
+          <div><small>AI保留</small><strong>{candidateAnalysisSummary.held}</strong></div>
+          <div><small>無料判定待ち</small><strong>{candidateAnalysisSummary.automaticPending}</strong></div>
+          <div><small>解析失敗</small><strong>{candidateAnalysisSummary.failed}</strong></div>
+        </div>
+
         {automationCandidates.length === 0 ? (
           <p className="knowledge-empty">現在、管理者確認が必要な自動調査候補はありません。</p>
         ) : (
@@ -558,12 +638,15 @@ export function KnowledgeRefreshPanel() {
                   </details>
                 )}
 
-                <div className={"knowledge-ai-analysis " + candidate.analysisStatus}>
+                <div className={"knowledge-ai-analysis " + candidateAnalysisPresentation(candidate, automationAiConfig).className}>
                   <div>
-                    <strong>AI解析: {candidate.analysisStatus === "completed" ? "完了" : candidate.analysisStatus === "failed" ? "失敗" : "待機中"}</strong>
+                    <strong>解析状態: {candidateAnalysisPresentation(candidate, automationAiConfig).label}</strong>
                     {candidate.analysisDecision && <span>判定: {candidate.analysisDecision}</span>}
                     {candidate.analysisModel && <span>{candidate.analysisProvider} / {candidate.analysisModel}</span>}
                   </div>
+                  {candidate.analysisStatus === "pending" && (
+                    <p>{candidateAnalysisPresentation(candidate, automationAiConfig).note}</p>
+                  )}
                   {candidate.analysisReason && <p>{candidate.analysisReason}</p>}
                   {candidate.analysisError && <p className="knowledge-automation-error">{candidate.analysisError}</p>}
                   {candidate.verifiedSourceUrls.length > 0 && (
