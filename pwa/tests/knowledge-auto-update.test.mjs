@@ -441,6 +441,8 @@ test("individual Knowledge research copy and optional Worker AI analysis fence u
   assert.match(copySection, /candidate\.researchPrompt\.slice\(0, 5000\)/);
   assert.match(copySection, /JSON\.stringify\(\{/);
   assert.match(copySection, /navigator\.clipboard\.writeText\(prompt\)/);
+  assert.match(panel, /根拠URL候補（要確認）/);
+  assert.match(panel, /AIが提示したURLは独立した事実確認の証明ではありません/);
   assert.doesNotMatch(copySection, /navigator\.clipboard\.writeText\(candidate\.researchPrompt\)/);
   assert.doesNotMatch(copySection, /adminReviewKnowledgeAutomationCandidate|adminPublishKnowledgeRefreshBundle|\.rpc\(/);
   const systemStart = worker.indexOf("function aiSystemPrompt()");
