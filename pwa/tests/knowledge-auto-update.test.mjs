@@ -678,12 +678,12 @@ test("successful Knowledge publication stays successful when candidate bookkeepi
   const candidateSync = publish.indexOf("await adminReviewKnowledgeAutomationCandidate", committed);
   const dashboardReload = publish.indexOf("await reload();", candidateSync);
   assert.ok(committed >= 0 && candidateSync > committed && dashboardReload > candidateSync);
-  assert.match(publish, /try\\s*\\{\\s*await adminReviewKnowledgeAutomationCandidate/);
-  assert.match(publish, /catch\\s*\\{\\s*followUpWarning =/);
+  assert.match(publish, /try\s*\{\s*await adminReviewKnowledgeAutomationCandidate/);
+  assert.match(publish, /catch\s*\{\s*followUpWarning =/);
   assert.match(publish, /再公開せず、候補の状態と公開履歴を確認してください/);
-  assert.match(publish, /try\\s*\\{\\s*await reload\\(\\);\\s*\\} catch/);
-  assert.match(publish, /setMessage\\(followUpWarning \\? /);
-  assert.equal((publish.match(/adminPublishKnowledgeRefreshBundle\\(/g) ?? []).length, 1);
+  assert.match(publish, /try\s*\{\s*await reload\(\);\s*\} catch/);
+  assert.match(publish, /setMessage\(followUpWarning \? /);
+  assert.equal((publish.match(/adminPublishKnowledgeRefreshBundle\(/g) ?? []).length, 1);
 });
 
 test("admin Knowledge quality analyzer reuses existing RPCs without auto-publish", async () => {
