@@ -47,6 +47,23 @@ import {
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
 
+const AUTOMATION_CANDIDATE_LIMIT = 200;
+type AutomationCandidateView = "all" | "ready" | "recheck" | "unanalysed";
+const AUTOMATION_CANDIDATE_VIEWS: { key: AutomationCandidateView; label: string }[] = [
+  { key: "all", label: "すべて" },
+  { key: "ready", label: "Fresh差分候補" },
+  { key: "recheck", label: "再確認" },
+  { key: "unanalysed", label: "解析待ち" },
+];
+
+function automationCandidatePriority(candidate: KnowledgeAutomationCandidate): number {
+  if (buildKnowledgeAutomationCandidateBundle(candidate)) return 0;
+  if (candidate.candidateAction === "retire") return 1;
+  if (candidate.candidateAction === "update") return 2;
+  if (candidate.candidateAction === "recheck") return 3;
+  return 4;
+}
+
 function candidateAnalysisPresentation(
   candidate: KnowledgeAutomationCandidate,
   config: KnowledgeAutomationAiConfig | null,
@@ -79,6 +96,7 @@ export function KnowledgeRefreshPanel() {
   const [sourceRiskReport, setSourceRiskReport] = useState<KnowledgeSourceRiskReport | null>(null);
   const [automationSources, setAutomationSources] = useState<KnowledgeAutomationSource[]>([]);
   const [automationCandidates, setAutomationCandidates] = useState<KnowledgeAutomationCandidate[]>([]);
+  const [candidateView, setCandidateView] = useState<AutomationCandidateView>("all");
   const [automationAiConfig, setAutomationAiConfig] = useState<KnowledgeAutomationAiConfig | null>(null);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiModel, setAiModel] = useState("gpt-5.6");
@@ -124,6 +142,25 @@ export function KnowledgeRefreshPanel() {
       automaticPending,
     };
   }, [automationCandidates]);
+  const candidateCounts = useMemo(() => ({
+    all: automationCandidates.length,
+    ready: automationCandidates.filter((candidate) => Boolean(buildKnowledgeAutomationCandidateBundle(candidate))).length,
+    recheck: automationCandidates.filter((candidate) => candidate.candidateAction === "recheck").length,
+    unanalysed: automationCandidates.filter((candidate) => candidate.analysisStatus === "pending").length,
+  }), [automationCandidates]);
+  const visibleAutomationCandidates = useMemo(() => automationCandidates
+    .filter((candidate) => {
+      if (candidateView === "ready") return Boolean(buildKnowledgeAutomationCandidateBundle(candidate));
+      if (candidateView === "recheck") return candidate.candidateAction === "recheck";
+      if (candidateView === "unanalysed") return candidate.analysisStatus === "pending";
+      return true;
+    })
+    .sort((left, right) =>
+      automationCandidatePriority(left) - automationCandidatePriority(right)
+      || left.detectedAt.localeCompare(right.detectedAt)
+      || left.id - right.id,
+    ), [automationCandidates, candidateView]);
+
   const reload = async () => {
     const client = getSupabaseClient();
     const [nextRequests, nextChannels, nextAutomationStatus, nextProductionHealth, nextSourceRiskReport, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
@@ -133,7 +170,7 @@ export function KnowledgeRefreshPanel() {
       adminGetKnowledgeProductionHealth(client),
       adminGetKnowledgeSourceRiskReport(client),
       adminListKnowledgeAutomationSources(client, 200),
-      adminListKnowledgeAutomationCandidates(client, "pending", 200),
+      adminListKnowledgeAutomationCandidates(client, "pending", AUTOMATION_CANDIDATE_LIMIT),
       adminGetKnowledgeAutomationAiConfig(client),
     ]);
     setRequests(nextRequests);
@@ -165,7 +202,7 @@ export function KnowledgeRefreshPanel() {
           adminGetKnowledgeProductionHealth(client),
           adminGetKnowledgeSourceRiskReport(client),
           adminListKnowledgeAutomationSources(client, 200),
-          adminListKnowledgeAutomationCandidates(client, "pending", 200),
+          adminListKnowledgeAutomationCandidates(client, "pending", AUTOMATION_CANDIDATE_LIMIT),
           adminGetKnowledgeAutomationAiConfig(client),
         ]);
         if (!active) return;
@@ -606,11 +643,42 @@ export function KnowledgeRefreshPanel() {
           <div><small>解析失敗</small><strong>{candidateAnalysisSummary.failed}</strong></div>
         </div>
 
+        <div className="knowledge-candidate-triage" aria-label="自動調査候補の確認順序">
+          <div className="knowledge-candidate-triage-summary">
+            <strong>管理者の候補確認</strong>
+            <span>取得 {automationCandidates.length}件 / 確認待ち {automationStatus?.pendingCandidates ?? "-"}件</span>
+          </div>
+          <div className="knowledge-candidate-triage-filters" role="group" aria-label="自動調査候補の絞り込み">
+            {AUTOMATION_CANDIDATE_VIEWS.map((view) => (
+              <button
+                key={view.key}
+                type="button"
+                aria-pressed={candidateView === view.key}
+                disabled={busy}
+                onClick={() => setCandidateView(view.key)}
+              >
+                {view.label} ({candidateCounts[view.key]})
+              </button>
+            ))}
+          </div>
+          {automationStatus && automationStatus.pendingCandidates > automationCandidates.length
+            && automationCandidates.length === AUTOMATION_CANDIDATE_LIMIT && (
+            <p className="knowledge-candidate-triage-note">
+              一度に最大200件を表示します。確認後に再読込すると、残りの候補を確認できます。
+            </p>
+          )}
+          <p className="knowledge-candidate-triage-note">
+            Fresh差分候補は管理者が根拠と差分を検証するための候補です。ここでの分類・承認だけでは公開されません。
+          </p>
+        </div>
+
         {automationCandidates.length === 0 ? (
           <p className="knowledge-empty">現在、管理者確認が必要な自動調査候補はありません。</p>
+        ) : visibleAutomationCandidates.length === 0 ? (
+          <p className="knowledge-empty">この条件に該当する候補はありません。別の絞り込みを選択してください。</p>
         ) : (
           <div className="knowledge-automation-candidates">
-            {automationCandidates.map((candidate) => (
+            {visibleAutomationCandidates.map((candidate) => (
               <article key={candidate.id}>
                 <header>
                   <span className={"automation-action " + candidate.candidateAction}>
