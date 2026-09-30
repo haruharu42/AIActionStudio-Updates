@@ -20,7 +20,7 @@ import {
 export function AdminPromotionScreenshotTool({
   onCopy,
 }: {
-  onCopy(prompt: string): void;
+  onCopy(prompt: string): Promise<boolean>;
 }) {
   const [target, setTarget] = useState<AdminScreenshotTarget>("create");
   const [publication, setPublication] = useState<AdminScreenshotPublication>("note");

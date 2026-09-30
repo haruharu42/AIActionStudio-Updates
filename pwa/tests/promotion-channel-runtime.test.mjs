@@ -274,3 +274,13 @@ test("promotion AI handoff persists first, copies the prompt, and opens AI only 
   assert.match(builderSource, /onBeforeExternalLaunch=\{persistWizardProgress\}/);
   assert.match(builderSource, /onClick=\{\(\) => void onCopy\(directScreenshotPrompt\)\}/);
 });
+
+
+test("screenshot prompt tool follows the boolean copy contract used by safe AI handoff", async () => {
+  const screenshotTool = await readFile(
+    new URL("../components/admin-promotion/admin-promotion-screenshot-tool.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(screenshotTool, /onCopy\(prompt: string\): Promise<boolean>/);
+  assert.match(screenshotTool, /onCopy=\{\(\) => onCopy\(prompt\)\}/);
+});
