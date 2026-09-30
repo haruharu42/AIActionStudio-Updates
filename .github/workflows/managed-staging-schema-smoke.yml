@@ -37,6 +37,7 @@ jobs:
           mkdir -p supabase/migrations
           cp "$GITHUB_WORKSPACE/supabase/tests/managed-staging/minimal-base.sql"             supabase/migrations/20260930125100_managed_staging_fixture.sql
           cp "$GITHUB_WORKSPACE/supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql"             supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql
+          cp "$GITHUB_WORKSPACE/supabase/migrations/20260930210846_update_release_github_run_url_constraint.sql"             supabase/migrations/20260930210846_update_release_github_run_url_constraint.sql
           echo "TEST_ROOT=$TEST_ROOT" >> "$GITHUB_ENV"
 
       - name: Start disposable full Supabase stack
@@ -57,7 +58,7 @@ jobs:
           source local.env
           set +a
           psql "$DB_URL" -v ON_ERROR_STOP=1             -f "$GITHUB_WORKSPACE/supabase/tests/managed-staging/verify.sql"
-          echo "PASS: managed Staging reconstruction fixture and Gemini migration are compatible."
+          echo "PASS: managed Staging fixture, Gemini migration, and release URL migration are compatible."
 
       - name: Stop disposable Supabase stack
         if: always()
