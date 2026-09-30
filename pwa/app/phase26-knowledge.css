@@ -1707,6 +1707,45 @@
   line-height: 1.5;
 }
 
+.knowledge-source-alternatives {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #cfe1db;
+  border-radius: 8px;
+  background: #f7fbfa;
+  padding: 8px 9px;
+}
+
+.knowledge-source-alternatives strong {
+  color: #35695a;
+  font-size: 8px;
+}
+
+.knowledge-source-alternatives small {
+  color: #748c84;
+  font-size: 7px;
+  line-height: 1.5;
+}
+
+.knowledge-source-alternatives > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.knowledge-source-alternatives a {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border: 1px solid #d7e8e2;
+  border-radius: 999px;
+  background: #fff;
+  color: #397a68;
+  padding: 4px 7px;
+  font-size: 7px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
 .knowledge-source-actions {
   display: flex;
   flex-wrap: wrap;
