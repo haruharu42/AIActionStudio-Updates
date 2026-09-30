@@ -48,12 +48,14 @@ import {
 import { getSupabaseClient } from "@/lib/supabase";
 
 const AUTOMATION_CANDIDATE_LIMIT = 200;
-type AutomationCandidateView = "all" | "ready" | "recheck" | "unanalysed";
+type AutomationCandidateView = "all" | "ready" | "recheck" | "unanalysed" | "held" | "failed";
 const AUTOMATION_CANDIDATE_VIEWS: { key: AutomationCandidateView; label: string }[] = [
   { key: "all", label: "すべて" },
   { key: "ready", label: "Fresh差分候補" },
   { key: "recheck", label: "再確認" },
   { key: "unanalysed", label: "解析待ち" },
+  { key: "held", label: "AI保留" },
+  { key: "failed", label: "解析失敗" },
 ];
 
 function automationCandidatePriority(candidate: KnowledgeAutomationCandidate): number {
@@ -124,6 +126,7 @@ export function KnowledgeRefreshPanel() {
     let held = 0;
     let failed = 0;
     let automaticPending = 0;
+    let aiPending = 0;
     for (const candidate of automationCandidates) {
       if (candidate.analysisStatus === "failed") {
         failed += 1;
@@ -132,8 +135,10 @@ export function KnowledgeRefreshPanel() {
         else aiCompleted += 1;
       } else if (candidate.candidateAction === "recheck" || candidate.candidateAction === "retire") {
         automaticPending += 1;
-      } else {
+      } else if (candidateAnalysisPresentation(candidate, automationAiConfig).className === "held") {
         held += 1;
+      } else {
+        aiPending += 1;
       }
     }
     return {
@@ -143,26 +148,31 @@ export function KnowledgeRefreshPanel() {
       held,
       failed,
       automaticPending,
+      aiPending,
     };
-  }, [automationCandidates]);
+  }, [automationCandidates, automationAiConfig]);
   const candidateCounts = useMemo(() => ({
     all: automationCandidates.length,
     ready: automationCandidates.filter((candidate) => Boolean(buildKnowledgeAutomationCandidateBundle(candidate))).length,
     recheck: automationCandidates.filter((candidate) => candidate.candidateAction === "recheck").length,
     unanalysed: automationCandidates.filter((candidate) => candidate.analysisStatus === "pending").length,
-  }), [automationCandidates]);
+    held: automationCandidates.filter((candidate) => candidateAnalysisPresentation(candidate, automationAiConfig).className === "held").length,
+    failed: automationCandidates.filter((candidate) => candidate.analysisStatus === "failed").length,
+  }), [automationCandidates, automationAiConfig]);
   const visibleAutomationCandidates = useMemo(() => automationCandidates
     .filter((candidate) => {
       if (candidateView === "ready") return Boolean(buildKnowledgeAutomationCandidateBundle(candidate));
       if (candidateView === "recheck") return candidate.candidateAction === "recheck";
       if (candidateView === "unanalysed") return candidate.analysisStatus === "pending";
+      if (candidateView === "held") return candidateAnalysisPresentation(candidate, automationAiConfig).className === "held";
+      if (candidateView === "failed") return candidate.analysisStatus === "failed";
       return true;
     })
     .sort((left, right) =>
       automationCandidatePriority(left) - automationCandidatePriority(right)
       || left.detectedAt.localeCompare(right.detectedAt)
       || left.id - right.id,
-    ), [automationCandidates, candidateView]);
+    ), [automationCandidates, candidateView, automationAiConfig]);
 
   const reload = async () => {
     const client = getSupabaseClient();
@@ -642,6 +652,7 @@ export function KnowledgeRefreshPanel() {
           <div><small>無料判定済み</small><strong>{candidateAnalysisSummary.deterministicCompleted}</strong></div>
           <div><small>AI解析済み</small><strong>{candidateAnalysisSummary.aiCompleted}</strong></div>
           <div><small>AI保留</small><strong>{candidateAnalysisSummary.held}</strong></div>
+          <div><small>AI解析待ち</small><strong>{candidateAnalysisSummary.aiPending}</strong></div>
           <div><small>無料判定待ち</small><strong>{candidateAnalysisSummary.automaticPending}</strong></div>
           <div><small>解析失敗</small><strong>{candidateAnalysisSummary.failed}</strong></div>
         </div>
