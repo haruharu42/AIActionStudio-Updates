@@ -686,6 +686,28 @@ test("successful Knowledge publication stays successful when candidate bookkeepi
   assert.equal((publish.match(/adminPublishKnowledgeRefreshBundle\(/g) ?? []).length, 1);
 });
 
+test("Knowledge publication checks read-only request receipt after an interrupted response", async () => {
+  const panel = await readKnowledgeRefreshSource();
+  const start = panel.indexOf("const publish = async () => {");
+  const end = panel.indexOf("const activeRequests =", start);
+  const publish = panel.slice(start, end);
+  const publishRpc = publish.indexOf("const result = await adminPublishKnowledgeRefreshBundle");
+  const recoveryRead = publish.indexOf("await adminListKnowledgeRefreshRequests(client, null, 200)");
+  const recoveredResult = publish.indexOf("publishedResult = {", recoveryRead);
+  const followUp = publish.indexOf("await adminReviewKnowledgeAutomationCandidate", recoveredResult);
+  assert.ok(publishRpc >= 0 && recoveryRead > publishRpc && recoveredResult > recoveryRead && followUp > recoveredResult);
+  assert.match(publish, /request\.id === selected\.id/);
+  assert.match(publish, /request\.channel === selected\.channel/);
+  assert.match(publish, /request\.status === "completed"/);
+  assert.match(publish, /request\.publishedVersion !== null/);
+  assert.match(publish, /setDiffPreview\(null\);\s*setMessage\(`更新 #/);
+  assert.match(publish, /再公開せず、更新履歴を再読込して状態を確認してください/);
+  assert.match(publish, /再公開せず、通信復旧後に管理者の更新履歴を確認してください/);
+  assert.match(publish, /preparedAutomationCandidateId !== null && !recoveredFromHistory/);
+  assert.match(publish, /自動処理済みにせず、公開差分との対応を手動確認してください/);
+  assert.equal((publish.match(/adminPublishKnowledgeRefreshBundle\(/g) ?? []).length, 1, "never retry the publish RPC automatically");
+});
+
 test("admin Knowledge quality analyzer reuses existing RPCs without auto-publish", async () => {
   const [panel, quality, client, css] = await Promise.all([
     readKnowledgeRefreshSource(),

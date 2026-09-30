@@ -42,6 +42,7 @@ import {
   type KnowledgeProductionHealth,
   type KnowledgeRefreshChannelState,
   type KnowledgeRefreshDiff,
+  type KnowledgeRefreshPublishResult,
   type KnowledgeRefreshRequest,
   type KnowledgeSourceRiskReport,
 } from "@/lib/knowledge-auto-update";
@@ -613,13 +614,56 @@ export function KnowledgeRefreshPanel() {
     try {
       const bundle = parseKnowledgeRefreshBundle(bundleText);
       const client = getSupabaseClient();
-      const result = await adminPublishKnowledgeRefreshBundle(client, selected.id, bundle);
-      // Publication is already confirmed here. A separate candidate update or
-      // dashboard reload must never turn that success into a "publish failed" message.
-      const publishedLabel = result.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）";
-      const publishedMessage = `${publishedLabel} v${result.publishedVersion} を公開しました。Knowledge ${result.knowledgeCount}件 / Prompt ${result.promptCount}件です。`;
-      let followUpWarning = "";
-      if (preparedAutomationCandidateId !== null) {
+      // An interrupted response can follow a committed server transaction.
+      // Resolve that ambiguity using the exact request receipt before showing a
+      // failure or allowing another publication attempt.
+      let publishedResult: KnowledgeRefreshPublishResult;
+      let recoveredFromHistory = false;
+      try {
+        const result = await adminPublishKnowledgeRefreshBundle(client, selected.id, bundle);
+        publishedResult = result;
+      } catch {
+        try {
+          const requestHistory = await adminListKnowledgeRefreshRequests(client, null, 200);
+          const receipt = requestHistory.find((request) =>
+            request.id === selected.id
+            && request.channel === selected.channel
+            && request.status === "completed"
+            && request.publishedVersion !== null,
+          );
+          if (!receipt || receipt.publishedVersion === null) {
+            setDiffPreview(null);
+            setMessage(`更新 #${selected.id} の公開応答が確認できませんでした。公開済みの可能性があるため再公開せず、更新履歴を再読込して状態を確認してください。差分の再確認が必要です。`);
+            return;
+          }
+          recoveredFromHistory = true;
+          publishedResult = {
+            channel: receipt.channel,
+            publishedVersion: receipt.publishedVersion,
+            knowledgeCount: receipt.publishedKnowledgeCount,
+            promptCount: receipt.publishedPromptCount,
+            changeDetails: receipt.changeDetails,
+          };
+        } catch {
+          setDiffPreview(null);
+          setMessage(`更新 #${selected.id} の公開後に通信が途切れ、更新履歴でも結果を確認できませんでした。再公開せず、通信復旧後に管理者の更新履歴を確認してください。`);
+          return;
+        }
+      }
+      // Publication is now confirmed by its response or exact request receipt.
+      // A follow-up failure must not turn that success into "publish failed".
+      const publishedLabel = publishedResult.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）";
+      const publishedMessage = `${publishedLabel} v${publishedResult.publishedVersion} の公開完了を確認しました。Knowledge ${publishedResult.knowledgeCount}件 / Prompt ${publishedResult.promptCount}件です。`;
+      let followUpWarning = recoveredFromHistory
+        ? "通信途絶後の更新履歴から確認した結果です。今回の送信内容との一致は公開差分で確認してください。"
+        : "";
+      // A receipt proves that the request completed, not which administrator
+      // submitted the bundle. Avoid automatically converting a linked candidate
+      // if the original RPC response was lost.
+      if (preparedAutomationCandidateId !== null && recoveredFromHistory) {
+        followUpWarning += ` 候補 #${preparedAutomationCandidateId} は自動処理済みにせず、公開差分との対応を手動確認してください。`;
+      }
+      if (preparedAutomationCandidateId !== null && !recoveredFromHistory) {
         const publishedCandidateId = preparedAutomationCandidateId;
         try {
           await adminReviewKnowledgeAutomationCandidate(
