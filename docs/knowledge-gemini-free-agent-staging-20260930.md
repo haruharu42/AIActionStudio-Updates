@@ -24,6 +24,18 @@ PRとPreviewが成功しても、既存の稼働中Supabase Edge Functionが新�
 5. Previewの管理者画面で、Gemini切替→無料・データ送信同意→最大1〜3件→明示的にON。1日10回の到達後は未処理候補を保留すること、候補承認・Fresh/Stable公開が独立していることを確認。
 6. 現行main Previewが新機能に対応した後も、実機/認証後のE2Eとセキュリティ監査を終えるまでProductionへ適用しない。
 
+## 2026-10-01 検証スナップショット
+
+以下は main `2c374420b3ccd133e25ed0aadc8dd79712902e45` までで確認済み。Productionへ適用済みという意味ではない。
+
+- disposable PostgreSQLで管理者/一般ユーザー権限、UTC日次上限、30並列要求の原子性を確認し、**30件中10件許可・20件拒否・最終カウント10** を確認済み。
+- `supabase/postgres:17.6.1.173` の実Vault拡張で、偽Geminiキーの暗号化保存・復号・ローテーション、service_role限定quotaを確認済み。
+- PR #233でGitHub Actions内の**フルローカルSupabase**を起動し、実GoTrue/Auth JWTで通常ユーザー拒否・管理者許可・Gemini 1実行3件への上限クランプ・非許可モデル拒否・Vault秘密値非露出・quota RPCのブラウザ拒否を確認。CI成功後mainへ統合済み。
+- Previewは `BUILD 2C37442` まで反映済み。
+- Google公式の2026-10-01時点情報で `gemini-3.5-flash-lite` の存在、Free Tierの無料入出力、`v1beta/models/...:generateContent` と `x-goog-api-key` のREST方式を再確認済み。
+- 本番Supabaseは `ACTIVE_HEALTHY`。Gemini migration `20260930125200_knowledge_gemini_free_agent_v1.sql` は**未適用**、本番 `knowledge-research-worker` はv11、AI設定はOpenAI / `gpt-5.6` / OFFのまま。
+- したがって次の本番ゲートは、対応migration・Worker・実Geminiキーを**別承認で**段階的に投入し、OFFのまま認証済み管理者E2Eを再確認してからONを判断する。
+
 ## 監査・エラー方針
 公開情報のハッシュ差分は変更の**兆候**であり規則の改訂を保証しない。AIによる根拠URLも未確認。HTTP403の制限を迂回しない。外部APIエラーは本文や秘密キーを記録せずHTTP番号だけを記録する。429時はその実行の残りGemini解析を停止する。日次上限に達した場合は候補を保留する。データベースの上限RPCが欠落していれば外部APIを呼ばず失敗閉鎖する。
 

@@ -1,4 +1,4 @@
-# AI記事スタジオ PWA 本番公開準備
+# AI Action Studio（AAS）PWA 本番公開準備
 
 基準: `main` の Phase 9–17 統合後。
 
