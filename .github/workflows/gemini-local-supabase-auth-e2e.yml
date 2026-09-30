@@ -33,6 +33,7 @@ jobs:
           mkdir -p "$TEST_ROOT"
           cd "$TEST_ROOT"
           supabase init
+          mkdir -p supabase/migrations
           cp "$GITHUB_WORKSPACE/supabase/tests/gemini-free/full-stack-base.sql" \
             supabase/migrations/20260930125100_gemini_auth_e2e_fixture.sql
           cp "$GITHUB_WORKSPACE/supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql" \
