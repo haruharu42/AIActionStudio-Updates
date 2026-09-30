@@ -415,7 +415,7 @@ export function KnowledgeRefreshPanel() {
         setMessage(`Fresh更新 #${requestId} は作成済みで、候補 #${candidate.id} のJSONも保持しています。一覧再読込には失敗しました。新しい更新を再作成せず、再読込して状態を確認してください。`);
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "AI提案をFresh差分レビューへ取り込めませんでした。");
+      setMessage(`AI提案のFresh更新作成結果を確認できませんでした。二重作成を避けるため更新キューを再読込してから操作してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -459,7 +459,7 @@ export function KnowledgeRefreshPanel() {
         setMessage(`追加根拠リサーチ ${result.itemCount}件はFresh更新 #${result.requestId} に準備済みです。一覧再読込には失敗しました。再作成せず、管理者の更新キューで確認してください。`);
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "追加根拠リサーチを準備できませんでした。");
+      setMessage(`追加根拠リサーチの作成結果を確認できませんでした。重複作成を避けるため更新キューを確認してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -585,7 +585,7 @@ export function KnowledgeRefreshPanel() {
         setMessage(`候補 #${candidate.id} の${actionLabel}と検証メモ保存は成功しましたが、一覧を再読込できませんでした。同じレビューを繰り返さず、後ほど更新状態を確認してください。`);
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "候補のレビュー結果を保存できませんでした。");
+      setMessage(`候補 #${candidate.id} のレビュー保存結果を確認できませんでした。再承認・再却下する前に一覧を再読込してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -612,7 +612,7 @@ export function KnowledgeRefreshPanel() {
         setMessage(`更新 #${id} はキューへ追加済みですが一覧再読込に失敗しました。再度追加せず、更新キューを確認してください。`);
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "更新を追加できませんでした。");
+      setMessage(`更新の追加結果を確認できませんでした。二重登録を防ぐため更新キューを確認してから再操作してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -644,7 +644,7 @@ export function KnowledgeRefreshPanel() {
         setMessage(`更新 #${request.id} は調査・確認中に変更済みですが、一覧再読込には失敗しました。再度開始せず、後ほど更新キューを確認してください。`);
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "更新を開始できませんでした。");
+      setMessage(`更新 #${request.id} の開始結果を確認できませんでした。二重操作を防ぐため更新キューを再読込してから確認してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
