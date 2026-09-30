@@ -16,12 +16,12 @@ test("pins patched framework versions, current release metadata, and PWA cache g
   const productionPreflight = await read("../.github/workflows/pwa-production-preflight.yml");
   const pullRequestCi = await read("../.github/workflows/pwa-phase9-17-ci.yml");
 
-  assert.equal(packageJson.dependencies.next, "16.3.4");
+  assert.equal(packageJson.dependencies.next, "16.3.8");
   assert.equal(packageJson.dependencies.react, "19.2.8");
   assert.equal(packageJson.devDependencies.vinext, "1.0.0-beta.9");
   assert.equal(packageJson.devDependencies.vite, "8.2.2");
   assert.equal(packageJson.devDependencies.wrangler, "4.129.0");
-  assert.equal(packageJson.devDependencies["eslint-config-next"], "16.3.4");
+  assert.equal(packageJson.devDependencies["eslint-config-next"], "16.3.8");
   assert.equal(packageLock.packages["node_modules/brace-expansion"].version, "1.1.21");
   assert.equal(
     packageLock.packages["node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion"].version,

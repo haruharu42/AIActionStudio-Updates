@@ -314,7 +314,7 @@ test("root uses the approved beginner dashboard across mobile and desktop", asyn
 test("package runs the Phase 9-11 contract test without changing dependency versions", async () => {
   const packageJson = JSON.parse(await read("package.json"));
   assert.match(packageJson.scripts.test, /node --test --test-concurrency=1/);
-  assert.equal(packageJson.dependencies.next, "16.3.4");
+  assert.equal(packageJson.dependencies.next, "16.3.8");
   assert.equal(packageJson.dependencies.react, "19.2.8");
   assert.equal(packageJson.devDependencies.vinext, "1.0.0-beta.9");
 });
