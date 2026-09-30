@@ -403,6 +403,7 @@ test("knowledge candidate dashboard distinguishes deterministic results from int
   assert.match(css, /\.knowledge-ai-mode-status/);
   assert.match(css, /\.knowledge-candidate-analysis-summary/);
   assert.match(css, /repeat\(auto-fit, minmax\(100px, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.knowledge-candidate-analysis-summary \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.knowledge-ai-analysis\.deterministic/);
   assert.match(css, /\.knowledge-ai-analysis\.held/);
   assert.match(css, /\.knowledge-ai-analysis\.automatic/);
