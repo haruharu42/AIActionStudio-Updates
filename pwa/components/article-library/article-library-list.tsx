@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import type { ArticleLibraryItem } from "@/lib/article-library-v2";
+import type { ArticleLibraryItem, ArticleStockSummary } from "@/lib/article-library-v2";
 import type { ArticleStatus } from "@/lib/phase7-articles";
 import {
   ARTICLE_LIBRARY_PAGE_SIZE,
@@ -17,6 +17,8 @@ type FilterChange = <Key extends keyof LibraryFilters>(key: Key, value: LibraryF
 export function ArticleLibraryListView({
   articles,
   totalCount,
+  stockSummary,
+  stockSummaryError,
   hasMore,
   loading,
   loadingMore,
@@ -35,6 +37,8 @@ export function ArticleLibraryListView({
 }: {
   articles: ArticleLibraryItem[];
   totalCount: number;
+  stockSummary: ArticleStockSummary | null;
+  stockSummaryError: string;
   hasMore: boolean;
   loading: boolean;
   loadingMore: boolean;
@@ -52,6 +56,15 @@ export function ArticleLibraryListView({
   onLoadMore: () => void;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const stockState = stockSummary && !stockSummary.isUnlimited
+    ? stockSummary.remainingArticles === 0
+      ? "reached"
+      : stockSummary.remainingArticles !== null
+        && stockSummary.maxArticles !== null
+        && stockSummary.remainingArticles <= Math.max(2, Math.ceil(stockSummary.maxArticles * 0.1))
+        ? "warning"
+        : "normal"
+    : "normal";
 
   return (
     <>
@@ -170,6 +183,50 @@ export function ArticleLibraryListView({
           </div>
         )}
       </section>
+
+      {stockSummary ? (
+        <section className={`library-stock-summary ${stockState}`} aria-label="記事ライブラリ保存状況">
+          <div className="library-stock-metric">
+            <span>保存済み</span>
+            <strong>{stockSummary.currentArticles}件</strong>
+          </div>
+          <div className="library-stock-metric">
+            <span>保存上限</span>
+            <strong>{stockSummary.isUnlimited ? "無制限" : `${stockSummary.maxArticles ?? 0}件`}</strong>
+          </div>
+          <div className="library-stock-metric">
+            <span>残り保存可能</span>
+            <strong>{stockSummary.isUnlimited ? "制限なし" : `${stockSummary.remainingArticles ?? 0}件`}</strong>
+          </div>
+          <div className="library-stock-guidance">
+            {stockState === "reached" ? (
+              <>
+                <strong>保存上限に達しています。</strong>
+                <span>不要な記事を整理するか、利用プランを確認してください。</span>
+                <Link href="/plans">プランを確認 →</Link>
+              </>
+            ) : stockState === "warning" ? (
+              <>
+                <strong>保存上限が近づいています。</strong>
+                <span>新しい記事を作る前に残り件数を確認してください。</span>
+                <Link href="/plans">プランを確認 →</Link>
+              </>
+            ) : (
+              <>
+                <strong>現在の保存枠</strong>
+                <span>{stockSummary.isUnlimited ? "記事数を気にせず保存できます。" : "作成・複製すると残り件数が1件減ります。"}</span>
+              </>
+            )}
+          </div>
+        </section>
+      ) : stockSummaryError ? (
+        <div className="library-stock-summary unavailable" role="note">
+          <div className="library-stock-guidance">
+            <strong>保存上限を確認できませんでした。</strong>
+            <span>{stockSummaryError} 記事一覧はそのまま利用できます。</span>
+          </div>
+        </div>
+      ) : null}
 
       <div className="library-toolbar">
         <span>{articles.length} / {totalCount} 件を表示</span>
