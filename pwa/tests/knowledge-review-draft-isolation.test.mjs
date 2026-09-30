@@ -49,6 +49,7 @@ test("confirmed Knowledge state changes remain successful even if dashboard relo
     assert.match(action, /try \{\s*await reload\(\);/);
     assert.match(action, /\} catch \{/);
     assert.match(action, /再読込/);
+    assert.match(action, /結果を確認できませんでした/);
     assert.doesNotMatch(action, /adminPublishKnowledgeRefreshBundle/);
   }
   assert.match(actionSource(panel, "reviewAutomationCandidate", "enqueue"), /setAutomationCandidates\(\(current\) => current\.filter/);
