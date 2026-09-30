@@ -75,6 +75,16 @@ export type AdminNotificationReadinessIssue = {
   actionLabel?: string;
 };
 
+export type AdminNotificationTesterReadiness = {
+  aasUserId: string;
+  displayName: string;
+  pushEnabled: boolean;
+  enabledDeviceCount: number;
+  healthyDeviceCount: number;
+  errorDeviceCount: number;
+  latestDeviceUpdatedAt: string | null;
+};
+
 export const NOTIFICATION_REFRESH_EVENT = "aas-notifications-refresh";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -381,6 +391,29 @@ export async function adminGetNotificationReadiness(client: SupabaseClient): Pro
   const { data, error } = await client.rpc("admin_get_notification_readiness");
   if (error) throw error;
   return normalizeAdminNotificationReadiness(data);
+}
+
+export async function adminListNotificationTesterReadiness(
+  client: SupabaseClient,
+): Promise<AdminNotificationTesterReadiness[]> {
+  const { data, error } = await client.rpc("admin_list_notification_tester_readiness");
+  if (error) throw error;
+  if (!Array.isArray(data)) return [];
+
+  const count = (value: unknown) => Math.max(0, Number(value ?? 0) || 0);
+  return data.flatMap((item) => {
+    const row = asRecord(item);
+    if (typeof row.aas_user_id !== "string" || !row.aas_user_id.trim()) return [];
+    return [{
+      aasUserId: row.aas_user_id.trim(),
+      displayName: typeof row.display_name === "string" ? row.display_name.trim() : "",
+      pushEnabled: row.push_enabled === true,
+      enabledDeviceCount: count(row.enabled_device_count),
+      healthyDeviceCount: count(row.healthy_device_count),
+      errorDeviceCount: count(row.error_device_count),
+      latestDeviceUpdatedAt: typeof row.latest_device_updated_at === "string" ? row.latest_device_updated_at : null,
+    }];
+  });
 }
 
 export async function adminListNotifications(client: SupabaseClient, limit = 50): Promise<AdminNotification[]> {
