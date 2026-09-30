@@ -225,6 +225,9 @@ test("official-source automation detects changes but never auto-publishes Knowle
   assert.match(providerHubs, /official_changelog/);
 
   assert.match(worker, /x-aas-worker-token/);
+  assert.match(worker, /timingSafeEqualHex/);
+  assert.match(worker, /worker_config_unavailable/);
+  assert.doesNotMatch(worker, /sha256\(token\) !== settings\.worker_token_hash/);
   assert.match(worker, /get_knowledge_automation_catalog_snapshot/);
   assert.match(worker, /last_content_hash/);
   assert.match(worker, /async function syncSources/);
@@ -338,11 +341,17 @@ test("AI enrichment drafts Knowledge candidates but keeps final publication admi
   assert.match(docs, /does \*\*not\*\* run the publication RPC/);
 });
 
-test("AI enrichment can fail or be disabled without stopping official-source monitoring", async () => {
+test("AI enrichment can be disabled while zero-cost recheck/retire analysis still drains safely", async () => {
   const worker = await readRepo("supabase/functions/knowledge-research-worker/index.ts");
 
+  assert.match(worker, /deterministicPending/);
+  assert.match(worker, /\.in\("candidate_action",\["retire","recheck"\]\)/);
+  assert.match(worker, /const deterministicConfig = \{ provider:"deterministic",model:"",api_key:"" \}/);
   assert.match(worker, /if \(config\.enabled !== true \|\| typeof config\.api_key !== "string" \|\| !config\.api_key\)/);
-  assert.match(worker, /return \{ enabled:false,analyzed:0,failed:0 \}/);
+  assert.match(worker, /return \{ enabled:false,analyzed,failed \}/);
+  assert.match(worker, /\.in\("candidate_action",\["new","update"\]\)/);
+  assert.doesNotMatch(worker, /return \{ enabled:false,analyzed:0,failed:0 \}/);
+  assert.match(worker, /if \(error\) throw error;\s*return \{ analyzed:1,failed:0 \};/s);
   assert.match(worker, /try \{\s*ai = await enrichPendingCandidates\(\);/s);
   assert.match(worker, /AI enrichment:/);
   assert.match(worker, /status:"completed"/);
