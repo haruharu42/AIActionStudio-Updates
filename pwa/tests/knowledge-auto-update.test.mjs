@@ -668,6 +668,24 @@ test("knowledge monitor dashboard exposes admin-only source health and side-hust
 });
 
 
+test("successful Knowledge publication stays successful when candidate bookkeeping or reload fails", async () => {
+  const panel = await readKnowledgeRefreshSource();
+  const start = panel.indexOf("const publish = async () => {");
+  const end = panel.indexOf("const activeRequests =", start);
+  assert.ok(start >= 0 && end > start);
+  const publish = panel.slice(start, end);
+  const committed = publish.indexOf("const result = await adminPublishKnowledgeRefreshBundle");
+  const candidateSync = publish.indexOf("await adminReviewKnowledgeAutomationCandidate", committed);
+  const dashboardReload = publish.indexOf("await reload();", candidateSync);
+  assert.ok(committed >= 0 && candidateSync > committed && dashboardReload > candidateSync);
+  assert.match(publish, /try\\s*\\{\\s*await adminReviewKnowledgeAutomationCandidate/);
+  assert.match(publish, /catch\\s*\\{\\s*followUpWarning =/);
+  assert.match(publish, /再公開せず、候補の状態と公開履歴を確認してください/);
+  assert.match(publish, /try\\s*\\{\\s*await reload\\(\\);\\s*\\} catch/);
+  assert.match(publish, /setMessage\\(followUpWarning \\? /);
+  assert.equal((publish.match(/adminPublishKnowledgeRefreshBundle\\(/g) ?? []).length, 1);
+});
+
 test("admin Knowledge quality analyzer reuses existing RPCs without auto-publish", async () => {
   const [panel, quality, client, css] = await Promise.all([
     readKnowledgeRefreshSource(),
