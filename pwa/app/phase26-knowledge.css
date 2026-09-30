@@ -875,6 +875,64 @@
   color: #597b70;
   font-size: 9px;
 }
+.knowledge-candidate-search {
+  display: grid;
+  gap: 5px;
+}
+
+.knowledge-candidate-search > label {
+  color: #3b6657;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.knowledge-candidate-search > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.knowledge-candidate-search input {
+  min-width: min(100%, 280px);
+  flex: 1 1 280px;
+  min-height: 38px;
+  border: 1px solid #cfdfd8;
+  border-radius: 9px;
+  background: #fff;
+  color: #315f52;
+  padding: 8px 10px;
+  font-size: 9px;
+}
+
+.knowledge-candidate-search button {
+  min-height: 38px;
+  border: 1px solid #d2e2dc;
+  border-radius: 9px;
+  background: #fff;
+  color: #356b58;
+  padding: 7px 10px;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.knowledge-candidate-search input:focus-visible,
+.knowledge-candidate-search button:focus-visible {
+  outline: 2px solid #23674e;
+  outline-offset: 2px;
+}
+
+.knowledge-candidate-search button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.knowledge-candidate-search small {
+  color: #6a8178;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
 .knowledge-candidate-triage-filters {
   display: flex;
   flex-wrap: wrap;
