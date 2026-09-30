@@ -185,6 +185,9 @@ export function KnowledgeRefreshPanel() {
         candidate.analysisDecision,
         candidate.analysisProvider,
         candidate.analysisModel,
+        candidate.analysisError,
+        candidate.reviewNotes,
+        ...candidate.verifiedSourceUrls,
         ...candidate.matchedTasks,
       ].filter(Boolean).join("\n").toLowerCase().includes(normalizedCandidateSearch);
     }), [automationCandidates, normalizedCandidateSearch]);
@@ -814,7 +817,7 @@ export function KnowledgeRefreshPanel() {
                   setHeldBatchIndex(0);
                   setRecheckBatchIndex(0);
                 }}
-                placeholder="タイトル・URL・カテゴリ・理由・現行キーで検索"
+                placeholder="タイトル・URL・カテゴリ・理由・レビュー記録で検索"
                 autoComplete="off"
               />
               {candidateSearch && (
