@@ -61,6 +61,15 @@ test("creator pages keep membership, missions and ranking separate and beginner-
   assert.match(missions, /creator-quests\.module\.css/);
 
   assert.match(membership, /listCreatorMembershipPlans/);
+  assert.match(membership, /getArticleStockSummary/);
+  assert.match(membership, /記事ライブラリ保存枠/);
+  assert.match(membership, /現在のアカウントに実際に適用されている保存枠/);
+  assert.match(membership, /articleStockSummary\.currentArticles/);
+  assert.match(membership, /articleStockSummary\.remainingArticles/);
+  assert.match(membership, /articleStockSummary\.isUnlimited/);
+  assert.match(membership, /getArticleStockSummary\(client\)\.catch\(\(\) => null\)/);
+  assert.match(membership, /記事枠ボーナス/);
+  assert.doesNotMatch(membership, /記事ストック上限/);
   assert.match(membership, /AASに登録されたnoteメンバーシッププラン/);
   assert.match(membership, /note購入状態の自動取得は別の連携機能/);
   assert.match(membership, /creator-quests\.module\.css/);
