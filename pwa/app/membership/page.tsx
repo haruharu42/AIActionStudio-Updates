@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import questStyles from "@/components/creator-quests.module.css";
 import styles from "@/components/creator-system.module.css";
+import { getArticleStockSummary, type ArticleStockSummary } from "@/lib/article-library-v2";
 import {
   formatRefreshCadence,
   getMyCreatorDashboard,
@@ -31,20 +32,23 @@ export default function CreatorMembershipPage() {
   const [error, setError] = useState("");
   const [publicSettings, setPublicSettings] = useState<CreatorMembershipPublicSettings | null>(null);
   const [featureMatrix, setFeatureMatrix] = useState<CreatorMembershipFeatureRow[]>([]);
+  const [articleStockSummary, setArticleStockSummary] = useState<ArticleStockSummary | null>(null);
 
   const load = useCallback(async () => {
     try {
       const client = getSupabaseClient();
-      const [nextDashboard, nextPlans, nextPublicSettings, nextFeatureMatrix] = await Promise.all([
+      const [nextDashboard, nextPlans, nextPublicSettings, nextFeatureMatrix, nextArticleStockSummary] = await Promise.all([
         getMyCreatorDashboard(client),
         listCreatorMembershipPlans(client),
         getCreatorMembershipPublicSettings(client),
         listCreatorMembershipFeatureMatrix(client),
+        getArticleStockSummary(client).catch(() => null),
       ]);
       setDashboard(nextDashboard);
       setPlans(nextPlans);
       setPublicSettings(nextPublicSettings);
       setFeatureMatrix(nextFeatureMatrix);
+      setArticleStockSummary(nextArticleStockSummary);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Creator Club特典を読み込めませんでした。");
     } finally {
@@ -102,6 +106,18 @@ export default function CreatorMembershipPage() {
               <div><small>KNOWLEDGE</small><strong>{dashboard.knowledgeTier === "fresh" ? "Fresh" : "Stable"}</strong></div>
               <div><small>ARTICLE XP</small><strong>×{dashboard.articleXpMultiplier.toFixed(1)}</strong></div>
               <div><small>記事枠ボーナス</small><strong>+{dashboard.creatorArticleQuotaBonus}</strong></div>
+            </div>
+          </section>
+        ) : null}
+
+        {articleStockSummary ? (
+          <section className={styles.panel}>
+            <h2>記事ライブラリ保存枠</h2>
+            <p className={styles.panelLead}>現在のアカウントに実際に適用されている保存枠です。記事作成・複製で1件ずつ使用します。</p>
+            <div className={questStyles.missionSummary}>
+              <div><small>保存済み</small><strong>{articleStockSummary.currentArticles}件</strong></div>
+              <div><small>上限</small><strong>{articleStockSummary.isUnlimited ? "無制限" : `${articleStockSummary.maxArticles ?? 0}件`}</strong></div>
+              <div><small>残り</small><strong>{articleStockSummary.isUnlimited ? "無制限" : `${articleStockSummary.remainingArticles ?? 0}件`}</strong></div>
             </div>
           </section>
         ) : null}
