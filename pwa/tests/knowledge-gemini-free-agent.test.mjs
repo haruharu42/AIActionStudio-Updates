@@ -80,6 +80,7 @@ test("Gemini Free refuses local and private HTTPS source hosts", () => {
     "https://10.0.0.1/updates", "https://172.16.0.2/updates",
     "https://172.31.255.254/updates", "https://192.168.1.10/updates",
     "https://169.254.169.254/updates", "https://[::1]/updates",
+    "https://[::ffff:127.0.0.1]/updates",
     "https://[fd00::1]/updates",
   ];
   for (const source_url of forbiddenUrls) {
@@ -97,6 +98,9 @@ test("Gemini Free blocks alternative header and URL credential forms in outbound
     { source_excerpt: candidate.source_excerpt + " Cookie: session=PRIVATE_COOKIE_VALUE_123456" },
     { source_excerpt: candidate.source_excerpt + " session_id=PRIVATE_SESSION_ID_123456" },
     { source_excerpt: candidate.source_excerpt + " private_key: PRIVATE_PEM_VALUE_123456" },
+    { source_excerpt: candidate.source_excerpt + ' {"api_key":"PRIVATE_JSON_TOKEN_123456"}' },
+    { source_excerpt: candidate.source_excerpt + ' {"refreshToken": "PRIVATE_JSON_REFRESH_123456"}' },
+    { source_excerpt: candidate.source_excerpt + ' {"authorization":"Bearer PRIVATE_JSON_AUTHORIZATION_123456"}' },
   ];
   for (const field of sensitiveFields) {
     const secretCandidate = { ...candidate, ...field };
