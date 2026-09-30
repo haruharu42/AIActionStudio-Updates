@@ -58,6 +58,7 @@ import {
 import {
   downloadText,
   noteOperationsGateFor,
+  noteAccountResponseStorageKey,
   notePerformanceLoopAvailable,
   noteScheduleResponseStorageKey,
   readNoteOperationsMonths,
@@ -89,6 +90,8 @@ export function NoteOperationsPage() {
   const [selectedAi, setSelectedAi] = useState<AiProvider>("chatgpt");
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
   const [accountPrompt, setAccountPrompt] = useState("");
+  const [accountResponse, setAccountResponse] = useState("");
+  const [accountResponseLoaded, setAccountResponseLoaded] = useState(false);
   const [schedulePrompt, setSchedulePrompt] = useState("");
   const [scheduleResponse, setScheduleResponse] = useState("");
   const [scheduleResponseLoaded, setScheduleResponseLoaded] = useState(false);
@@ -115,8 +118,10 @@ export function NoteOperationsPage() {
           loadWritingProfile(client, userId),
         ]);
         let savedScheduleResponse = "";
+        let savedAccountResponse = "";
         try {
           savedScheduleResponse = window.localStorage.getItem(noteScheduleResponseStorageKey(userId)) ?? "";
+          savedAccountResponse = window.localStorage.getItem(noteAccountResponseStorageKey(userId)) ?? "";
         } catch {
           // Device storage is optional. The current session still works without it.
         }
@@ -129,6 +134,8 @@ export function NoteOperationsPage() {
           setSelectedAi(nextWritingProfile.preferredAi);
           setScheduleResponse(savedScheduleResponse);
           setScheduleResponseLoaded(true);
+          setAccountResponse(savedAccountResponse.slice(0, 120000));
+          setAccountResponseLoaded(true);
           setTargetMonth(savedMonths.targetMonth);
           setCalendarMonth(savedMonths.calendarMonth);
           setMonthsLoaded(true);
@@ -175,6 +182,20 @@ export function NoteOperationsPage() {
       // Ignore storage failures. Do not block schedule import.
     }
   }, [gate, scheduleResponse, scheduleResponseLoaded]);
+
+  useEffect(() => {
+    if (gate.kind !== "ready" || !accountResponseLoaded) return;
+    try {
+      const key = noteAccountResponseStorageKey(gate.userId);
+      if (accountResponse) {
+        window.localStorage.setItem(key, accountResponse.slice(0, 120000));
+      } else {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Account-design result remains available for the current session.
+    }
+  }, [accountResponse, accountResponseLoaded, gate]);
 
   useEffect(() => {
     if (gate.kind !== "ready" || !monthsLoaded) return;
@@ -274,6 +295,38 @@ export function NoteOperationsPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const pasteAccountResponse = async () => {
+    try {
+      if (!navigator.clipboard?.readText) throw new Error("clipboard-read-unavailable");
+      const value = await navigator.clipboard.readText();
+      if (!value.trim()) {
+        setMessage("クリップボードに貼り付けられるアカウント構成案がありません。");
+        return;
+      }
+      setAccountResponse(value.slice(0, 120000));
+      setMessage("AIのアカウント構成候補をAASへ貼り付けました。");
+    } catch {
+      setMessage("自動貼付できませんでした。下の欄へAIの回答を手動で貼り付けてください。");
+    }
+  };
+
+  const copyAccountResponse = async () => {
+    if (!accountResponse.trim()) return;
+    try {
+      await navigator.clipboard.writeText(accountResponse);
+      setMessage("保存しているアカウント構成候補をコピーしました。");
+    } catch {
+      setMessage("アカウント構成候補をコピーできませんでした。結果欄から手動でコピーしてください。");
+    }
+  };
+
+  const clearAccountResponse = () => {
+    if (!accountResponse) return;
+    if (!window.confirm("保存しているAIのアカウント構成候補をクリアしますか？")) return;
+    setAccountResponse("");
+    setMessage("保存しているアカウント構成候補をクリアしました。");
   };
 
   const openScheduleBuilderAi = async () => {
@@ -644,6 +697,33 @@ export function NoteOperationsPage() {
               </button>
               <p className="note-data-note">プロンプトをクリップボードへコピーして選択したAIを開きます。AASからAIサービスへAPIキーやnoteログイン情報は送信しません。</p>
               {accountPrompt && <details className="note-account-prompt"><summary>AIへ渡すプロンプトを確認・コピー</summary><textarea readOnly value={accountPrompt} rows={18} onFocus={(event) => event.currentTarget.select()} /></details>}
+
+              <div className="note-ai-import-box note-ai-easy-import">
+                <div>
+                  <strong>AIのアカウント構成候補をAASへ戻す</strong>
+                  <small>3案の回答を保存して、上の設定へ反映する内容を見比べられます。AASが勝手にプロフィールを書き換えることはありません。</small>
+                </div>
+                <div className="note-ai-easy-actions">
+                  <button type="button" className="primary-action" onClick={() => void pasteAccountResponse()}>
+                    クリップボードからAI回答を貼り付け
+                  </button>
+                </div>
+                <textarea
+                  value={accountResponse}
+                  onChange={(event) => setAccountResponse(event.target.value.slice(0, 120000))}
+                  placeholder="ChatGPT / Gemini / Claude が作成したアカウント構成3案をここへ貼り付けてください。"
+                  rows={10}
+                />
+                <div className="note-data-actions">
+                  <button type="button" disabled={!accountResponse.trim()} onClick={() => void copyAccountResponse()}>
+                    保存結果をコピー
+                  </button>
+                  <button type="button" className="note-clear-response-button" disabled={!accountResponse} onClick={clearAccountResponse}>
+                    保存結果をクリア
+                  </button>
+                </div>
+                <p className="note-data-note">この回答はこの端末でアカウント別に保存されます。候補を採用する場合は上のプロフィール設定を確認しながら反映し、「設定をAASに保存」を押してください。</p>
+              </div>
             </div>
 
             <div className="note-local-profile-draft">

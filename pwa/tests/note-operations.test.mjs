@@ -1056,3 +1056,25 @@ test("membership workflow carries saved upstream AI drafts forward safely withou
   assert.match(cockpit, /buildMembershipCalendarPrompt\(profile, calendar, \{[\s\S]*?pricing: workspaceResults\.pricing,[\s\S]*?page: workspaceResults\.page/);
   assert.match(cockpit, /buildMembershipImprovePrompt\(profile, improve, metricsEntries, \{[\s\S]*?calendar: workspaceResults\.calendar/);
 });
+
+
+test("note account research can round-trip AI design candidates without auto-mutating the saved profile", async () => {
+  const [page, helpers] = await Promise.all([
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-operations/note-operations-page-helpers.ts"),
+  ]);
+
+  assert.match(helpers, /NOTE_ACCOUNT_RESPONSE_STORAGE_PREFIX/);
+  assert.match(helpers, /aas\.note\.account\.response\.v1/);
+  assert.match(helpers, /noteAccountResponseStorageKey\(userId\)/);
+
+  assert.match(page, /const \[accountResponse, setAccountResponse\] = useState\(""\)/);
+  assert.match(page, /const \[accountResponseLoaded, setAccountResponseLoaded\] = useState\(false\)/);
+  assert.match(page, /window\.localStorage\.getItem\(noteAccountResponseStorageKey\(userId\)\)/);
+  assert.match(page, /window\.localStorage\.setItem\(key, accountResponse\.slice\(0, 120000\)\)/);
+  assert.match(page, /navigator\.clipboard\?\.readText/);
+  assert.match(page, /AIのアカウント構成候補をAASへ戻す/);
+  assert.match(page, /AASが勝手にプロフィールを書き換えることはありません/);
+  assert.match(page, /保存しているAIのアカウント構成候補をクリアしますか/);
+  assert.match(page, /setAccountResponse\(event\.target\.value\.slice\(0, 120000\)\)/);
+});

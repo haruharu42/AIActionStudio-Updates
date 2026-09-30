@@ -10,6 +10,7 @@ export type NoteOperationsGate =
 
 const NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0.1.1";
 const NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX = "aas.note.schedule.response.v1";
+const NOTE_ACCOUNT_RESPONSE_STORAGE_PREFIX = "aas.note.account.response.v1";
 const NOTE_OPERATIONS_TAB_STORAGE_PREFIX = "aas.note.operations.tab.v1";
 const NOTE_OPERATIONS_MONTHS_STORAGE_PREFIX = "aas.note.operations.months.v1";
 
@@ -44,6 +45,10 @@ export function noteOperationsGateFor(
 
 export function noteScheduleResponseStorageKey(userId: string): string {
   return `${NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX}:${userId}`;
+}
+
+export function noteAccountResponseStorageKey(userId: string): string {
+  return `${NOTE_ACCOUNT_RESPONSE_STORAGE_PREFIX}:${userId}`;
 }
 
 export function noteOperationsTabStorageKey(userId: string): string {
