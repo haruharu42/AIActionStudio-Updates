@@ -235,13 +235,14 @@ test("external-sales readiness is isolated and does not treat it as full product
 
 
 test("sales center groups legal support, DB readiness, and explicit public approval", async () => {
-  const [page, preflight, readinessClient, billingWorker, approvalMigration, routeAwareMigration, css] = await Promise.all([
+  const [page, preflight, readinessClient, billingWorker, approvalMigration, routeAwareMigration, workerAttestationMigration, css] = await Promise.all([
     readPwa("components/sales-settings-admin-page.tsx"),
     readPwa("components/admin-sales/sales-release-preflight-panel.tsx"),
     readPwa("lib/sales-launch-readiness.ts"),
     readPwa("worker/billing.ts"),
     readRepo("supabase/migrations/20260928035226_commerce_public_sales_approval_v1.sql"),
     readRepo("supabase/migrations/20260930041500_sales_launch_route_aware_readiness_v2.sql"),
+    readRepo("supabase/migrations/20260930051500_sales_worker_readiness_attestation_v1.sql"),
     readPwa("app/phase32-sales-settings.css"),
   ]);
 
@@ -352,6 +353,10 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(billingWorker, /priceReachable/);
   assert.match(billingWorker, /modeMatches/);
   assert.match(billingWorker, /backendReady/);
+  assert.match(billingWorker, /service_record_sales_worker_readiness/);
+  assert.match(billingWorker, /p_backend_ready: backendReady/);
+  assert.match(billingWorker, /p_pwa_7day_ready/);
+  assert.match(billingWorker, /p_pwa_monthly_ready/);
 
   assert.match(approvalMigration, /public_sales_approved boolean not null default false/);
   assert.match(approvalMigration, /admin_set_public_sales_approval/);
@@ -369,6 +374,20 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(routeAwareMigration, /not v_external_sales_enabled[\s\S]*?v_access_code_enabled[\s\S]*?v_purchase_url_ready[\s\S]*?v_usable_invite_count > 0/);
   assert.match(routeAwareMigration, /not v_stripe_checkout_enabled[\s\S]*?v_pwa_7day_enabled[\s\S]*?or v_pwa_monthly_enabled/);
   assert.match(routeAwareMigration, /v_seller_ready[\s\S]*?v_verified_mfa_count > 0/);
+
+  assert.match(workerAttestationMigration, /create table if not exists public\.sales_worker_readiness_attestations/);
+  assert.match(workerAttestationMigration, /alter table public\.sales_worker_readiness_attestations enable row level security/);
+  assert.match(workerAttestationMigration, /service_record_sales_worker_readiness/);
+  assert.match(workerAttestationMigration, /grant execute on function public\.service_record_sales_worker_readiness\(text,boolean,boolean,boolean\)[\s\S]*?to service_role/);
+  assert.match(workerAttestationMigration, /revoke all on function public\.service_record_sales_worker_readiness\(text,boolean,boolean,boolean\)[\s\S]*?from public, anon, authenticated/);
+  assert.match(workerAttestationMigration, /v_settings\.stripe_checkout_enabled/);
+  assert.match(workerAttestationMigration, /v_worker\.checked_at < v_settings\.updated_at/);
+  assert.match(workerAttestationMigration, /now\(\) - interval '5 minutes'/);
+  assert.match(workerAttestationMigration, /v_settings\.pwa_7day_enabled and not v_worker\.pwa_7day_ready/);
+  assert.match(workerAttestationMigration, /v_settings\.pwa_monthly_enabled and not v_worker\.pwa_monthly_ready/);
+  assert.match(workerAttestationMigration, /stripe worker readiness attestation required/);
+  assert.match(readinessClient, /stripe worker readiness attestation required/);
+  assert.match(readinessClient, /Stripe Workerの最新実設定確認が必要/);
 
   assert.match(css, /\.sales-route-readiness-summary/);
   assert.match(css, /\.sales-route-readiness-summary article\.ready/);
@@ -460,9 +479,10 @@ test("external purchase URL is HTTPS-only and credential-free before rendering a
 });
 
 
-test("public sales approval requires the current admin session to be AAL2 while emergency stop stays available", async () => {
-  const [migration, readinessClient] = await Promise.all([
+test("public sales approval requires AAL2 and fresh Worker readiness while emergency stop stays available", async () => {
+  const [migration, workerAttestationMigration, readinessClient] = await Promise.all([
     readRepo("supabase/migrations/20260928040519_commerce_public_sales_approval_aal2_v1.sql"),
+    readRepo("supabase/migrations/20260930051500_sales_worker_readiness_attestation_v1.sql"),
     readPwa("lib/sales-launch-readiness.ts"),
   ]);
 
@@ -473,4 +493,8 @@ test("public sales approval requires the current admin session to be AAL2 while 
   assert.match(migration, /grant execute on function public\.admin_set_public_sales_approval\(boolean\) to authenticated/);
   assert.match(readinessClient, /aal2 required for public sales approval/);
   assert.match(readinessClient, /現在の管理者セッションでMFA認証（AAL2）が必要/);
+  assert.match(workerAttestationMigration, /if v_settings\.stripe_checkout_enabled then/);
+  assert.match(workerAttestationMigration, /stripe worker readiness attestation required/);
+  assert.match(workerAttestationMigration, /else[\s\S]*?public_sales_approved = false/);
+  assert.match(readinessClient, /Stripe Workerの最新実設定確認が必要/);
 });
