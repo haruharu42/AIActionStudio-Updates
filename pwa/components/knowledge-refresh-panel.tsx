@@ -47,6 +47,22 @@ import {
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
 
+const AUTOMATION_CANDIDATE_LIMIT = 200;
+type CandidateView = "all" | "ready" | "recheck" | "unanalysed";
+const CANDIDATE_VIEWS: { key: CandidateView; label: string }[] = [
+  { key: "all", label: "すべて" },
+  { key: "ready", label: "Fresh差分候補" },
+  { key: "recheck", label: "再確認" },
+  { key: "unanalysed", label: "解析待ち" },
+];
+function candidatePriority(item: KnowledgeAutomationCandidate): number {
+  if (buildKnowledgeAutomationCandidateBundle(item)) return 0;
+  if (item.candidateAction === "retire") return 1;
+  if (item.candidateAction === "update") return 2;
+  if (item.candidateAction === "recheck") return 3;
+  return 4;
+}
+
 function candidateAnalysisPresentation(
   candidate: KnowledgeAutomationCandidate,
   config: KnowledgeAutomationAiConfig | null,
@@ -79,6 +95,7 @@ export function KnowledgeRefreshPanel() {
   const [sourceRiskReport, setSourceRiskReport] = useState<KnowledgeSourceRiskReport | null>(null);
   const [automationSources, setAutomationSources] = useState<KnowledgeAutomationSource[]>([]);
   const [automationCandidates, setAutomationCandidates] = useState<KnowledgeAutomationCandidate[]>([]);
+  const [candidateView, setCandidateView] = useState<CandidateView>("all");
   const [automationAiConfig, setAutomationAiConfig] = useState<KnowledgeAutomationAiConfig | null>(null);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiModel, setAiModel] = useState("gpt-5.6");
@@ -124,6 +141,19 @@ export function KnowledgeRefreshPanel() {
       automaticPending,
     };
   }, [automationCandidates]);
+  const candidateCounts = useMemo(() => ({
+    all: automationCandidates.length,
+    ready: automationCandidates.filter(item => Boolean(buildKnowledgeAutomationCandidateBundle(item))).length,
+    recheck: automationCandidates.filter(item => item.candidateAction === "recheck").length,
+    unanalysed: automationCandidates.filter(item => item.analysisStatus === "pending").length,
+  }), [automationCandidates]);
+  const visibleCandidates = useMemo(() => automationCandidates.filter(item => {
+    if (candidateView === "ready") return Boolean(buildKnowledgeAutomationCandidateBundle(item));
+    if (candidateView === "recheck") return item.candidateAction === "recheck";
+    if (candidateView === "unanalysed") return item.analysisStatus === "pending";
+    return true;
+  }).sort((a,b) => candidatePriority(a) - candidatePriority(b)
+    || a.detectedAt.localeCompare(b.detectedAt) || a.id - b.id), [automationCandidates, candidateView]);
   const reload = async () => {
     const client = getSupabaseClient();
     const [nextRequests, nextChannels, nextAutomationStatus, nextProductionHealth, nextSourceRiskReport, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
@@ -133,7 +163,7 @@ export function KnowledgeRefreshPanel() {
       adminGetKnowledgeProductionHealth(client),
       adminGetKnowledgeSourceRiskReport(client),
       adminListKnowledgeAutomationSources(client, 200),
-      adminListKnowledgeAutomationCandidates(client, "pending", 200),
+      adminListKnowledgeAutomationCandidates(client, "pending", AUTOMATION_CANDIDATE_LIMIT),
       adminGetKnowledgeAutomationAiConfig(client),
     ]);
     setRequests(nextRequests);
@@ -165,7 +195,7 @@ export function KnowledgeRefreshPanel() {
           adminGetKnowledgeProductionHealth(client),
           adminGetKnowledgeSourceRiskReport(client),
           adminListKnowledgeAutomationSources(client, 200),
-          adminListKnowledgeAutomationCandidates(client, "pending", 200),
+          adminListKnowledgeAutomationCandidates(client, "pending", AUTOMATION_CANDIDATE_LIMIT),
           adminGetKnowledgeAutomationAiConfig(client),
         ]);
         if (!active) return;
@@ -606,11 +636,30 @@ export function KnowledgeRefreshPanel() {
           <div><small>解析失敗</small><strong>{candidateAnalysisSummary.failed}</strong></div>
         </div>
 
+        <div className="knowledge-candidate-triage" aria-label="自動調査候補の絞り込み">
+          <strong>管理者の候補確認</strong>
+          <span>取得 {automationCandidates.length}件 / 全候補 {automationStatus?.pendingCandidates ?? "-"}件</span>
+          <div className="knowledge-candidate-triage-filters" role="group" aria-label="候補の分類">
+            {CANDIDATE_VIEWS.map(view => (
+              <button key={view.key} type="button" aria-pressed={candidateView === view.key}
+                disabled={busy} onClick={() => setCandidateView(view.key)}>
+                {view.label} ({candidateCounts[view.key]})
+              </button>
+            ))}
+          </div>
+          {automationStatus && automationStatus.pendingCandidates > automationCandidates.length
+            && automationCandidates.length === AUTOMATION_CANDIDATE_LIMIT && (
+            <p>最大200件を表示しています。確認後に再取得してください。</p>
+          )}
+          <p>候補の分類だけでは公開されません。Fresh公開には既存の管理者承認が必要です。</p>
+        </div>
         {automationCandidates.length === 0 ? (
           <p className="knowledge-empty">現在、管理者確認が必要な自動調査候補はありません。</p>
+        ) : visibleCandidates.length === 0 ? (
+          <p className="knowledge-empty">選択した条件に該当する候補はありません。</p>
         ) : (
           <div className="knowledge-automation-candidates">
-            {automationCandidates.map((candidate) => (
+            {visibleCandidates.map((candidate) => (
               <article key={candidate.id}>
                 <header>
                   <span className={"automation-action " + candidate.candidateAction}>
