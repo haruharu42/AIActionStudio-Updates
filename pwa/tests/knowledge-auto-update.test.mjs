@@ -580,7 +580,9 @@ test("knowledge source health puts failing URLs first and never labels disabled 
   assert.match(sourceHealth, /kind: "disabled"/);
   assert.match(sourceHealth, /label: "停止中"/);
   assert.match(sourceHealth, /<span>再試行待ち<\/span><strong>\{backoffSources\.length\}<\/strong>/);
-  assert.match(sourceHealth, /orderedSources\.map/);
+  assert.match(sourceHealth, /const visibleSources = useMemo/);
+  assert.match(sourceHealth, /return orderedSources\.filter/);
+  assert.match(sourceHealth, /visibleSources\.map/);
   assert.match(css, /\.knowledge-source-list article > header > span\.backoff/);
   assert.match(css, /\.knowledge-source-list article\.backoff/);
   assert.match(css, /\.knowledge-source-health-stats article\.backoff/);
