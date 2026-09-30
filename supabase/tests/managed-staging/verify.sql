@@ -39,6 +39,16 @@ begin
   ) then
     raise exception 'Gemini migration status RPC missing';
   end if;
+  if not exists (
+    select 1
+    from pg_constraint c
+    where c.conrelid='public.app_release_deployments'::regclass
+      and c.conname='app_release_deployments_run_url_check'
+      and pg_get_constraintdef(c.oid) like '%AIActionStudio-Updates%'
+      and pg_get_constraintdef(c.oid) like '%AIArticleStudio-Updates%'
+  ) then
+    raise exception 'dual repository run URL constraint missing';
+  end if;
   if has_function_privilege(
     'authenticated','public.reserve_knowledge_gemini_free_call()','EXECUTE'
   ) then
