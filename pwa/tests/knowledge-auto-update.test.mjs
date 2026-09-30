@@ -386,7 +386,7 @@ test("knowledge candidate dashboard distinguishes deterministic results from int
   assert.match(panel, /自動判定済み/);
   assert.match(panel, /自動判定待ち/);
   assert.match(panel, /AI APIは呼び出しません/);
-  assert.match(panel, /adminListKnowledgeAutomationCandidates\(client, "pending", 200\)/);
+  assert.match(panel, /adminListKnowledgeAutomationCandidates\(client, "pending", AUTOMATION_CANDIDATE_LIMIT\)/);
   assert.match(panel, /candidateAnalysisSummary/);
   assert.match(panel, /レビュー待ち/);
   assert.match(panel, /無料判定済み/);
@@ -632,13 +632,15 @@ test("automation review filters and priority sorting preserve approval gates", a
     readPwa("lib/knowledge-auto-update.ts"),
     readPwa("app/phase26-knowledge.css"),
   ]);
-  assert.equal((panel.match(/adminListKnowledgeAutomationCandidates\(client, "pending", 200\)/g) ?? []).length, 2);
+  assert.match(panel, /AUTOMATION_CANDIDATE_LIMIT = 200/);
+  assert.equal((panel.match(/adminListKnowledgeAutomationCandidates\(client, "pending", AUTOMATION_CANDIDATE_LIMIT\)/g) ?? []).length, 2);
   assert.match(client, /Math\.min\(200, Math\.trunc\(limit\)\)/);
   for (const view of ["all", "ready", "recheck", "unanalysed"]) {
     assert.match(panel, new RegExp(`key: "${view}"`));
   }
   assert.match(panel, /visibleAutomationCandidates\.map\(\(candidate\) =>/);
   assert.match(panel, /automationCandidatePriority\(left\) - automationCandidatePriority\(right\)/);
+  assert.match(panel, /if \(candidate\.analysisStatus === "completed"\) return 1/);
   assert.match(panel, /candidateView === "ready"/);
   assert.match(panel, /candidateView === "recheck"/);
   assert.match(panel, /candidateView === "unanalysed"/);
