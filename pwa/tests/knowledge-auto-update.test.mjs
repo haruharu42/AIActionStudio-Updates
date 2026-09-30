@@ -574,9 +574,10 @@ test("knowledge source health puts failing URLs first and never labels disabled 
   assert.match(sourceHealth, /if \(!source\.enabled\) return 2/);
   assert.match(sourceHealth, /return b\.consecutiveFailures - a\.consecutiveFailures/);
   assert.match(sourceHealth, /<span>停止中<\/span><strong>\{disabledSources\.length\}<\/strong>/);
-  assert.match(sourceHealth, /const isBackoff = source\.enabled && source\.consecutiveFailures >= 3/);
-  assert.match(sourceHealth, /const statusClass = !source\.enabled \? "disabled" : isBackoff \? "backoff"/);
-  assert.match(sourceHealth, /const statusLabel = !source\.enabled \? "停止中" : isBackoff \? "再試行待ち"/);
+  assert.match(sourceHealth, /source\.consecutiveFailures >= 3/);
+  assert.match(sourceHealth, /const diagnosis = sourceFetchDiagnosis\(source\)/);
+  assert.match(sourceHealth, /if \(!source\.enabled\)/);
+  assert.match(sourceHealth, /return \{ kind: "disabled", label: "停止中"/);
   assert.match(sourceHealth, /<span>再試行待ち<\/span><strong>\{backoffSources\.length\}<\/strong>/);
   assert.match(sourceHealth, /orderedSources\.map/);
   assert.match(css, /\.knowledge-source-list article > header > span\.backoff/);
@@ -585,9 +586,36 @@ test("knowledge source health puts failing URLs first and never labels disabled 
   assert.match(css, /\.knowledge-source-list article > header > span\.disabled/);
   assert.match(css, /\.knowledge-source-health-stats article\.disabled/);
   assert.match(css, /\.knowledge-source-list article\.disabled/);
-  assert.match(css, /\.knowledge-source-health-stats \{[\s\S]*?grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.knowledge-source-health-stats \{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(100px, 1fr\)\)/);
 });
 
+
+test("access-restricted Knowledge sources offer safe manual review without overriding access controls", async () => {
+  const [sourceHealth, css] = await Promise.all([
+    readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(sourceHealth, /source\.lastHttpStatus === 401 \|\| source\.lastHttpStatus === 403/);
+  assert.match(sourceHealth, /source\.lastHttpStatus === 429/);
+  assert.match(sourceHealth, /source\.lastHttpStatus === 404 \|\| source\.lastHttpStatus === 410/);
+  assert.match(sourceHealth, /label: "アクセス制限"/);
+  assert.match(sourceHealth, /label: "取得頻度制限"/);
+  assert.match(sourceHealth, /label: "参照先を再確認"/);
+  assert.match(sourceHealth, /制限を迂回せず/);
+  assert.match(sourceHealth, /公式の公開API・RSS・代替公式URL/);
+  assert.match(sourceHealth, /const restrictedSources = useMemo/);
+  assert.match(sourceHealth, /<span>アクセス制限<\/span><strong>\{restrictedSources\.length\}<\/strong>/);
+  assert.match(sourceHealth, /copyManualResearchPrompt/);
+  assert.match(sourceHealth, /navigator\.clipboard\.writeText\(prompt\)/);
+  assert.match(sourceHealth, /候補承認やFresh \/ Stableへの反映は実行しない/);
+  assert.match(sourceHealth, /diagnosis\.needsManualReview/);
+  assert.doesNotMatch(sourceHealth, /adminReviewKnowledgeAutomationCandidate|getSupabaseClient|\.rpc\(/);
+  assert.match(css, /\.knowledge-source-health-stats article\.restricted/);
+  assert.match(css, /\.knowledge-source-list article\.restricted/);
+  assert.match(css, /\.knowledge-source-guidance/);
+  assert.match(css, /\.knowledge-source-actions button\.manual-review/);
+});
 
 test("redundant OpenAI Help source is retired from scheduling after repeated 403s without deleting history", async () => {
   const migration = await readRepo("supabase/migrations/20260929235427_disable_redundant_openai_help_source_v1.sql");
