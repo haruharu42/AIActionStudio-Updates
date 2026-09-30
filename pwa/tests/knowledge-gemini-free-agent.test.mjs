@@ -73,6 +73,22 @@ test("Gemini Free refuses source excerpts containing likely personal data or cre
   assert.equal(networkCalls, 0);
 });
 
+test("Gemini Free refuses local and private HTTPS source hosts", () => {
+  const forbiddenUrls = [
+    "https://localhost/updates", "https://docs.local/updates",
+    "https://metadata.internal/updates", "https://127.0.0.1/updates",
+    "https://10.0.0.1/updates", "https://172.16.0.2/updates",
+    "https://172.31.255.254/updates", "https://192.168.1.10/updates",
+    "https://169.254.169.254/updates", "https://[::1]/updates",
+    "https://[fd00::1]/updates",
+  ];
+  for (const source_url of forbiddenUrls) {
+    const privateCandidate = {...candidate, source_url};
+    assert.equal(geminiPublicSourceEligible(privateCandidate), false, source_url);
+    assert.throws(() => buildGeminiFreeRequest(privateCandidate), /eligible non-sensitive/);
+  }
+});
+
 test("Gemini Free blocks alternative header and URL credential forms in outbound fields", () => {
   const sensitiveFields = [
     { reason: "Changed: https://official.example/changelog?token=SENSITIVE_QUERY_TOKEN_123456" },
