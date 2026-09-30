@@ -40,6 +40,26 @@ export type AdminNotification = {
   createdByAasId: string | null;
 };
 
+export type AdminNotificationReadiness = {
+  featureStage: "admin" | "tester" | "public";
+  maintenanceMode: boolean;
+  pushEnabled: boolean;
+  pushConfigReady: boolean;
+  testerCount: number;
+  testerPushUsers: number;
+  enabledSubscriptions: number;
+  deliveries: {
+    pending: number;
+    processing: number;
+    sent: number;
+    failed: number;
+    latestSentAt: string | null;
+    latestFailedAt: string | null;
+  };
+  automatedChecksPass: boolean;
+  manualChecksRequired: string[];
+};
+
 export const NOTIFICATION_REFRESH_EVENT = "aas-notifications-refresh";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -244,6 +264,40 @@ export async function adminCreateNotification(
   });
   if (error) throw error;
   return Number(data);
+}
+
+function normalizeAdminNotificationReadiness(value: unknown): AdminNotificationReadiness {
+  const row = asRecord(value);
+  const deliveries = asRecord(row.deliveries);
+  const featureStage = row.feature_stage === "public" || row.feature_stage === "tester" ? row.feature_stage : "admin";
+  const count = (candidate: unknown) => Math.max(0, Number(candidate ?? 0) || 0);
+  return {
+    featureStage,
+    maintenanceMode: row.maintenance_mode === true,
+    pushEnabled: row.push_enabled === true,
+    pushConfigReady: row.push_config_ready === true,
+    testerCount: count(row.tester_count),
+    testerPushUsers: count(row.tester_push_users),
+    enabledSubscriptions: count(row.enabled_subscriptions),
+    deliveries: {
+      pending: count(deliveries.pending),
+      processing: count(deliveries.processing),
+      sent: count(deliveries.sent),
+      failed: count(deliveries.failed),
+      latestSentAt: typeof deliveries.latest_sent_at === "string" ? deliveries.latest_sent_at : null,
+      latestFailedAt: typeof deliveries.latest_failed_at === "string" ? deliveries.latest_failed_at : null,
+    },
+    automatedChecksPass: row.automated_checks_pass === true,
+    manualChecksRequired: Array.isArray(row.manual_checks_required)
+      ? row.manual_checks_required.filter((item): item is string => typeof item === "string")
+      : [],
+  };
+}
+
+export async function adminGetNotificationReadiness(client: SupabaseClient): Promise<AdminNotificationReadiness> {
+  const { data, error } = await client.rpc("admin_get_notification_readiness");
+  if (error) throw error;
+  return normalizeAdminNotificationReadiness(data);
 }
 
 export async function adminListNotifications(client: SupabaseClient, limit = 50): Promise<AdminNotification[]> {
