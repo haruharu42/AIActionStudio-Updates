@@ -432,6 +432,12 @@ export function fromApiError(error: unknown, fallback: string): ArticleLibraryEr
   if (error instanceof ArticleLibraryError) return error;
   const { code, message, details, status } = errorParts(error);
   const normalized = `${message} ${details}`.toLowerCase();
+  if (normalized.includes("article_quota_exceeded")) {
+    return new ArticleLibraryError(
+      "記事ライブラリの保存上限に達しています。不要な記事を整理するか、利用プランを確認してください。",
+      { category: "validation", code: "article_quota_exceeded", status, cause: error },
+    );
+  }
   if (code === "40001" || status === 409 || normalized.includes("revision conflict")) {
     return new ArticleLibraryError(
       "他の端末で記事が更新されています。入力内容は残したままです。別画面で最新状態を確認してから、もう一度編集してください。",
