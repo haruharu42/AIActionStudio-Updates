@@ -73,6 +73,24 @@ test("Gemini Free refuses source excerpts containing likely personal data or cre
   assert.equal(networkCalls, 0);
 });
 
+test("Gemini Free blocks alternative header and URL credential forms in outbound fields", () => {
+  const sensitiveFields = [
+    { reason: "Changed: https://official.example/changelog?token=SENSITIVE_QUERY_TOKEN_123456" },
+    { reason: "refresh_token=FAKE_REFRESH_TOKEN_123456" },
+    { source_title: "X-API-Key: PRIVATE_HEADER_VALUE_123456" },
+    { source_excerpt: candidate.source_excerpt + " Cookie: session=PRIVATE_COOKIE_VALUE_123456" },
+    { source_excerpt: candidate.source_excerpt + " session_id=PRIVATE_SESSION_ID_123456" },
+    { source_excerpt: candidate.source_excerpt + " private_key: PRIVATE_PEM_VALUE_123456" },
+  ];
+  for (const field of sensitiveFields) {
+    const secretCandidate = { ...candidate, ...field };
+    assert.equal(geminiPublicSourceEligible(secretCandidate), false, JSON.stringify(field).slice(0, 90));
+    assert.throws(() => buildGeminiFreeRequest(secretCandidate), /eligible non-sensitive/);
+  }
+  // Query parameters in the source URL itself are removed before checking/sending.
+  assert.equal(geminiPublicSourceEligible(candidate), true);
+});
+
 test("Gemini Free calls exactly one allowlisted model and never falls back to paid", async () => {
   assert.equal(GEMINI_FREE_MODEL, "gemini-3.5-flash-lite");
   assert.equal(GEMINI_FREE_RUN_LIMIT, 3);
