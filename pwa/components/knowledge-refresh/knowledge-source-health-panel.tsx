@@ -51,6 +51,49 @@ function sourceFetchIssue(source: KnowledgeAutomationSource): SourceFetchDiagnos
   return { kind: "healthy", label: "正常", guidance: "", needsManualReview: false };
 }
 
+function sourceOrganizationDomain(sourceUrl: string): string {
+  try {
+    const host = new URL(sourceUrl).hostname.toLowerCase().replace(/^www\./, "");
+    const parts = host.split(".").filter(Boolean);
+    if (parts.length <= 2) return host;
+    const countrySecondLevel = new Set(["co.jp", "go.jp", "ac.jp", "ne.jp", "or.jp"]);
+    const lastTwo = parts.slice(-2).join(".");
+    return countrySecondLevel.has(lastTwo) ? parts.slice(-3).join(".") : lastTwo;
+  } catch {
+    return "";
+  }
+}
+
+function sourceTasksOverlap(source: KnowledgeAutomationSource, candidate: KnowledgeAutomationSource): boolean {
+  if (source.tasks.includes("all") || candidate.tasks.includes("all")) return true;
+  return source.tasks.some((task) => candidate.tasks.includes(task));
+}
+
+function manualReviewAlternativeSources(
+  source: KnowledgeAutomationSource,
+  sources: KnowledgeAutomationSource[],
+): KnowledgeAutomationSource[] {
+  const organizationDomain = sourceOrganizationDomain(source.sourceUrl);
+  if (!organizationDomain) return [];
+  return sources
+    .filter((candidate) => (
+      candidate.id !== source.id
+      && candidate.enabled
+      && candidate.consecutiveFailures === 0
+      && candidate.lastHttpStatus !== null
+      && candidate.lastHttpStatus >= 200
+      && candidate.lastHttpStatus < 400
+      && sourceOrganizationDomain(candidate.sourceUrl) === organizationDomain
+      && sourceTasksOverlap(source, candidate)
+    ))
+    .sort((a, b) => {
+      const exactKind = Number(b.sourceKind === source.sourceKind) - Number(a.sourceKind === source.sourceKind);
+      if (exactKind !== 0) return exactKind;
+      return knowledgeSourceHost(a.sourceUrl).localeCompare(knowledgeSourceHost(b.sourceUrl), "ja");
+    })
+    .slice(0, 3);
+}
+
 function sourceFetchDiagnosis(source: KnowledgeAutomationSource): SourceFetchDiagnosis {
   const diagnosis = sourceFetchIssue(source);
   if (!source.enabled) {
@@ -91,6 +134,7 @@ export function KnowledgeSourceHealthPanel({
       `対象URL: ${source.sourceUrl}`,
       `対象カテゴリ: ${source.tasks.join(", ") || "未分類"}`,
       `直近HTTP状態: ${source.lastHttpStatus ?? "不明"}`,
+      `既存の健全な同一公式ドメイン候補: ${manualReviewAlternativeSources(source, sources).map((candidate) => candidate.sourceUrl).join(", ") || "なし"}`,
       "一次情報を手動で確認し、公式の公開API・RSS・移転後の公式ページなど、利用条件に沿った代替手段があれば根拠URLと確認日を示してください。",
       "ログイン制限・アクセス制御・サイトの利用条件を迂回しないでください。確認できない情報は未確認として明記してください。",
       "調査内容をまとめるだけで、候補承認やFresh / Stableへの反映は実行しないでください。",
@@ -115,6 +159,7 @@ export function KnowledgeSourceHealthPanel({
         `対象URL: ${source.sourceUrl}`,
         `対象カテゴリ: ${source.tasks.join(", ") || "未分類"}`,
         `直近HTTP状態: ${source.lastHttpStatus ?? "不明"}`,
+        `既存の健全な同一公式ドメイン候補: ${manualReviewAlternativeSources(source, sources).map((candidate) => candidate.sourceUrl).join(", ") || "なし"}`,
         "",
       ]),
       "回答では各URLごとに、確認結果・根拠URL・確認日・代替候補の有無を分けてください。確認できない情報は未確認と明記してください。",
@@ -240,6 +285,9 @@ export function KnowledgeSourceHealthPanel({
         <div>
           {orderedSources.map((source) => {
             const diagnosis = sourceFetchDiagnosis(source);
+            const alternatives = diagnosis.needsManualReview
+              ? manualReviewAlternativeSources(source, sources)
+              : [];
             return (
               <article key={source.id} className={diagnosis.kind === "healthy" ? "" : diagnosis.kind}>
                 <header>
@@ -261,6 +309,19 @@ export function KnowledgeSourceHealthPanel({
                 )}
                 {source.lastError && <p className="knowledge-source-error">{source.lastError}</p>}
                 {diagnosis.guidance && <p className="knowledge-source-guidance" role="note">{diagnosis.guidance}</p>}
+                {alternatives.length > 0 && (
+                  <div className="knowledge-source-alternatives" role="note">
+                    <strong>既存の健全な同一公式ドメイン候補</strong>
+                    <small>同じ運営元・関連カテゴリで正常取得できている監視URLです。自動差し替えはせず、内容が代替根拠として適切か管理者が確認してください。</small>
+                    <div>
+                      {alternatives.map((candidate) => (
+                        <a key={candidate.id} href={candidate.sourceUrl} target="_blank" rel="noreferrer">
+                          {knowledgeSourceHost(candidate.sourceUrl)} · HTTP {candidate.lastHttpStatus}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="knowledge-source-actions">
                   {diagnosis.needsManualReview && (
                     <button type="button" className="manual-review" onClick={() => void copyManualResearchPrompt(source)}>
