@@ -170,15 +170,8 @@ export function KnowledgeRefreshPanel() {
     failed: automationCandidates.filter((candidate) => candidate.analysisStatus === "failed").length,
   }), [automationCandidates, automationAiConfig]);
   const normalizedCandidateSearch = candidateSearch.trim().toLowerCase();
-  const visibleAutomationCandidates = useMemo(() => automationCandidates
-    .filter((candidate) => {
-      if (candidateView === "ready") return Boolean(buildKnowledgeAutomationCandidateBundle(candidate));
-      if (candidateView === "recheck") return candidate.candidateAction === "recheck";
-      if (candidateView === "unanalysed") return candidateAnalysisPresentation(candidate, automationAiConfig).className === "pending";
-      if (candidateView === "held") return candidateAnalysisPresentation(candidate, automationAiConfig).className === "held";
-      if (candidateView === "failed") return candidate.analysisStatus === "failed";
-      return true;
-    })
+  // Shared display-only search: review and publication remain separate admin actions.
+  const searchedAutomationCandidates = useMemo(() => automationCandidates
     .filter((candidate) => {
       if (!normalizedCandidateSearch) return true;
       return [
@@ -194,17 +187,26 @@ export function KnowledgeRefreshPanel() {
         candidate.analysisModel,
         ...candidate.matchedTasks,
       ].filter(Boolean).join("\n").toLowerCase().includes(normalizedCandidateSearch);
+    }), [automationCandidates, normalizedCandidateSearch]);
+  const visibleAutomationCandidates = useMemo(() => searchedAutomationCandidates
+    .filter((candidate) => {
+      if (candidateView === "ready") return Boolean(buildKnowledgeAutomationCandidateBundle(candidate));
+      if (candidateView === "recheck") return candidate.candidateAction === "recheck";
+      if (candidateView === "unanalysed") return candidateAnalysisPresentation(candidate, automationAiConfig).className === "pending";
+      if (candidateView === "held") return candidateAnalysisPresentation(candidate, automationAiConfig).className === "held";
+      if (candidateView === "failed") return candidate.analysisStatus === "failed";
+      return true;
     })
     .sort((left, right) =>
       automationCandidatePriority(left) - automationCandidatePriority(right)
       || left.detectedAt.localeCompare(right.detectedAt)
       || left.id - right.id,
-    ), [automationCandidates, candidateView, automationAiConfig, normalizedCandidateSearch]);
+    ), [searchedAutomationCandidates, candidateView, automationAiConfig]);
 
-  const heldCandidates = useMemo(() => automationCandidates
+  const heldCandidates = useMemo(() => searchedAutomationCandidates
     .filter((candidate) => candidateAnalysisPresentation(candidate, automationAiConfig).className === "held")
     .sort((left, right) => left.detectedAt.localeCompare(right.detectedAt) || left.id - right.id),
-  [automationCandidates, automationAiConfig]);
+  [searchedAutomationCandidates, automationAiConfig]);
   const heldBatchCount = Math.ceil(heldCandidates.length / HELD_RESEARCH_BATCH_SIZE);
   const currentHeldBatchIndex = Math.min(heldBatchIndex, Math.max(0, heldBatchCount - 1));
   const currentHeldBatchStart = currentHeldBatchIndex * HELD_RESEARCH_BATCH_SIZE;
@@ -212,10 +214,10 @@ export function KnowledgeRefreshPanel() {
     currentHeldBatchStart,
     currentHeldBatchStart + HELD_RESEARCH_BATCH_SIZE,
   );
-  const recheckCandidates = useMemo(() => automationCandidates
+  const recheckCandidates = useMemo(() => searchedAutomationCandidates
     .filter((candidate) => candidate.candidateAction === "recheck")
     .sort((left, right) => left.detectedAt.localeCompare(right.detectedAt) || left.id - right.id),
-  [automationCandidates]);
+  [searchedAutomationCandidates]);
   const recheckBatchCount = Math.ceil(recheckCandidates.length / RECHECK_RESEARCH_BATCH_SIZE);
   const currentRecheckBatchIndex = Math.min(recheckBatchIndex, Math.max(0, recheckBatchCount - 1));
   const currentRecheckBatchStart = currentRecheckBatchIndex * RECHECK_RESEARCH_BATCH_SIZE;
@@ -807,17 +809,25 @@ export function KnowledgeRefreshPanel() {
                 id="knowledge-candidate-search-input"
                 type="search"
                 value={candidateSearch}
-                onChange={(event) => setCandidateSearch(event.target.value)}
+                onChange={(event) => {
+                  setCandidateSearch(event.target.value);
+                  setHeldBatchIndex(0);
+                  setRecheckBatchIndex(0);
+                }}
                 placeholder="タイトル・URL・カテゴリ・理由・現行キーで検索"
                 autoComplete="off"
               />
               {candidateSearch && (
-                <button type="button" disabled={busy} onClick={() => setCandidateSearch("")}>
+                <button type="button" disabled={busy} onClick={() => {
+                    setCandidateSearch("");
+                    setHeldBatchIndex(0);
+                    setRecheckBatchIndex(0);
+                  }}>
                   検索をクリア
                 </button>
               )}
             </div>
-            <small>候補一覧の表示だけを絞り込み、候補状態・監視設定・公開状態は変更しません。</small>
+            <small>候補一覧と5件一括検証の対象に同じ検索条件を適用します。タブの括弧内は検索前の全体件数です。候補状態・監視設定・公開状態は変更しません。</small>
           </div>
           <div className="knowledge-candidate-triage-filters" role="group" aria-label="自動調査候補の絞り込み">
             {AUTOMATION_CANDIDATE_VIEWS.map((view) => (

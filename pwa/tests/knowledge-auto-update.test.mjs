@@ -540,6 +540,27 @@ test("Knowledge candidate review text search combines with existing filters with
   assert.ok(css.includes(".knowledge-candidate-search button:disabled"));
 });
 
+test("Knowledge candidate search also scopes both five-item research batches and resets their pagination", async () => {
+  const panel = await readKnowledgeRefreshSource();
+  const start = panel.indexOf("const normalizedCandidateSearch");
+  const end = panel.indexOf("const reload", start);
+  assert.ok(start >= 0 && end > start, "candidate display and batch sources exist");
+  const section = panel.slice(start, end);
+  assert.ok(section.includes("const searchedAutomationCandidates = useMemo(() => automationCandidates"));
+  assert.ok(section.includes("const visibleAutomationCandidates = useMemo(() => searchedAutomationCandidates"));
+  assert.ok(section.includes("const heldCandidates = useMemo(() => searchedAutomationCandidates"));
+  assert.ok(section.includes("const recheckCandidates = useMemo(() => searchedAutomationCandidates"));
+  assert.ok(section.includes("[automationCandidates, normalizedCandidateSearch]"));
+  assert.ok(section.includes("[searchedAutomationCandidates, automationAiConfig]"));
+  assert.ok(section.includes("[searchedAutomationCandidates]"));
+  assert.ok(section.includes("const currentHeldBatch = heldCandidates.slice("));
+  assert.ok(section.includes("const currentRecheckBatch = recheckCandidates.slice("));
+  assert.match(panel, /setCandidateSearch\(event\.target\.value\);\s*setHeldBatchIndex\(0\);\s*setRecheckBatchIndex\(0\);/);
+  assert.match(panel, /setCandidateSearch\(""\);\s*setHeldBatchIndex\(0\);\s*setRecheckBatchIndex\(0\);/);
+  assert.ok(panel.includes("候補一覧と5件一括検証の対象に同じ検索条件を適用します"));
+  assert.doesNotMatch(section, /adminReviewKnowledgeAutomationCandidate|adminPublishKnowledgeRefreshBundle|adminSetKnowledgeAutomationSourceEnabled|\.rpc\(/);
+});
+
 test("knowledge candidate dashboard distinguishes deterministic results from intentionally held AI work", async () => {
   const [panel, css] = await Promise.all([
     readKnowledgeRefreshSource(),
