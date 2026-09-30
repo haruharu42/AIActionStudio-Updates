@@ -50,6 +50,8 @@ PRとPreviewが成功しても、既存の稼働中Supabase Edge Functionが新�
 - 実Geminiキー、Workerトークン、Production秘密情報はStagingへコピーしていない。
 - Knowledge automationの最小依存（空のCatalog 2テーブル、Source/Run/Candidate 3テーブル、Catalog Snapshot / Worker AI Config RPC）を構造のみ再現。全件数0を確認。
 - `knowledge-research-worker` をStagingへv1として配布し `ACTIVE` を確認。カスタムWorkerトークンは作成しておらず、設定DB側も `enabled=false` / `ai_enrichment_enabled=false` の二重ロック。実行はまだ行わない。
+- Staging WorkerへトークンなしPOSTを実HTTPで送信し、HTTP 401 / `{"error":"unauthorized"}` を確認。直後もSource/Run/Candidateは全て0件、`last_worker_invoked_at=null`、AI/automation OFF、Gemini日次使用0で副作用なし。
+- StagingのSupabase標準Realtime内部テーブル（`realtime.subscription` / `realtime.messages` / `realtime.schema_migrations`）がプロジェクト作成直後から未初期化であることを確認。AAS変更以前からのManaged Platform側事象としてIssue #244で分離追跡し、AASから`realtime`内部オブジェクトを手作業修復しない。
 
 
 ### Managed Staging 実DBガード検証（2026-10-01）
