@@ -9,9 +9,12 @@ import {
   adminCreateNotification,
   adminGetNotificationReadiness,
   adminListNotifications,
+  adminListNotificationTesterReadiness,
+  adminPromoteNotificationFeaturePublic,
   notificationReadinessIssues,
   type AdminNotification,
   type AdminNotificationReadiness,
+  type AdminNotificationTesterReadiness,
   type NotificationAudience,
   type NotificationCategory,
 } from "@/lib/notifications";
@@ -45,21 +48,33 @@ export function AdminNotificationsPage() {
   const [href, setHref] = useState("/");
   const [items, setItems] = useState<AdminNotification[]>([]);
   const [readiness, setReadiness] = useState<AdminNotificationReadiness | null>(null);
+  const [testerReadiness, setTesterReadiness] = useState<AdminNotificationTesterReadiness[]>([]);
+  const [manualChecks, setManualChecks] = useState({
+    testerDevicePushReceive: false,
+    testerDeviceNotificationTap: false,
+    pcMobileMajorFlow: false,
+  });
+  const [currentSessionAal, setCurrentSessionAal] = useState<"aal1" | "aal2" | null>(null);
+  const [aalCheckFailed, setAalCheckFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const activeAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
   const readinessIssues = readiness ? notificationReadinessIssues(readiness) : [];
+  const manualCheckCount = Object.values(manualChecks).filter(Boolean).length;
+  const manualChecksComplete = manualCheckCount === 3;
 
   const refresh = async () => {
     const client = getSupabaseClient();
-    const [nextItems, nextReadiness] = await Promise.all([
+    const [nextItems, nextReadiness, nextTesterReadiness] = await Promise.all([
       adminListNotifications(client, 80),
       adminGetNotificationReadiness(client),
+      adminListNotificationTesterReadiness(client),
     ]);
     setItems(nextItems);
     setReadiness(nextReadiness);
+    setTesterReadiness(nextTesterReadiness);
   };
 
   useEffect(() => {
@@ -69,16 +84,81 @@ export function AdminNotificationsPage() {
     void Promise.all([
       adminListNotifications(client, 80),
       adminGetNotificationReadiness(client),
+      adminListNotificationTesterReadiness(client),
     ]).then(
-      ([nextItems, nextReadiness]) => {
+      ([nextItems, nextReadiness, nextTesterReadiness]) => {
         if (!active) return;
         setItems(nextItems);
         setReadiness(nextReadiness);
+        setTesterReadiness(nextTesterReadiness);
       },
       () => { if (active) setError("通知管理の状態を取得できませんでした。"); },
     );
     return () => { active = false; };
   }, [activeAdmin]);
+
+  useEffect(() => {
+    if (!activeAdmin) return;
+    let active = true;
+    const client = getSupabaseClient();
+    void client.auth.mfa.getAuthenticatorAssuranceLevel().then(
+      ({ data, error: aalError }) => {
+        if (!active) return;
+        if (aalError) {
+          setCurrentSessionAal(null);
+          setAalCheckFailed(true);
+          return;
+        }
+        setCurrentSessionAal(data.currentLevel === "aal2" ? "aal2" : "aal1");
+        setAalCheckFailed(false);
+      },
+      () => {
+        if (!active) return;
+        setCurrentSessionAal(null);
+        setAalCheckFailed(true);
+      },
+    );
+    return () => { active = false; };
+  }, [activeAdmin]);
+
+  const promotePublic = async () => {
+    if (
+      busy
+      || readiness?.featureStage !== "tester"
+      || !readiness.automatedChecksPass
+      || !manualChecksComplete
+    ) return;
+
+    setBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const client = getSupabaseClient();
+      const { data, error: aalError } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalError || data.currentLevel !== "aal2") {
+        setCurrentSessionAal(data?.currentLevel === "aal2" ? "aal2" : "aal1");
+        setAalCheckFailed(Boolean(aalError));
+        throw new Error("通知センターの全体公開には、現在の管理者セッションでMFA認証（AAL2）が必要です。");
+      }
+      setCurrentSessionAal("aal2");
+      setAalCheckFailed(false);
+
+      if (!window.confirm("通知センターを全一般ユーザーへ公開しますか？\n3つの実機・導線確認とMFA認証を再確認してください。")) return;
+
+      await adminPromoteNotificationFeaturePublic(client, manualChecks);
+      setManualChecks({
+        testerDevicePushReceive: false,
+        testerDeviceNotificationTap: false,
+        pcMobileMajorFlow: false,
+      });
+      setMessage("通知センターを全一般ユーザーへ公開しました。");
+      await refresh();
+    } catch (promotionError) {
+      setError(promotionError instanceof Error ? promotionError.message : "通知センターを全体公開できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const send = async () => {
     if (busy || !title.trim()) return;
@@ -203,9 +283,130 @@ export function AdminNotificationsPage() {
                 <small>送信成功 {readiness.deliveries.sent} 件</small>
               </article>
             </div>
+            <div className="admin-notification-tester-readiness" aria-label="指定テスターのPush準備状況">
+              <div className="admin-notification-tester-readiness-head">
+                <div>
+                  <strong>指定テスターの実機Push状況</strong>
+                  <span>endpoint・P-256鍵・auth鍵は表示せず、端末数と状態だけを確認します。</span>
+                </div>
+                <Link href="/admin/releases">テスター設定を開く →</Link>
+              </div>
+              <div className="admin-notification-tester-readiness-list">
+                {testerReadiness.map((tester) => {
+                  const ready = tester.pushEnabled && tester.healthyDeviceCount > 0;
+                  const stateLabel = ready
+                    ? "Push確認可"
+                    : !tester.pushEnabled
+                      ? "端末通知OFF"
+                      : tester.enabledDeviceCount === 0
+                        ? "端末登録待ち"
+                        : tester.errorDeviceCount > 0
+                          ? "配信エラー確認"
+                          : "要確認";
+                  return (
+                    <article className={ready ? "ready" : "action"} key={tester.aasUserId}>
+                      <div className="admin-notification-tester-identity">
+                        <strong>{tester.aasUserId}</strong>
+                        <span>{tester.displayName || "表示名なし"}</span>
+                      </div>
+                      <div className="admin-notification-tester-metrics">
+                        <span>Push設定 <b>{tester.pushEnabled ? "ON" : "OFF"}</b></span>
+                        <span>正常端末 <b>{tester.healthyDeviceCount}</b></span>
+                        <span>有効端末 <b>{tester.enabledDeviceCount}</b></span>
+                        <span>エラー端末 <b>{tester.errorDeviceCount}</b></span>
+                      </div>
+                      <div className="admin-notification-tester-state">
+                        <strong>{stateLabel}</strong>
+                        <small>
+                          {tester.latestDeviceUpdatedAt
+                            ? `最終端末更新: ${formatDate(tester.latestDeviceUpdatedAt)}`
+                            : "端末登録履歴なし"}
+                        </small>
+                      </div>
+                    </article>
+                  );
+                })}
+                {!testerReadiness.length && (
+                  <div className="admin-empty-state compact">
+                    <strong>activeな一般ユーザーテスターが見つかりません。</strong>
+                  </div>
+                )}
+              </div>
+              {testerReadiness.some((tester) => !tester.pushEnabled || tester.healthyDeviceCount === 0) && (
+                <p>
+                  未確認テスター本人のPWAで「設定 → 通知 → スマホ・PCへの端末通知」をONにし、
+                  この画面で正常端末が1台以上になったことを再確認してください。
+                </p>
+              )}
+            </div>
+            {readiness.featureStage === "tester" ? (
+              <div className="admin-notification-public-approval" aria-label="通知センター全体公開の最終承認">
+                <div className="admin-notification-public-approval-head">
+                  <div>
+                    <span>FINAL PUBLIC APPROVAL</span>
+                    <strong>通知センター全体公開の最終確認</strong>
+                    <small>自動確認に加え、実機でしか確認できない3項目と現在の管理者MFA（AAL2）を必須にします。</small>
+                  </div>
+                  <b>{manualCheckCount} / 3</b>
+                </div>
+                <div className="admin-notification-manual-checks">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={manualChecks.testerDevicePushReceive}
+                      onChange={(event) => setManualChecks((current) => ({ ...current, testerDevicePushReceive: event.target.checked }))}
+                    />
+                    <span><strong>テスター実機でPush受信を確認</strong><small>テスター限定通知が対象端末へ実際に表示されることを確認します。</small></span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={manualChecks.testerDeviceNotificationTap}
+                      onChange={(event) => setManualChecks((current) => ({ ...current, testerDeviceNotificationTap: event.target.checked }))}
+                    />
+                    <span><strong>通知タップ後の遷移を確認</strong><small>Push通知をタップし、指定したAAS内ページへ安全に遷移することを確認します。</small></span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={manualChecks.pcMobileMajorFlow}
+                      onChange={(event) => setManualChecks((current) => ({ ...current, pcMobileMajorFlow: event.target.checked }))}
+                    />
+                    <span><strong>PC・スマホ主要導線を確認</strong><small>通知一覧・既読・設定ON/OFF・主要画面への移動をPC/スマホで確認します。</small></span>
+                  </label>
+                </div>
+                <div className="admin-notification-public-approval-footer">
+                  <div className={currentSessionAal === "aal2" ? "ready" : "action"}>
+                    <strong>{currentSessionAal === "aal2" ? "MFA AAL2 認証済み" : aalCheckFailed ? "MFA状態を確認できません" : "MFA AAL2 未認証"}</strong>
+                    {currentSessionAal !== "aal2" && <Link href="/admin/security">管理者MFAで再認証 →</Link>}
+                  </div>
+                  <button
+                    className="primary-action"
+                    type="button"
+                    disabled={busy || !readiness.automatedChecksPass || !manualChecksComplete || currentSessionAal !== "aal2"}
+                    onClick={() => void promotePublic()}
+                  >
+                    {busy ? "確認中…" : "3項目確認済みとして全体公開"}
+                  </button>
+                </div>
+                {!readiness.automatedChecksPass && (
+                  <p>自動確認が未完了のため公開できません。上のブロッカーとテスター端末状態を先に解消してください。</p>
+                )}
+              </div>
+            ) : readiness.featureStage === "public" ? (
+              <div className="admin-notification-public-state ready">
+                <strong>通知センターは全体公開済みです。</strong>
+                <span>停止・テスター段階へのロールバックは<Link href="/admin/features">全機能管理</Link>から実行できます。</span>
+              </div>
+            ) : (
+              <div className="admin-notification-public-state">
+                <strong>全体公開の前にテスター段階へ進めてください。</strong>
+                <span><Link href="/admin/features">全機能管理</Link>でテスター段階へ切り替えてから、実機確認を行います。</span>
+              </div>
+            )}
             <p className="admin-notification-readiness-note">
               最終送信: {readiness.deliveries.latestSentAt ? formatDate(readiness.deliveries.latestSentAt) : "まだありません"}。
-              この画面から公開段階は変更しません。実機確認後に<Link href="/admin/features">全機能管理</Link>で段階を変更してください。
+              公開範囲の縮小・メンテナンス管理は<Link href="/admin/features">全機能管理</Link>、tester → public は上の最終承認から行います。
             </p>
           </>
         ) : (

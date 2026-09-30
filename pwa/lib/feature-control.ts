@@ -158,7 +158,16 @@ export async function adminUpdateAppFeatureControl(
     p_maintenance_mode: input.maintenanceMode,
     p_maintenance_message: input.maintenanceMessage,
   });
-  if (error) throw error;
+  if (error) {
+    const message = String(error.message ?? "").toLowerCase();
+    if (message.includes("notification public promotion must use dedicated approval")) {
+      throw new Error("通知センターの全体公開は「通知管理」の最終承認から実行してください。");
+    }
+    if (message.includes("notification rollout readiness requirements not met")) {
+      throw new Error("通知センターの公開準備が未完了です。通知管理でテスター端末・Push設定・配信キューを確認してください。");
+    }
+    throw error;
+  }
   return normalizeAdminFeatureSnapshot(data);
 }
 

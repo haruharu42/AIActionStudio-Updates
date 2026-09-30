@@ -75,6 +75,16 @@ export type AdminNotificationReadinessIssue = {
   actionLabel?: string;
 };
 
+export type AdminNotificationTesterReadiness = {
+  aasUserId: string;
+  displayName: string;
+  pushEnabled: boolean;
+  enabledDeviceCount: number;
+  healthyDeviceCount: number;
+  errorDeviceCount: number;
+  latestDeviceUpdatedAt: string | null;
+};
+
 export const NOTIFICATION_REFRESH_EVENT = "aas-notifications-refresh";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -381,6 +391,65 @@ export async function adminGetNotificationReadiness(client: SupabaseClient): Pro
   const { data, error } = await client.rpc("admin_get_notification_readiness");
   if (error) throw error;
   return normalizeAdminNotificationReadiness(data);
+}
+
+export type NotificationPublicManualChecks = {
+  testerDevicePushReceive: boolean;
+  testerDeviceNotificationTap: boolean;
+  pcMobileMajorFlow: boolean;
+};
+
+export async function adminPromoteNotificationFeaturePublic(
+  client: SupabaseClient,
+  checks: NotificationPublicManualChecks,
+): Promise<void> {
+  const { error } = await client.rpc("admin_promote_notification_feature_public", {
+    p_tester_device_push_receive: checks.testerDevicePushReceive,
+    p_tester_device_notification_tap: checks.testerDeviceNotificationTap,
+    p_pc_mobile_major_flow: checks.pcMobileMajorFlow,
+  });
+  if (!error) return;
+
+  const message = String(error.message ?? "").toLowerCase();
+  if (message.includes("aal2 required for notification public promotion")) {
+    throw new Error("通知センターの全体公開には、現在の管理者セッションでMFA認証（AAL2）が必要です。");
+  }
+  if (message.includes("all notification manual checks are required")) {
+    throw new Error("通知センターの全体公開には、3つの実機・導線確認をすべて完了してください。");
+  }
+  if (message.includes("notification maintenance must be disabled before public promotion")) {
+    throw new Error("通知センターがメンテナンス中です。先にメンテナンスを解除してください。");
+  }
+  if (message.includes("notification rollout readiness requirements not met")) {
+    throw new Error("通知センターの自動公開準備が未完了です。テスター端末・Push設定・配信キューを再確認してください。");
+  }
+  if (message.includes("notification tester rollout stage required")) {
+    throw new Error("通知センターは先にテスター段階で実機確認してください。");
+  }
+  throw error;
+}
+
+export async function adminListNotificationTesterReadiness(
+  client: SupabaseClient,
+): Promise<AdminNotificationTesterReadiness[]> {
+  const { data, error } = await client.rpc("admin_list_notification_tester_readiness");
+  if (error) throw error;
+  if (!Array.isArray(data)) return [];
+
+  const count = (value: unknown) => Math.max(0, Number(value ?? 0) || 0);
+  return data.flatMap((item) => {
+    const row = asRecord(item);
+    if (typeof row.aas_user_id !== "string" || !row.aas_user_id.trim()) return [];
+    return [{
+      aasUserId: row.aas_user_id.trim(),
+      displayName: typeof row.display_name === "string" ? row.display_name.trim() : "",
+      pushEnabled: row.push_enabled === true,
+      enabledDeviceCount: count(row.enabled_device_count),
+      healthyDeviceCount: count(row.healthy_device_count),
+      errorDeviceCount: count(row.error_device_count),
+      latestDeviceUpdatedAt: typeof row.latest_device_updated_at === "string" ? row.latest_device_updated_at : null,
+    }];
+  });
 }
 
 export async function adminListNotifications(client: SupabaseClient, limit = 50): Promise<AdminNotification[]> {

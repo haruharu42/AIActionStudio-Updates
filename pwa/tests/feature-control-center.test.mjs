@@ -128,6 +128,24 @@ test("admin feature center is compact by default and provides rollout plus maint
   assert.match(css, /@media \(max-width: 650px\)/);
 });
 
+test("feature control routes Notification Center public promotion through dedicated approval", async () => {
+  const [migration, client] = await Promise.all([
+    readRepo("supabase/migrations/20260930044500_notification_public_rollout_readiness_guard_v1.sql"),
+    read("lib/feature-control.ts"),
+  ]);
+
+  assert.match(migration, /p_feature_key = 'notifications'/);
+  assert.match(migration, /notification public promotion must use dedicated approval/);
+  assert.match(migration, /admin_promote_notification_feature_public/);
+  assert.match(migration, /admin_get_notification_readiness\(\)/);
+  assert.match(migration, /automated_checks_pass/);
+  assert.match(migration, /aal2 required for notification public promotion/);
+  assert.match(migration, /all notification manual checks are required/);
+  assert.match(migration, /update public\.app_feature_controls/);
+  assert.match(migration, /insert into public\.app_feature_control_audit/);
+  assert.match(client, /通知センターの全体公開は「通知管理」の最終承認から実行してください/);
+});
+
 test("release management and admin navigation link to the feature control center", async () => {
   const [releasePage, sections, nav] = await Promise.all([
     read("components/admin-release-page.tsx"),

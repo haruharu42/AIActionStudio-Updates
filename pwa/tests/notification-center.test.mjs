@@ -212,12 +212,111 @@ test("admin notification readiness is read-only, admin-guarded, and visible befo
   assert.match(page, /自動確認のブロッカーはありません/);
   assert.match(page, /notificationReadinessIssues\(readiness\)/);
   assert.match(page, /実機でのPush受信・通知タップ・PC\/スマホ主要導線/);
-  assert.match(page, /この画面から公開段階は変更しません/);
+  assert.match(page, /tester → public は上の最終承認から行います/);
   assert.match(page, /testerPushUsers/);
   assert.match(page, /deliveries\.pending/);
   assert.match(css, /\.admin-notification-readiness-grid/);
   assert.match(css, /\.admin-notification-readiness-blockers/);
   assert.match(css, /\.admin-notification-readiness-blocker-list/);
+});
+
+test("admin notification readiness identifies each tester without exposing Push secrets", async () => {
+  const [migration, page, client, css] = await Promise.all([
+    readRepo("supabase/migrations/20260930043600_notification_tester_device_readiness_v1.sql"),
+    readPwa("components/admin-notifications-page.tsx"),
+    readPwa("lib/notifications.ts"),
+    readPwa("app/phase55-notifications.css"),
+  ]);
+
+  assert.match(migration, /admin_list_notification_tester_readiness/);
+  assert.match(migration, /security definer/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /p\.aas_user_id/);
+  assert.match(migration, /p\.display_name/);
+  assert.match(migration, /pref\.push_enabled/);
+  assert.match(migration, /healthy_device_count/);
+  assert.match(migration, /error_device_count/);
+  assert.match(migration, /latest_device_updated_at/);
+  assert.match(migration, /revoke all on function public\.admin_list_notification_tester_readiness\(\)[\s\S]*?from public,anon,authenticated/);
+  assert.match(migration, /grant execute on function public\.admin_list_notification_tester_readiness\(\)[\s\S]*?to authenticated/);
+  assert.doesNotMatch(migration, /select[\s\S]*?s\.endpoint|select[\s\S]*?s\.p256dh|select[\s\S]*?s\.auth_key/i);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+
+  assert.match(client, /AdminNotificationTesterReadiness/);
+  assert.match(client, /adminListNotificationTesterReadiness/);
+  assert.match(client, /admin_list_notification_tester_readiness/);
+  assert.match(client, /healthyDeviceCount/);
+  assert.match(client, /errorDeviceCount/);
+
+  assert.match(page, /指定テスターの実機Push状況/);
+  assert.match(page, /endpoint・P-256鍵・auth鍵は表示せず/);
+  assert.match(page, /正常端末/);
+  assert.match(page, /エラー端末/);
+  assert.match(page, /端末通知OFF/);
+  assert.match(page, /端末登録待ち/);
+  assert.match(page, /配信エラー確認/);
+  assert.match(page, /設定 → 通知 → スマホ・PCへの端末通知/);
+  assert.match(page, /adminListNotificationTesterReadiness/);
+
+  assert.match(css, /\.admin-notification-tester-readiness/);
+  assert.match(css, /\.admin-notification-tester-readiness-list/);
+  assert.match(css, /\.admin-notification-tester-metrics/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.admin-notification-tester-state/);
+});
+
+test("notification public rollout is fail-closed and requires dedicated MFA manual approval", async () => {
+  const [migration, featureClient, notificationClient, page, css] = await Promise.all([
+    readRepo("supabase/migrations/20260930044500_notification_public_rollout_readiness_guard_v1.sql"),
+    readPwa("lib/feature-control.ts"),
+    readPwa("lib/notifications.ts"),
+    readPwa("components/admin-notifications-page.tsx"),
+    readPwa("app/phase55-notifications.css"),
+  ]);
+
+  assert.match(migration, /p_feature_key = 'notifications'/);
+  assert.match(migration, /notification public promotion must use dedicated approval/);
+  assert.match(migration, /admin_promote_notification_feature_public/);
+  assert.match(migration, /v_aal text := coalesce\(\(select auth\.jwt\(\)->>'aal'\), 'aal1'\)/);
+  assert.match(migration, /aal2 required for notification public promotion/);
+  assert.match(migration, /p_tester_device_push_receive is distinct from true/);
+  assert.match(migration, /p_tester_device_notification_tap is distinct from true/);
+  assert.match(migration, /p_pc_mobile_major_flow is distinct from true/);
+  assert.match(migration, /all notification manual checks are required/);
+  assert.match(migration, /admin_get_notification_readiness/);
+  assert.match(migration, /automated_checks_pass/);
+  assert.match(migration, /notification rollout readiness requirements not met/);
+  assert.match(migration, /notification tester rollout stage required/);
+  assert.match(migration, /notification maintenance must be disabled before public promotion/);
+  assert.match(migration, /manual_checks_confirmed/);
+  assert.match(migration, /approval_aal/);
+  assert.match(migration, /insert into public\.app_feature_control_audit/);
+  assert.match(migration, /revoke all on function public\.admin_promote_notification_feature_public\(boolean,boolean,boolean\)[\s\S]*?from public, anon, authenticated/);
+  assert.match(migration, /grant execute on function public\.admin_promote_notification_feature_public\(boolean,boolean,boolean\)[\s\S]*?to authenticated/);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+
+  assert.match(featureClient, /notification public promotion must use dedicated approval/);
+  assert.match(featureClient, /通知センターの全体公開は「通知管理」の最終承認から実行してください/);
+
+  assert.match(notificationClient, /NotificationPublicManualChecks/);
+  assert.match(notificationClient, /adminPromoteNotificationFeaturePublic/);
+  assert.match(notificationClient, /admin_promote_notification_feature_public/);
+  assert.match(notificationClient, /MFA認証（AAL2）が必要/);
+
+  assert.match(page, /通知センター全体公開の最終確認/);
+  assert.match(page, /テスター実機でPush受信を確認/);
+  assert.match(page, /通知タップ後の遷移を確認/);
+  assert.match(page, /PC・スマホ主要導線を確認/);
+  assert.match(page, /getAuthenticatorAssuranceLevel/);
+  assert.match(page, /currentSessionAal === "aal2"/);
+  assert.match(page, /adminPromoteNotificationFeaturePublic/);
+  assert.match(page, /3項目確認済みとして全体公開/);
+  assert.match(page, /window\.confirm/);
+  assert.match(page, /href="\/admin\/security"/);
+
+  assert.match(css, /\.admin-notification-public-approval/);
+  assert.match(css, /\.admin-notification-manual-checks/);
+  assert.match(css, /\.admin-notification-public-approval-footer/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.admin-notification-public-approval-footer/);
 });
 
 test("push worker has immediate trigger and cron recovery", async () => {
