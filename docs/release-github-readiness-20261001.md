@@ -2,6 +2,15 @@
 
 更新：2026-10-01 JST。既存のCloudflare Worker名・公開URL・Auth設定は変更しない。
 
+
+## Managed Staging 確認（2026-10-01）
+
+- Supabase Staging: `AI Action Studio Staging` / `swwbfrhvsvouiwobodwh` / 東京 `ap-northeast-1`。
+- 現行mainの `pwa-release-deploy` をStagingへv1として配布し、`ACTIVE` / `verify_jwt=true` を確認。
+- 配布済みコードは `haruharu42/AIActionStudio-Updates` を参照し、`github_readiness` を含むことを取得済みFunction sourceで確認。
+- Stagingには本番のGitHub release tokenをコピーしていない。実トークンのread/write/dispatch権限確認は未実施。
+- Release用DB RPC/管理者AuthのStaging再現は次工程。JWT付き管理者E2Eが揃うまでworkflow dispatchは実行しない。
+
 ## 目的と制限
 
 リポジトリ改名後、Supabase Edge Function `pwa-release-deploy` 内の **AAS_GITHUB_RELEASE_TOKEN** が新リポジトリ `haruharu42/AIActionStudio-Updates` と公開ワークフロー `pwa-admin-public-release.yml` を読めるか、**実際の公開workflow_dispatchを発行せずに**管理者画面から確認する。
