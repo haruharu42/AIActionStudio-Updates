@@ -151,9 +151,17 @@ export type SourceDiversityResearchResult = {
   singleDomainCount: number;
 };
 
+export type KnowledgeAutomationAiProvider = "openai" | "gemini";
+export type KnowledgeAutomationGeminiFreeStatus = {
+  supported: boolean;
+  keyConfigured: boolean;
+  dailyUsed: number;
+  dailyLimit: number;
+};
+
 export type KnowledgeAutomationAiConfig = {
   enabled: boolean;
-  provider: "openai";
+  provider: KnowledgeAutomationAiProvider;
   model: string;
   maxCandidatesPerRun: number;
   apiKeyConfigured: boolean;
@@ -161,7 +169,7 @@ export type KnowledgeAutomationAiConfig = {
 
 export type KnowledgeAutomationAiConfigUpdate = {
   enabled: boolean;
-  provider: "openai";
+  provider: KnowledgeAutomationAiProvider;
   model: string;
   maxCandidatesPerRun: number;
   apiKey?: string;
@@ -627,10 +635,30 @@ export async function adminGetKnowledgeAutomationAiConfig(
   }
   return {
     enabled: row.enabled === true,
-    provider: "openai",
+    provider: row.provider === "gemini" ? "gemini" : "openai",
     model: typeof row.model === "string" && row.model.trim() ? row.model.trim() : "gpt-5.6",
     maxCandidatesPerRun: Math.max(1,Math.min(20,asNumber(row.max_candidates_per_run,6))),
     apiKeyConfigured: row.api_key_configured === true,
+  };
+}
+
+/**
+ * Optional capability RPC. Older deployments have no Gemini migration, so return
+ * null and keep Gemini disabled without breaking the existing OpenAI controls.
+ * Never expose API keys or secrets in the capability response.
+ */
+export async function adminGetKnowledgeGeminiFreeStatus(
+  client: SupabaseClient,
+): Promise<KnowledgeAutomationGeminiFreeStatus | null> {
+  const { data, error } = await client.rpc("admin_get_knowledge_gemini_free_agent_status");
+  if (error) return null; // Fail closed when migration is absent or permission denied.
+  const raw = asObject(data);
+  if (!raw || raw.supported !== true) return null;
+  return {
+    supported: true,
+    keyConfigured: raw.key_configured === true,
+    dailyUsed: Math.max(0, asNumber(raw.daily_used)),
+    dailyLimit: Math.max(0, asNumber(raw.daily_limit)),
   };
 }
 
