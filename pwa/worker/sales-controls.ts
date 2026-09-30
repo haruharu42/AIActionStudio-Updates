@@ -1,6 +1,11 @@
 export interface SalesControlEnv {
   AAS_SUPABASE_URL?: string;
   AAS_SUPABASE_SERVICE_ROLE_KEY?: string;
+  AAS_COMMERCE_MODE?: string;
+  AAS_STRIPE_SECRET_KEY?: string;
+  AAS_STRIPE_WEBHOOK_SECRET?: string;
+  AAS_STRIPE_PRICE_PWA_7D?: string;
+  AAS_STRIPE_PRICE_PWA_MONTHLY?: string;
 }
 
 export type EffectiveSalesSettings = {
@@ -26,6 +31,18 @@ const PLAN_FLAGS: Record<string, keyof Pick<EffectiveSalesSettings, "pwa7DayEnab
 
 function clean(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function stripeWorkerConfigReady(
+  env: SalesControlEnv,
+  row: Record<string, unknown>,
+): boolean {
+  const mode = clean(env.AAS_COMMERCE_MODE).toLowerCase();
+  if (mode !== "test" && mode !== "live") return false;
+  if (!clean(env.AAS_STRIPE_SECRET_KEY) || !clean(env.AAS_STRIPE_WEBHOOK_SECRET)) return false;
+  if (row.pwa_7day_enabled === true && !clean(env.AAS_STRIPE_PRICE_PWA_7D)) return false;
+  if (row.pwa_monthly_enabled === true && !clean(env.AAS_STRIPE_PRICE_PWA_MONTHLY)) return false;
+  return row.pwa_7day_enabled === true || row.pwa_monthly_enabled === true;
 }
 
 function safeExternalSalesUrl(value: unknown): string {
@@ -115,7 +132,8 @@ export async function loadEffectiveSalesSettings(env: SalesControlEnv): Promise<
   const stripeCheckoutEnabled =
     runtime.approved &&
     runtime.stripeRouteReady &&
-    row.stripe_checkout_enabled === true;
+    row.stripe_checkout_enabled === true &&
+    stripeWorkerConfigReady(env, row);
 
   return {
     externalSalesEnabled,
