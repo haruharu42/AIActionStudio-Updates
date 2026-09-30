@@ -24,7 +24,32 @@ export function publicKnowledgeCandidate(candidate) {
   };
 }
 
+// Conservative fail-closed filter: even publicly fetched pages can include
+// accidentally exposed personal data, access credentials or secret-bearing URLs.
+// False positives remain available for manual review; never upload to free AI.
+export function geminiPublicSourceEligible(candidate) {
+  try {
+    if (candidate?.source_http_status !== 200) return false;
+    const source = publicKnowledgeCandidate(candidate);
+    if (source.public_source_excerpt.trim().length < 80) return false;
+    const body = [
+      source.source_url, source.source_title, source.public_source_excerpt,
+      source.detection_reason, ...source.matched_tasks,
+    ].join("\n");
+    if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(body)) return false;
+    if (/\b(?:AIza[A-Za-z0-9_-]{18,}|sk-(?:proj-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,})\b/.test(body)) return false;
+    if (/\bbearer\s+[A-Za-z0-9._-]{16,}/i.test(body)) return false;
+    if (/(?:^|[\s?&])(?:api[_-]?key|access[_-]?token|client[_-]?secret|password|authorization)\s*[:=]\s*[^\s&,;]{5,}/i.test(body)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function buildGeminiFreeRequest(candidate) {
+  if (!geminiPublicSourceEligible(candidate)) {
+    throw new Error("Gemini Free requires an eligible non-sensitive public source.");
+  }
   const source = publicKnowledgeCandidate(candidate);
   return {
     systemInstruction: { parts: [{ text: [
