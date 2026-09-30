@@ -552,7 +552,10 @@ test("Knowledge candidate search includes saved review evidence without changing
   assert.ok(searchable.includes("candidate.sourceTitle"));
   assert.ok(searchable.includes("candidate.existingItemKey"));
   assert.ok(panel.includes("placeholder=\"タイトル・URL・カテゴリ・理由・レビュー記録で検索\""));
-  assert.doesNotMatch(searchable, /adminReviewKnowledgeAutomationCandidate|adminPublishKnowledgeRefreshBundle|adminSetKnowledgeAutomationSourceEnabled|\\.rpc\\(/);
+  assert.ok(!searchable.includes("adminReviewKnowledgeAutomationCandidate"));
+  assert.ok(!searchable.includes("adminPublishKnowledgeRefreshBundle"));
+  assert.ok(!searchable.includes("adminSetKnowledgeAutomationSourceEnabled"));
+  assert.ok(!searchable.includes(".rpc("));
 });
 
 test("Knowledge candidate search also scopes both five-item research batches and resets their pagination", async () => {
