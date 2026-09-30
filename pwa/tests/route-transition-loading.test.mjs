@@ -164,16 +164,24 @@ test("free trial usage verification stays invisible while loading", async () => 
   assert.doesNotMatch(gate, /利用回数を確認しています/);
 });
 
-test("member and admin route shells stay hidden until access verification settles", async () => {
-  const accessStateRoutes = await Promise.all([
+test("member and admin route shells keep protected content hidden while safe shared loading shells may render", async () => {
+  const hiddenAccessStateRoutes = await Promise.all([
     read("components/phase13-image-page.tsx"),
-    read("components/phase14-sns-page.tsx"),
     read("components/article-export-page.tsx"),
   ]);
 
-  for (const source of accessStateRoutes) {
+  for (const source of hiddenAccessStateRoutes) {
     assert.match(source, /if \(accessState\.kind === "loading"\) return null/);
   }
+
+  const [snsPage, memberGate] = await Promise.all([
+    read("components/phase14-sns-page.tsx"),
+    read("components/phase15-member-gate.tsx"),
+  ]);
+  assert.match(snsPage, /accessState\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
+  assert.match(snsPage, /SNS投稿作成を準備しています/);
+  assert.match(memberGate, /state\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
+  assert.match(memberGate, /会員機能の利用権を確認しています/);
 
   const localGateRoutes = await Promise.all([
     read("components/phase11-create-page.tsx"),

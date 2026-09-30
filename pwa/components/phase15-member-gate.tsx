@@ -4,12 +4,15 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 
 export function Phase15MemberGate({ children }: { children: ReactNode }) {
   const { state } = useSharedAccessState();
 
   if (state.kind === "ready") return <>{children}</>;
-  if (state.kind === "loading") return null;
+  if (state.kind === "loading") {
+    return <AppLoadingScreen message="会員機能の利用権を確認しています…" />;
+  }
 
   const canRegisterInvite =
     state.kind === "pending" || state.kind === "entitlement_denied";
