@@ -52,6 +52,7 @@ test("knowledge refresh scheduler keeps unstarted admin review tasks pending acr
   assert.doesNotMatch(migration, /request\.status = 'pending'[\s\S]*?status = 'failed'/);
   assert.match(display, /旧仕様で未着手のレビュー待ちが更新周期を超えたため自動解除された履歴/);
   assert.match(display, /現在は未着手のpendingを失敗扱いしません/);
+  assert.match(display, /case "pending": return "管理者レビュー待ち"/);
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
 });
 
