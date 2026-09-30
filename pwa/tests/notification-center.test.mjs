@@ -174,7 +174,7 @@ test("admin notification management supports all, tester, and admin audiences", 
 
 test("admin notification readiness is read-only, admin-guarded, and visible before rollout", async () => {
   const [migration, page, client, css] = await Promise.all([
-    readRepo("supabase/migrations/20260930013709_notification_readiness_snapshot_v1.sql"),
+    readRepo("supabase/migrations/20260930014200_notification_readiness_snapshot_v1.sql"),
     readPwa("components/admin-notifications-page.tsx"),
     readPwa("lib/notifications.ts"),
     readPwa("app/phase55-notifications.css"),
