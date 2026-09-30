@@ -640,14 +640,14 @@ test("Knowledge candidate search also scopes both five-item research batches and
   assert.ok(section.includes("const visibleAutomationCandidates = useMemo(() => searchedAutomationCandidates"));
   assert.ok(section.includes("const heldCandidates = useMemo(() => searchedAutomationCandidates"));
   assert.ok(section.includes("const recheckCandidates = useMemo(() => searchedAutomationCandidates"));
-  assert.ok(section.includes("[automationCandidates, normalizedCandidateSearch]"));
+  assert.ok(section.includes("[automationCandidates, normalizedCandidateSearch, exactCandidateIdQuery]"));
   assert.ok(section.includes("[searchedAutomationCandidates, automationAiConfig]"));
   assert.ok(section.includes("[searchedAutomationCandidates]"));
   assert.ok(section.includes("const currentHeldBatch = heldCandidates.slice("));
   assert.ok(section.includes("const currentRecheckBatch = recheckCandidates.slice("));
   assert.match(panel, /setCandidateSearch\(event\.target\.value\);\s*setHeldBatchIndex\(0\);\s*setRecheckBatchIndex\(0\);/);
   assert.match(panel, /setCandidateSearch\(""\);\s*setHeldBatchIndex\(0\);\s*setRecheckBatchIndex\(0\);/);
-  assert.ok(panel.includes("候補一覧と5件一括検証の対象に同じ検索条件を適用します"));
+  assert.ok(panel.includes("候補一覧と5件一括検証には同じ検索条件が適用されます"));
   assert.doesNotMatch(section, /adminReviewKnowledgeAutomationCandidate|adminPublishKnowledgeRefreshBundle|adminSetKnowledgeAutomationSourceEnabled|\.rpc\(/);
 });
 
