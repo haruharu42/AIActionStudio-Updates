@@ -264,6 +264,28 @@ test("admin notification readiness identifies each tester without exposing Push 
   assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.admin-notification-tester-state/);
 });
 
+test("notification public rollout is fail-closed at the database boundary", async () => {
+  const [migration, featureClient] = await Promise.all([
+    readRepo("supabase/migrations/20260930044500_notification_public_rollout_readiness_guard_v1.sql"),
+    readPwa("lib/feature-control.ts"),
+  ]);
+
+  assert.match(migration, /p_feature_key = 'notifications'/);
+  assert.match(migration, /v_feature\.rollout_stage = 'tester'/);
+  assert.match(migration, /p_rollout_stage = 'public'/);
+  assert.match(migration, /admin_get_notification_readiness/);
+  assert.match(migration, /automated_checks_pass/);
+  assert.match(migration, /notification rollout readiness requirements not met/);
+  assert.match(migration, /tester rollout stage required before public release/);
+  assert.match(migration, /active release tester required for staged rollout/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /revoke all on function public\.admin_update_app_feature_control/);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+
+  assert.match(featureClient, /notification rollout readiness requirements not met/);
+  assert.match(featureClient, /通知センターの公開準備が未完了です/);
+});
+
 test("push worker has immediate trigger and cron recovery", async () => {
   const migration = await readRepo("supabase/migrations/20260925012520_app_notification_center_and_web_push_v1.sql");
 
