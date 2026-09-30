@@ -93,6 +93,7 @@ test("staged Gemini database gates and worker leave existing OpenAI path intact"
   assert.match(client,/admin_get_knowledge_gemini_free_agent_status/);
   assert.match(panel,/setAiEnabled\(false\)/);
   assert.match(panel,/geminiFreeConfirmed/);
+  assert.ok((panel.match(/launchAiApp\\("gemini"\\)/g) ?? []).length >= 3, "Gemini Web handoff available from candidate and both batches");
   assert.match(panel,/aiProvider === "gemini" && !geminiStatus/);
   assert.doesNotMatch(worker,/admin_publish_knowledge_refresh_bundle/);
 });
