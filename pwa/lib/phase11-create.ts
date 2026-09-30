@@ -537,7 +537,7 @@ export async function createArticleFromWizard(
   if (error) {
     const message = String(error.message ?? "").toLowerCase();
     if (message.includes("article_quota_exceeded")) {
-      throw new Error("記事ライブラリの保存上限に達しています。不要な記事を整理するか、利用プランを確認してください。");
+      throw new Error("記事ライブラリの保存上限に達しています。不要な記事を整理するか、Creator Club特典を確認してください。");
     }
     if (message.includes("active profile required")) {
       throw new Error("activeアカウントが必要です。");
