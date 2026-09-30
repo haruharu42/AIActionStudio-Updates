@@ -393,6 +393,129 @@
   font-weight: 800;
 }
 
+.admin-notification-tester-readiness {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(72, 106, 96, .13);
+  border-radius: 14px;
+  background: #f8fbfa;
+  padding: 12px 13px;
+}
+
+.admin-notification-tester-readiness-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-notification-tester-readiness-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-notification-tester-readiness-head strong {
+  color: #274c40;
+  font-size: 12px;
+}
+
+.admin-notification-tester-readiness-head span,
+.admin-notification-tester-readiness > p {
+  color: #71867d;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.admin-notification-tester-readiness-head a {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.admin-notification-tester-readiness-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-notification-tester-readiness-list article {
+  display: grid;
+  grid-template-columns: minmax(150px, .8fr) minmax(260px, 1.5fr) minmax(130px, .7fr);
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dce7e2;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 11px;
+}
+
+.admin-notification-tester-readiness-list article.ready {
+  border-color: #cfe6d9;
+  background: #f8fcfa;
+}
+
+.admin-notification-tester-readiness-list article.action {
+  border-color: #eadfc6;
+  background: #fffaf0;
+}
+
+.admin-notification-tester-identity,
+.admin-notification-tester-state {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-notification-tester-identity strong {
+  color: #244e40;
+  font-size: 11px;
+}
+
+.admin-notification-tester-identity span,
+.admin-notification-tester-state small {
+  color: #7b8e87;
+  font-size: 9px;
+}
+
+.admin-notification-tester-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-notification-tester-metrics span {
+  border-radius: 999px;
+  background: #eef4f1;
+  color: #60766d;
+  padding: 4px 7px;
+  font-size: 8px;
+}
+
+.admin-notification-tester-metrics b {
+  color: #294f42;
+}
+
+.admin-notification-tester-state {
+  justify-items: end;
+  text-align: right;
+}
+
+.admin-notification-tester-state strong {
+  color: #8a6219;
+  font-size: 10px;
+}
+
+.admin-notification-tester-readiness-list article.ready .admin-notification-tester-state strong {
+  color: #26734c;
+}
+
+.admin-notification-tester-readiness > p {
+  margin: 0;
+  border-radius: 10px;
+  background: #fff7e5;
+  color: #765a22;
+  padding: 8px 10px;
+}
+
 .admin-notification-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0,1fr));
@@ -477,6 +600,20 @@
 
   .admin-notification-readiness-blocker-list article {
     display: grid;
+  }
+
+  .admin-notification-tester-readiness-head,
+  .admin-notification-tester-readiness-list article {
+    display: grid;
+  }
+
+  .admin-notification-tester-readiness-list article {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-notification-tester-state {
+    justify-items: start;
+    text-align: left;
   }
 
   .admin-notification-form {
