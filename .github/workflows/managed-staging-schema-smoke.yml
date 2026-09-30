@@ -47,12 +47,12 @@ jobs:
           cp "$GITHUB_WORKSPACE/supabase/functions/_shared/knowledge-gemini-free.mjs" supabase/functions/_shared/knowledge-gemini-free.mjs
           cat >> supabase/config.toml <<'EOF'
 
-[functions.knowledge-research-worker]
-verify_jwt = false
+          [functions.knowledge-research-worker]
+          verify_jwt = false
 
-[functions.pwa-release-deploy]
-verify_jwt = true
-EOF
+          [functions.pwa-release-deploy]
+          verify_jwt = true
+          EOF
           echo "TEST_ROOT=$TEST_ROOT" >> "$GITHUB_ENV"
 
       - name: Start disposable full Supabase stack
