@@ -1092,6 +1092,55 @@
   font-weight: 850;
 }
 
+.knowledge-candidate-review-note {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #d8e5e1;
+  border-radius: 10px;
+  background: #f9fcfb;
+  padding: 9px;
+}
+
+.knowledge-candidate-review-note > span {
+  color: #365f54;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.knowledge-candidate-review-note textarea {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  border: 1px solid #ceded9;
+  border-radius: 8px;
+  background: #fff;
+  color: #3e5f56;
+  padding: 8px 9px;
+  font: inherit;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.knowledge-candidate-review-note small {
+  color: #71877f;
+  font-size: 7px;
+  line-height: 1.5;
+}
+
+.knowledge-candidate-review-note em {
+  justify-self: end;
+  color: #82958f;
+  font-size: 7px;
+  font-style: normal;
+}
+
+.knowledge-candidate-existing-review-note {
+  border: 1px dashed #d6e3df;
+  border-radius: 9px;
+  padding: 8px;
+  background: #fbfdfc;
+}
+
 .knowledge-automation-actions {
   display: flex;
   flex-wrap: wrap;
