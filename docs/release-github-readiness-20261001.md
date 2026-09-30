@@ -38,3 +38,14 @@
 - 旧Cloudflare公開URL・OAuth設定・ユーザーデータを改名作業に便乗して変更しない。
 - GitHub main HEADは `2c374420b3ccd133e25ed0aadc8dd79712902e45`、Previewは `BUILD 2C37442` まで追従確認済み。一般公開PWAと本番Supabase Workerへの昇格は別ゲート。
 - Gemini検証環境・本番DB移行・AI自動解析は別課題。未検証でONにしない。
+
+
+### Managed Staging 読み取りゲート検証（2026-10-01）
+
+- Stagingに空の `app_releases` / `app_release_deployments` と、読み取り専用の管理ゲートとして `admin_list_app_release_deployments()` のみを再現。行数は双方0。
+- Productionに残る旧 `AIArticleStudio-Updates` のGitHub run URL制約はStagingへ持ち込んでいない。write/dispatch用RPCはまだ作成していない。
+- active adminなしでは `admin_list_app_release_deployments()` が `42501 active admin required` で拒否されることを確認。
+- 一時active-admin claimsのロールバックテストでは、管理者読み取りが空配列 `[]` を正常返却。
+- Staging Edge Functionへの無認証GETでは `pwa-release-deploy` がHTTP 401（authorization header不足）、`knowledge-research-worker` がHTTP 405（POST required）を返し、GET経由では処理開始されないことを確認。
+- Release用GitHub token、workflow dispatch、Production URLへの公開処理は未実施。
+
