@@ -74,5 +74,8 @@ export function knowledgeRefreshErrorLabel(value: string): string {
   if (value.startsWith("AAS auto-recovery: processing exceeded 24 hours")) {
     return "24時間以上処理中だったため自動解除しました。次回の更新サイクルで再試行できます。";
   }
+  if (value.startsWith("AAS auto-recovery: pending request exceeded its channel refresh cycle")) {
+    return "旧仕様で未着手のレビュー待ちが更新周期を超えたため自動解除された履歴です。現在は未着手のpendingを失敗扱いしません。";
+  }
   return value;
 }
