@@ -9,7 +9,7 @@ import {
 const MIB = 1024 ** 2;
 const GIB = 1024 ** 3;
 
-export const AAS_GITHUB_REPOSITORY = "haruharu42/AIArticleStudio-Updates";
+export const AAS_GITHUB_REPOSITORY = "haruharu42/AIActionStudio-Updates";
 export const GITHUB_REPOSITORY_RECOMMENDED_BYTES = 10 * GIB;
 export const GITHUB_CACHE_INCLUDED_BYTES = 10 * GIB;
 export const GITHUB_SHARED_STORAGE_OVERAGE_USD_PER_GB_MONTH = 0.25;

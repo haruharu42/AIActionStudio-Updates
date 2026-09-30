@@ -322,7 +322,7 @@ export function AdminInfrastructureUsagePage() {
         </div>
 
         <div className="infra-plan-strip">
-          <div><span>Repository</span><strong>{github?.repository.fullName ?? "haruharu42/AIArticleStudio-Updates"}</strong></div>
+          <div><span>Repository</span><strong>{github?.repository.fullName ?? "haruharu42/AIActionStudio-Updates"}</strong></div>
           <div><span>公開状態</span><strong>{github?.repository.isPrivate === false ? "Public" : github?.repository.isPrivate ? "Private" : "—"}</strong></div>
           <div><span>最新更新</span><strong>{formatDate(github?.repository.updatedAt ?? null)}</strong></div>
         </div>
@@ -405,7 +405,7 @@ export function AdminInfrastructureUsagePage() {
           <a href="https://supabase.com/dashboard/org/_/usage" target="_blank" rel="noreferrer">Supabase Usage ↗</a>
           <a href="https://supabase.com/dashboard/org/_/billing" target="_blank" rel="noreferrer">Supabase Billing ↗</a>
           <a href="https://github.com/settings/billing/usage" target="_blank" rel="noreferrer">GitHub Usage ↗</a>
-          <a href="https://github.com/haruharu42/AIArticleStudio-Updates/actions" target="_blank" rel="noreferrer">GitHub Actions ↗</a>
+          <a href="https://github.com/haruharu42/AIActionStudio-Updates/actions" target="_blank" rel="noreferrer">GitHub Actions ↗</a>
         </div>
       </section>
     </main>
