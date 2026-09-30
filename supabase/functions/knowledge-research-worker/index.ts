@@ -14,6 +14,15 @@ async function sha256(value: string) {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function timingSafeEqualHex(left: string, right: string): boolean {
+  if (left.length !== right.length || left.length === 0) return false;
+  let mismatch = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return mismatch === 0;
+}
+
 function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -275,7 +284,7 @@ async function enrichCandidate(candidate: any, config: any): Promise<{ analyzed:
   const now = new Date().toISOString();
   try {
     if (candidate.candidate_action === "retire" || candidate.candidate_action === "recheck") {
-      await db.from("knowledge_automation_candidates").update({
+      const { error } = await db.from("knowledge_automation_candidates").update({
         analysis_status:"completed",
         analysis_decision:candidate.candidate_action,
         proposal_item_type:null,
@@ -287,11 +296,12 @@ async function enrichCandidate(candidate: any, config: any): Promise<{ analyzed:
         verified_source_urls:candidate.source_url ? [candidate.source_url] : [],
         analyzed_at:now
       }).eq("id",candidate.id);
+      if (error) throw error;
       return { analyzed:1,failed:0 };
     }
 
     if (!candidate.source_excerpt || String(candidate.source_excerpt).trim().length < 80) {
-      await db.from("knowledge_automation_candidates").update({
+      const { error } = await db.from("knowledge_automation_candidates").update({
         analysis_status:"completed",
         analysis_decision:"recheck",
         proposal_item_type:null,
@@ -303,6 +313,7 @@ async function enrichCandidate(candidate: any, config: any): Promise<{ analyzed:
         verified_source_urls:candidate.source_url ? [candidate.source_url] : [],
         analyzed_at:now
       }).eq("id",candidate.id);
+      if (error) throw error;
       return { analyzed:1,failed:0 };
     }
 
@@ -336,26 +347,47 @@ async function enrichCandidate(candidate: any, config: any): Promise<{ analyzed:
 }
 
 async function enrichPendingCandidates() {
+  const selectFields = "id,candidate_action,existing_item_type,existing_item_key,matched_tasks,source_url,source_title,source_excerpt,source_http_status,current_payload,reason,analysis_status,status";
+
+  // Retire/recheck decisions do not require a paid model call. Process them even
+  // when AI enrichment is disabled or no API secret is configured.
+  const deterministicPending = await db.from("knowledge_automation_candidates")
+    .select(selectFields)
+    .eq("status","pending")
+    .eq("analysis_status","pending")
+    .in("candidate_action",["retire","recheck"])
+    .order("detected_at",{ascending:true})
+    .limit(20);
+  if (deterministicPending.error) throw deterministicPending.error;
+
+  let analyzed = 0;
+  let failed = 0;
+  const deterministicConfig = { provider:"deterministic",model:"",api_key:"" };
+  for (const item of deterministicPending.data ?? []) {
+    const result = await enrichCandidate(item,deterministicConfig);
+    analyzed += result.analyzed;
+    failed += result.failed;
+  }
+
   const configResult = await db.rpc("get_knowledge_automation_worker_ai_config");
   if (configResult.error) throw new Error("AI enrichment config failed: " + configResult.error.message);
   const config = asRecord(configResult.data) ?? {};
   if (config.enabled !== true || typeof config.api_key !== "string" || !config.api_key) {
-    return { enabled:false,analyzed:0,failed:0 };
+    return { enabled:false,analyzed,failed };
   }
   if (config.provider !== "openai") throw new Error("Unsupported AI enrichment provider.");
   const model = cleanText(config.model,120);
   if (!model) throw new Error("AI enrichment model is not configured.");
   const limit = Math.max(1,Math.min(20,Number(config.max_candidates_per_run ?? 6) || 6));
   const pending = await db.from("knowledge_automation_candidates")
-    .select("id,candidate_action,existing_item_type,existing_item_key,matched_tasks,source_url,source_title,source_excerpt,source_http_status,current_payload,reason,analysis_status,status")
+    .select(selectFields)
     .eq("status","pending")
     .eq("analysis_status","pending")
+    .in("candidate_action",["new","update"])
     .order("detected_at",{ascending:true})
     .limit(limit);
   if (pending.error) throw pending.error;
 
-  let analyzed = 0;
-  let failed = 0;
   const safeConfig = { provider:"openai",model,api_key:config.api_key };
   for (const item of pending.data ?? []) {
     const result = await enrichCandidate(item,safeConfig);
@@ -364,7 +396,6 @@ async function enrichPendingCandidates() {
   }
   return { enabled:true,analyzed,failed };
 }
-
 
 function discoverLinks(raw: string, baseUrl: string, tasks: string[], limit: number) {
   if (limit <= 0) return [] as Array<{url:string;label:string}>;
@@ -571,7 +602,15 @@ Deno.serve(async (req) => {
   const { data:settings,error:settingsError } = await db.from("knowledge_automation_settings").select("*").eq("id",1).single();
   if (settingsError || !settings) return response({ error:"settings unavailable" },500);
   const token = req.headers.get("x-aas-worker-token") ?? "";
-  if (!token || await sha256(token) !== settings.worker_token_hash) return response({ error:"unauthorized" },401);
+  if (!token) return response({ error:"unauthorized" },401);
+  const workerTokenHash = typeof settings.worker_token_hash === "string"
+    ? settings.worker_token_hash.trim().toLowerCase()
+    : "";
+  if (!/^[0-9a-f]{64}$/.test(workerTokenHash)) {
+    return response({ error:"worker_config_unavailable" },503);
+  }
+  const suppliedHash = await sha256(token);
+  if (!timingSafeEqualHex(suppliedHash,workerTokenHash)) return response({ error:"unauthorized" },401);
   await db.from("knowledge_automation_settings").update({ last_worker_invoked_at:new Date().toISOString(),updated_at:new Date().toISOString() }).eq("id",1);
   if (!settings.enabled) return response({ ok:true,skipped:"disabled" });
 
