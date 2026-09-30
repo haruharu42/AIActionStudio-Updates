@@ -33,3 +33,9 @@ test("renamed release target retains approved workflow-dispatch safety checks", 
   assert.ok(workflow.includes("git merge-base --is-ancestor"));
   assert.ok(workflow.includes("Admin public release Cloudflare contract: PASS"));
 });
+
+test("README links to the renamed repository's existing Preview workflow", async () => {
+  const readme = await readRepo("README.md");
+  assert.ok(readme.includes("https://github.com/haruharu42/AIActionStudio-Updates/actions/workflows/pwa-preview-deploy.yml"));
+  assert.ok(!readme.includes("haruharu42/AIArticleStudio-Updates"));
+});
