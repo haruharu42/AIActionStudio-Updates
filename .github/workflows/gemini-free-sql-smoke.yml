@@ -43,3 +43,5 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql
       - name: Check admin gate and UTC quota rollover
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/gemini-free/smoke.sql
+      - name: Prove atomic ten-call cap under concurrent workers
+        run: bash supabase/tests/gemini-free/parallel.sh
