@@ -614,21 +614,33 @@ export function KnowledgeRefreshPanel() {
       const bundle = parseKnowledgeRefreshBundle(bundleText);
       const client = getSupabaseClient();
       const result = await adminPublishKnowledgeRefreshBundle(client, selected.id, bundle);
+      // Publication is already confirmed here. A separate candidate update or
+      // dashboard reload must never turn that success into a "publish failed" message.
+      const publishedLabel = result.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）";
+      const publishedMessage = `${publishedLabel} v${result.publishedVersion} を公開しました。Knowledge ${result.knowledgeCount}件 / Prompt ${result.promptCount}件です。`;
+      let followUpWarning = "";
       if (preparedAutomationCandidateId !== null) {
-        await adminReviewKnowledgeAutomationCandidate(
-          client,
-          preparedAutomationCandidateId,
-          "converted",
-          "Fresh差分確認と管理者公開が完了したため、AI自動提案候補を処理済みに変更。",
-        );
+        const publishedCandidateId = preparedAutomationCandidateId;
+        try {
+          await adminReviewKnowledgeAutomationCandidate(
+            client,
+            publishedCandidateId,
+            "converted",
+            "Fresh差分確認と管理者公開が完了したため、AI自動提案候補を処理済みに変更。",
+          );
+        } catch {
+          followUpWarning = `候補 #${publishedCandidateId} の処理済み更新には失敗しました。再公開せず、候補の状態と公開履歴を確認してください。`;
+        }
       }
       setPreparedAutomationCandidateId(null);
       setBundleText("");
       setDiffPreview(null);
-      await reload();
-      setMessage(
-        `${result.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）"} v${result.publishedVersion} を公開しました。Knowledge ${result.knowledgeCount}件 / Prompt ${result.promptCount}件です。`,
-      );
+      try {
+        await reload();
+      } catch {
+        followUpWarning += (followUpWarning ? " " : "") + "一覧の再読込にも失敗しました。更新履歴を再読込して確認してください。";
+      }
+      setMessage(followUpWarning ? `${publishedMessage} ${followUpWarning}` : publishedMessage);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "更新Bundleを公開できませんでした。");
     } finally {
