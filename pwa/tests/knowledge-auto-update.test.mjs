@@ -41,6 +41,20 @@ test("knowledge refresh scheduler releases processing requests that are stuck fo
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
 });
 
+test("knowledge refresh scheduler keeps unstarted admin review tasks pending across channel cycles", async () => {
+  const migration = await readRepo("supabase/migrations/20260930061500_knowledge_pending_review_queue_v2.sql");
+  const display = await readPwa("components/knowledge-refresh/knowledge-refresh-display.ts");
+
+  assert.match(migration, /status = 'processing'/);
+  assert.match(migration, /interval '24 hours'/);
+  assert.match(migration, /request\.status in \('pending', 'processing'\)/);
+  assert.doesNotMatch(migration, /pending request exceeded its channel refresh cycle/);
+  assert.doesNotMatch(migration, /request\.status = 'pending'[\s\S]*?status = 'failed'/);
+  assert.match(display, /旧仕様で未着手のレビュー待ちが更新周期を超えたため自動解除された履歴/);
+  assert.match(display, /現在は未着手のpendingを失敗扱いしません/);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+});
+
 test("knowledge auto-update control plane keeps Fresh and Stable review-gated and versioned", async () => {
   const migration = await readRepo("supabase/migrations/20260919083000_knowledge_prompt_auto_update.sql");
 
