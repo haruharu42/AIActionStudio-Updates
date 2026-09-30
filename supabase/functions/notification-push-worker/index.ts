@@ -21,6 +21,15 @@ async function sha256(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function timingSafeEqualHex(left: string, right: string): boolean {
+  if (left.length !== right.length || left.length === 0) return false;
+  let mismatch = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return mismatch === 0;
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
@@ -32,9 +41,12 @@ Deno.serve(async (request: Request) => {
     return json({ error: "push_config_unavailable" }, 503);
   }
 
-  const workerTokenHash = String((config as Record<string, unknown>).worker_token_hash ?? "");
+  const workerTokenHash = String((config as Record<string, unknown>).worker_token_hash ?? "").trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(workerTokenHash)) {
+    return json({ error: "push_config_unavailable" }, 503);
+  }
   const suppliedHash = await sha256(suppliedToken);
-  if (!workerTokenHash || suppliedHash !== workerTokenHash) return json({ error: "unauthorized" }, 401);
+  if (!timingSafeEqualHex(suppliedHash, workerTokenHash)) return json({ error: "unauthorized" }, 401);
 
   if ((config as Record<string, unknown>).enabled !== true) {
     return json({ enabled: false, claimed: 0, sent: 0, failed: 0 });
