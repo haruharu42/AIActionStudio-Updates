@@ -142,7 +142,7 @@ export default function CreatorMembershipPage() {
                 <div className={questStyles.planBenefits}>
                   <div><small>AI Knowledge</small><strong>{plan.knowledgeChannel === "fresh" ? "Fresh" : "Stable"} / {formatRefreshCadence(plan.knowledgeRefreshHours)}</strong></div>
                   <div><small>完成記事XP</small><strong>×{plan.articleXpMultiplier.toFixed(1)}</strong></div>
-                  <div><small>記事ストック上限</small><strong>+{plan.articleQuotaBonus}</strong></div>
+                  <div><small>記事枠ボーナス</small><strong>+{plan.articleQuotaBonus}</strong></div>
                   <div><small>テンプレートTier</small><strong>{plan.templateTier.toUpperCase()}</strong></div>
                 </div>
                 {(featuresByPlan.get(plan.planCode)?.length ?? 0) > 0 ? (
