@@ -222,6 +222,8 @@ test("Phase 14 restores user-scoped SNS composer work without consuming another 
   assert.match(page, /writeSnsComposerProgress\(userId/);
   assert.match(page, /getCloudArticleDetail\(client, userId, restored\.articleId\)/);
   assert.match(page, /progressOwnerRef\.current = userId/);
+  assert.match(page, /setHydratedUserId\(userId\)/);
+  assert.match(page, /hydratedUserId !== userId/);
   assert.match(page, /restoredProgressRef\.current = Boolean\(restored\)/);
   assert.match(page, /window\.addEventListener\("pagehide"/);
   assert.match(page, /window\.addEventListener\("beforeunload"/);

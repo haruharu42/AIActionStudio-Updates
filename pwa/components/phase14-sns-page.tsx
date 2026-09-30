@@ -53,6 +53,7 @@ export function Phase14SnsPage() {
   const progressOwnerRef = useRef("");
   const restoredProgressRef = useRef(false);
   const [progressHydrated, setProgressHydrated] = useState(false);
+  const [hydratedUserId, setHydratedUserId] = useState("");
 
   useEffect(() => {
     if (!userId || !client) return;
@@ -96,6 +97,7 @@ export function Phase14SnsPage() {
         setGeneratedFingerprint(nextDetail ? restored?.generatedFingerprint ?? "" : "");
         restoredProgressRef.current = Boolean(restored);
         progressOwnerRef.current = userId;
+        setHydratedUserId(userId);
         setProgressHydrated(true);
         if (restoreMessage) {
           setMessage(restoreMessage);
@@ -250,7 +252,7 @@ export function Phase14SnsPage() {
     </section></main>
   );
 
-  if (!progressHydrated || progressOwnerRef.current !== userId) {
+  if (!progressHydrated || hydratedUserId !== userId) {
     return <AppLoadingScreen message="SNS投稿作成の作業状態を復元しています…" />;
   }
 
