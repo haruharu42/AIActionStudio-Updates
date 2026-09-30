@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 
 import {
   listArticleLibraryPage,
@@ -206,7 +207,9 @@ export function ArticleExportPage() {
     } finally { setBulkBusy(false); }
   };
 
-  if (accessState.kind === "loading") return null;
+  if (accessState.kind === "loading") {
+    return <AppLoadingScreen message="記事出力を準備しています…" />;
+  }
 
   if (accessState.kind !== "ready" || !client) {
     return (

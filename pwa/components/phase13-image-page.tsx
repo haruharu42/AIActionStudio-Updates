@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { PresetSelect, type PresetOption } from "@/components/preset-select";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { workspacePresetImageDefaults } from "@/features/presets/preset-adapters";
@@ -184,7 +185,9 @@ export function Phase13ImagePromptPage() {
     }
   };
 
-  if (accessState.kind === "loading") return null;
+  if (accessState.kind === "loading") {
+    return <AppLoadingScreen message="画像生成計画を準備しています…" />;
+  }
 
   if (accessState.kind !== "ready" || !client) return (
     <main className="standalone-page"><section className="standalone-card">

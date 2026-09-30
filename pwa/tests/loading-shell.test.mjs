@@ -22,3 +22,19 @@ test("auth and personalization loading states never render a blank app shell", a
   assert.match(accessProvider, /runtimeProfilePending \? <AppLoadingScreen/);
   assert.doesNotMatch(accessProvider, /runtimeProfilePending \? null : children/);
 });
+
+
+test("article export and image planning never render a blank screen while access is loading", async () => {
+  const [articleExport, imagePage] = await Promise.all([
+    read("components/article-export-page.tsx"),
+    read("components/phase13-image-page.tsx"),
+  ]);
+
+  assert.match(articleExport, /AppLoadingScreen/);
+  assert.match(articleExport, /記事出力を準備しています/);
+  assert.doesNotMatch(articleExport, /accessState\.kind === "loading"\) return null/);
+
+  assert.match(imagePage, /AppLoadingScreen/);
+  assert.match(imagePage, /画像生成計画を準備しています/);
+  assert.doesNotMatch(imagePage, /accessState\.kind === "loading"\) return null/);
+});
