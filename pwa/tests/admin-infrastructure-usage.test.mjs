@@ -35,7 +35,7 @@ test("infrastructure usage reuses protected Supabase capacity data and public Gi
   assert.match(operations, /admin_ops_get_snapshot/);
   assert.match(operations, /admin_ops_refresh_capacity/);
 
-  assert.match(usage, /AAS_GITHUB_REPOSITORY = "haruharu42\/AIArticleStudio-Updates"/);
+  assert.match(usage, /AAS_GITHUB_REPOSITORY = "haruharu42\/AIActionStudio-Updates"/);
   assert.match(usage, /api\.github\.com\/repos/);
   assert.match(usage, /\/actions\/runs/);
   assert.match(usage, /\/actions\/artifacts/);
