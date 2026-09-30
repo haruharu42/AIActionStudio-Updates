@@ -125,7 +125,8 @@ test('article library shows the effective save quota and remaining slots without
   assert.match(libraryListUi, /残り保存可能/);
   assert.match(libraryListUi, /保存上限に達しています/);
   assert.match(libraryListUi, /保存上限が近づいています/);
-  assert.match(libraryListUi, /プランを確認/);
+  assert.match(libraryListUi, /Creator Club特典を確認/);
+  assert.match(libraryListUi, /href="\/membership"/);
   assert.match(libraryListUi, /記事一覧はそのまま利用できます/);
   assert.match(globalsCss, /\.library-stock-summary/);
   assert.match(globalsCss, /\.library-stock-summary\.warning/);
@@ -135,11 +136,12 @@ test('article library shows the effective save quota and remaining slots without
   assert.match(libraryDetailUi, /duplicateDisabled/);
   assert.match(libraryDetailUi, /disabled=\{busy \|\| duplicateDisabled\}/);
   assert.match(libraryDetailUi, /この記事は現在複製できません/);
-  assert.match(libraryDetailUi, /利用プランを確認/);
+  assert.match(libraryDetailUi, /Creator Club特典を確認/);
+  assert.match(libraryDetailUi, /href="\/membership"/);
   assert.match(globalsCss, /\.library-duplicate-quota-note/);
   const phase7Source = await fs.readFile(`${root}/lib/phase7-articles.ts`, 'utf8');
   assert.match(phase7Source, /article_quota_exceeded/);
-  assert.match(phase7Source, /不要な記事を整理するか、利用プランを確認してください/);
+  assert.match(phase7Source, /不要な記事を整理するか、Creator Club特典を確認してください/);
 });
 
 test('article library filters start collapsed and can be opened without clearing the selected conditions', () => {
