@@ -15,15 +15,28 @@ type SourceFetchDiagnosis = {
   label: string;
   guidance: string;
   needsManualReview: boolean;
+  pauseRecommended: boolean;
 };
+
+const PERSISTENT_ACCESS_RESTRICTION_FAILURES = 6;
+
+function isPersistentAccessRestriction(source: KnowledgeAutomationSource): boolean {
+  return source.enabled
+    && (source.lastHttpStatus === 401 || source.lastHttpStatus === 403)
+    && source.consecutiveFailures >= PERSISTENT_ACCESS_RESTRICTION_FAILURES;
+}
 
 function sourceFetchIssue(source: KnowledgeAutomationSource): SourceFetchDiagnosis {
   if (source.lastHttpStatus === 401 || source.lastHttpStatus === 403) {
+    const pauseRecommended = isPersistentAccessRestriction(source);
     return {
       kind: "restricted",
       label: "アクセス制限",
-      guidance: "HTTP 401/403: このサイトでは認証や自動取得の制限がある可能性があります。制限を迂回せず、公式の公開API・RSS・代替公式URLを手動確認してください。必要に応じて監視を停止できます。",
+      guidance: pauseRecommended
+        ? `HTTP 401/403 が${source.consecutiveFailures}回連続しています。自動取得環境では継続取得が難しい可能性が高いため、制限を迂回せず、履歴を保持したまま監視停止を検討してください。公式の公開API・RSS・代替公式URLは手動確認してください。`
+        : "HTTP 401/403: このサイトでは認証や自動取得の制限がある可能性があります。制限を迂回せず、公式の公開API・RSS・代替公式URLを手動確認してください。必要に応じて監視を停止できます。",
       needsManualReview: true,
+      pauseRecommended,
     };
   }
   if (source.lastHttpStatus === 429) {
@@ -32,6 +45,7 @@ function sourceFetchIssue(source: KnowledgeAutomationSource): SourceFetchDiagnos
       label: "取得頻度制限",
       guidance: "HTTP 429: サイトの利用条件や公式APIの取得枠を確認してください。再試行時刻を尊重し、手動の連続再試行は避けてください。",
       needsManualReview: true,
+      pauseRecommended: false,
     };
   }
   if (source.lastHttpStatus === 404 || source.lastHttpStatus === 410) {
@@ -40,15 +54,16 @@ function sourceFetchIssue(source: KnowledgeAutomationSource): SourceFetchDiagnos
       label: "参照先を再確認",
       guidance: "HTTP 404/410: ページ移動・公開終了の可能性があります。公式の新URLまたは改訂履歴を確認し、古い情報を根拠に自動承認しないでください。",
       needsManualReview: true,
+      pauseRecommended: false,
     };
   }
   if (source.consecutiveFailures >= 3) {
-    return { kind: "backoff", label: "再試行待ち", guidance: "連続取得失敗のため自動再試行の間隔が延長されています。", needsManualReview: false };
+    return { kind: "backoff", label: "再試行待ち", guidance: "連続取得失敗のため自動再試行の間隔が延長されています。", needsManualReview: false, pauseRecommended: false };
   }
   if (source.consecutiveFailures > 0 || (source.lastHttpStatus !== null && source.lastHttpStatus >= 400)) {
-    return { kind: "warning", label: "要確認", guidance: "取得エラーです。自動再試行後も続く場合は監視URLを確認してください。", needsManualReview: false };
+    return { kind: "warning", label: "要確認", guidance: "取得エラーです。自動再試行後も続く場合は監視URLを確認してください。", needsManualReview: false, pauseRecommended: false };
   }
-  return { kind: "healthy", label: "正常", guidance: "", needsManualReview: false };
+  return { kind: "healthy", label: "正常", guidance: "", needsManualReview: false, pauseRecommended: false };
 }
 
 function sourceOrganizationDomain(sourceUrl: string): string {
@@ -101,6 +116,7 @@ function sourceFetchDiagnosis(source: KnowledgeAutomationSource): SourceFetchDia
       ...diagnosis,
       kind: "disabled",
       label: "停止中",
+      pauseRecommended: false,
       guidance: diagnosis.guidance
         ? `監視停止中です。履歴は保持されています。 ${diagnosis.guidance}`
         : "監視停止中です。履歴・取得状態・既存候補は保持されています。",
@@ -124,6 +140,10 @@ export function KnowledgeSourceHealthPanel({
   const [batchCopyFeedback, setBatchCopyFeedback] = useState("");
   const manualReviewSources = useMemo(
     () => sources.filter((source) => sourceFetchDiagnosis(source).needsManualReview),
+    [sources],
+  );
+  const pauseRecommendedSources = useMemo(
+    () => sources.filter((source) => sourceFetchDiagnosis(source).pauseRecommended),
     [sources],
   );
   const copyManualResearchPrompt = async (source: KnowledgeAutomationSource) => {
@@ -248,6 +268,7 @@ export function KnowledgeSourceHealthPanel({
         <article className={backoffSources.length > 0 ? "backoff" : ""}><span>再試行待ち</span><strong>{backoffSources.length}</strong></article>
         <article className={restrictedSources.length > 0 ? "restricted" : ""}><span>アクセス制限</span><strong>{restrictedSources.length}</strong></article>
         <article className={manualReviewSources.length > 0 ? "restricted" : ""}><span>手動確認</span><strong>{manualReviewSources.length}</strong></article>
+        <article className={pauseRecommendedSources.length > 0 ? "pause-recommended" : ""}><span>停止推奨</span><strong>{pauseRecommendedSources.length}</strong></article>
         <article className={disabledSources.length > 0 ? "disabled" : ""}><span>停止中</span><strong>{disabledSources.length}</strong></article>
         <article><span>次回対象</span><strong>{dueSources ?? "-"}</strong></article>
       </div>
@@ -256,7 +277,7 @@ export function KnowledgeSourceHealthPanel({
         <div className="knowledge-source-manual-review" role="note">
           <div>
             <strong>手動検証待ち {manualReviewSources.length}件</strong>
-            <small>停止中のURLも履歴を残したまま検証できます。自動再開・自動承認・自動公開は行いません。</small>
+            <small>停止中のURLも履歴を残したまま検証できます。自動再開・自動承認・自動公開は行いません。{pauseRecommendedSources.length > 0 ? ` 現在、長期の401/403により停止推奨が${pauseRecommendedSources.length}件あります。` : ""}</small>
           </div>
           <button type="button" onClick={() => void copyManualResearchBatch()}>
             最大10件をまとめてコピー
@@ -292,6 +313,7 @@ export function KnowledgeSourceHealthPanel({
               <article key={source.id} className={diagnosis.kind === "healthy" ? "" : diagnosis.kind}>
                 <header>
                   <span className={diagnosis.kind}>{diagnosis.label}</span>
+                  {diagnosis.pauseRecommended && <span className="pause-recommended">停止推奨</span>}
                   <strong>{knowledgeSourceHost(source.sourceUrl)}</strong>
                   <small>{knowledgeSourceKindLabel(source.sourceKind)}</small>
                 </header>
