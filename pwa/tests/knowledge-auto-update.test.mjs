@@ -580,7 +580,9 @@ test("knowledge source health puts failing URLs first and never labels disabled 
   assert.match(sourceHealth, /kind: "disabled"/);
   assert.match(sourceHealth, /label: "停止中"/);
   assert.match(sourceHealth, /<span>再試行待ち<\/span><strong>\{backoffSources\.length\}<\/strong>/);
-  assert.match(sourceHealth, /orderedSources\.map/);
+  assert.match(sourceHealth, /const visibleSources = useMemo/);
+  assert.match(sourceHealth, /return orderedSources\.filter/);
+  assert.match(sourceHealth, /visibleSources\.map/);
   assert.match(css, /\.knowledge-source-list article > header > span\.backoff/);
   assert.match(css, /\.knowledge-source-list article\.backoff/);
   assert.match(css, /\.knowledge-source-health-stats article\.backoff/);
@@ -717,6 +719,36 @@ test("admins can manually bulk-pause repeatedly restricted Knowledge sources wit
 
   assert.match(css, /\.knowledge-source-bulk-pause/);
   assert.match(css, /\.knowledge-source-bulk-pause button:disabled/);
+});
+
+
+test("knowledge source list supports operational filters and search without changing monitoring state", async () => {
+  const [sourceHealth, css] = await Promise.all([
+    readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(sourceHealth, /type SourceListView = "all" \| "attention" \| "manual" \| "disabled" \| "healthy"/);
+  assert.match(sourceHealth, /const \[sourceListView, setSourceListView\] = useState<SourceListView>\("all"\)/);
+  assert.match(sourceHealth, /const \[sourceQuery, setSourceQuery\] = useState\(""/);
+  assert.match(sourceHealth, /const sourceListCounts = useMemo/);
+  assert.match(sourceHealth, /const visibleSources = useMemo/);
+  assert.match(sourceHealth, /sourceListView === "attention"/);
+  assert.match(sourceHealth, /sourceListView === "manual"/);
+  assert.match(sourceHealth, /sourceListView === "disabled"/);
+  assert.match(sourceHealth, /sourceListView === "healthy"/);
+  assert.match(sourceHealth, /URL・カテゴリ検索/);
+  assert.match(sourceHealth, /placeholder="例: x\.com \/ sidejob_sns \/ official_policy"/);
+  assert.match(sourceHealth, /表示 \{visibleSources\.length\} \/ \{sources\.length\}件/);
+  assert.match(sourceHealth, /visibleSources\.map/);
+  assert.match(sourceHealth, /この条件に該当する監視URLはありません/);
+  assert.doesNotMatch(sourceHealth, /setAutomationSourceEnabled|getSupabaseClient|\.rpc\(/);
+
+  assert.match(css, /\.knowledge-source-list-tools/);
+  assert.match(css, /\.knowledge-source-list-filters/);
+  assert.match(css, /button\[aria-pressed="true"\]/);
+  assert.match(css, /\.knowledge-source-search input/);
+  assert.match(css, /\.knowledge-source-list-empty/);
 });
 
 
