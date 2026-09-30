@@ -625,3 +625,20 @@ test("redundant X analytics Help sources stop only when the healthy X Business f
   assert.match(migration, /enabled=false/);
   assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
 });
+
+
+test("knowledge candidate triage filters without bypassing manual publishing", async () => {
+  const panel = await readKnowledgeRefreshSource();
+  const css = await readPwa("app/phase26-knowledge.css");
+  assert.match(panel, /AUTOMATION_CANDIDATE_LIMIT = 200/);
+  assert.equal((panel.match(/adminListKnowledgeAutomationCandidates\(client, "pending", AUTOMATION_CANDIDATE_LIMIT\)/g) ?? []).length, 2);
+  for (const view of ["all","ready","recheck","unanalysed"]) assert.match(panel, new RegExp('key: "' + view + '"'));
+  assert.match(panel, /visibleCandidates\.map\(\(candidate\)/);
+  assert.match(panel, /candidatePriority\(a\) - candidatePriority\(b\)/);
+  assert.match(panel, /aria-pressed=\{candidateView === view\.key\}/);
+  assert.match(panel, /pendingCandidates > automationCandidates\.length/);
+  assert.match(panel, /adminPreviewKnowledgeRefreshBundleDiff/);
+  assert.match(panel, /adminPublishKnowledgeRefreshBundle/);
+  assert.match(css, /\.knowledge-candidate-triage/);
+  assert.match(css, /\.knowledge-candidate-triage-filters button\[aria-pressed="true"\]/);
+});
