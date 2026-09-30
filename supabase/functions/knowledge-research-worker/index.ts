@@ -484,7 +484,8 @@ async function syncSources(items: any[]) {
   const rows = [...grouped.entries()].map(([source_url,tasks]) => ({
     source_url,
     tasks:[...tasks].sort(),
-    enabled:true,
+    // New rows use the database default (enabled=true). Existing rows keep
+    // their current enabled state so an admin-disabled source stays disabled.
     updated_at:new Date().toISOString()
   }));
   if (rows.length) {

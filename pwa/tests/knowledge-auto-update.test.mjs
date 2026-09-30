@@ -227,6 +227,15 @@ test("official-source automation detects changes but never auto-publishes Knowle
   assert.match(worker, /x-aas-worker-token/);
   assert.match(worker, /get_knowledge_automation_catalog_snapshot/);
   assert.match(worker, /last_content_hash/);
+  assert.match(worker, /async function syncSources/);
+  assert.match(worker, /New rows use the database default \(enabled=true\)/);
+  const syncStart = worker.indexOf("async function syncSources");
+  const syncEnd = worker.indexOf("async function inspectSource", syncStart);
+  assert.notEqual(syncStart, -1);
+  assert.notEqual(syncEnd, -1);
+  const syncSource = worker.slice(syncStart, syncEnd);
+  assert.doesNotMatch(syncSource, /enabled:true/);
+  assert.match(syncSource, /upsert\(rows,\{ onConflict:"source_url" \}\)/);
   assert.match(worker, /official_changelog/);
   assert.match(worker, /candidate\(runId,source,action/);
   assert.match(worker, /knowledge_automation_candidates"\)\.upsert/);
