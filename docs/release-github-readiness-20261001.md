@@ -25,6 +25,7 @@
 
 ## 2026-10-01 現況スナップショット（再取得必須）
 
-- 前回確認時の本番 `pwa-release-deploy`: v4、旧リポジトリ参照。本番Workerは改名対応コードへ未更新。
+- 2026-10-01 05:20 JST前後の再確認でも、本番 `pwa-release-deploy` は **v4**、旧リポジトリ `haruharu42/AIArticleStudio-Updates` 参照のまま。GitHub main側は新リポジトリ対応済みだが、本番Workerは未更新。
 - 旧Cloudflare公開URL・OAuth設定・ユーザーデータを改名作業に便乗して変更しない。
+- GitHub main HEADは `2c374420b3ccd133e25ed0aadc8dd79712902e45`、Previewは `BUILD 2C37442` まで追従確認済み。一般公開PWAと本番Supabase Workerへの昇格は別ゲート。
 - Gemini検証環境・本番DB移行・AI自動解析は別課題。未検証でONにしない。
