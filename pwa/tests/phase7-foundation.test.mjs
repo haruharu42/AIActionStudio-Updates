@@ -13,6 +13,7 @@ test("pins patched framework versions, current release metadata, and PWA cache g
   const worker = await read("public/sw.js");
   const productionHelper = await read("../scripts/Prepare-AAS-PWA-Production.ps1");
   const productionPreflight = await read("../.github/workflows/pwa-production-preflight.yml");
+  const pullRequestCi = await read("../.github/workflows/pwa-phase9-17-ci.yml");
 
   assert.equal(packageJson.dependencies.next, "16.3.4");
   assert.equal(packageJson.dependencies.react, "19.2.8");
@@ -31,6 +32,10 @@ test("pins patched framework versions, current release metadata, and PWA cache g
     assert.match(productionGuard, /aas-pwa-phase17-prod-v2/);
     assert.match(productionGuard, /aas-pwa-phase8-v1/);
   }
+  assert.match(productionHelper, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE = "public"/);
+  assert.match(productionHelper, /service_worker_cache_generation = "phase56-runtime-v12-axia-generated"/);
+  assert.match(productionPreflight, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: public/);
+  assert.match(pullRequestCi, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: preview/);
 });
 
 test("keeps article library boundaries and routes article and image creation to active PWA flows", async () => {
