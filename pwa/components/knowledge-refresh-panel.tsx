@@ -16,6 +16,7 @@ import {
 import {
   adminGetKnowledgeAutomationAiConfig,
   adminGetKnowledgeAutomationStatus,
+  adminGetKnowledgeGeminiFreeStatus,
   adminGetKnowledgeProductionHealth,
   adminGetKnowledgeRefreshChannels,
   adminGetKnowledgeSourceRiskReport,
@@ -36,6 +37,8 @@ import {
   buildKnowledgeRefreshResearchPrompt,
   parseKnowledgeRefreshBundle,
   type KnowledgeAutomationAiConfig,
+  type KnowledgeAutomationAiProvider,
+  type KnowledgeAutomationGeminiFreeStatus,
   type KnowledgeAutomationCandidate,
   type KnowledgeAutomationSource,
   type KnowledgeAutomationStatus,
@@ -116,6 +119,9 @@ export function KnowledgeRefreshPanel() {
   const [candidateReviewNotes, setCandidateReviewNotes] = useState<Record<number, string>>({});
   const [automationAiConfig, setAutomationAiConfig] = useState<KnowledgeAutomationAiConfig | null>(null);
   const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiProvider, setAiProvider] = useState<KnowledgeAutomationAiProvider>("openai");
+  const [geminiStatus, setGeminiStatus] = useState<KnowledgeAutomationGeminiFreeStatus | null>(null);
+  const [geminiFreeConfirmed, setGeminiFreeConfirmed] = useState(false);
   const [aiModel, setAiModel] = useState("gpt-5.6");
   const [aiMaxCandidates, setAiMaxCandidates] = useState(6);
   const [aiApiKey, setAiApiKey] = useState("");
@@ -267,8 +273,10 @@ export function KnowledgeRefreshPanel() {
     setAutomationCandidates(nextAutomationCandidates);
     setAutomationAiConfig(nextAiConfig);
     setAiEnabled(nextAiConfig.enabled);
+    setAiProvider(nextAiConfig.provider);
     setAiModel(nextAiConfig.model);
     setAiMaxCandidates(nextAiConfig.maxCandidatesPerRun);
+    setGeminiStatus(await adminGetKnowledgeGeminiFreeStatus(client));
     if (selectedId === null) {
       const active = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
       if (active) setSelectedId(active.id);
@@ -300,8 +308,13 @@ export function KnowledgeRefreshPanel() {
         setAutomationCandidates(nextAutomationCandidates);
         setAutomationAiConfig(nextAiConfig);
         setAiEnabled(nextAiConfig.enabled);
+        setAiProvider(nextAiConfig.provider);
         setAiModel(nextAiConfig.model);
         setAiMaxCandidates(nextAiConfig.maxCandidatesPerRun);
+        // This capability RPC is optional until the staged DB migration exists.
+        void adminGetKnowledgeGeminiFreeStatus(client).then((status) => {
+          if (active) setGeminiStatus(status);
+        });
         const firstActive = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
         if (firstActive) setSelectedId(firstActive.id);
       } catch (error) {
@@ -313,21 +326,40 @@ export function KnowledgeRefreshPanel() {
   }, []);
 
   const saveAutomationAiConfig = async () => {
+    if (aiProvider === "gemini") {
+      if (!geminiStatus?.supported) {
+        setMessage("Gemini FreeはDBマイグレーションとEdge Worker配布後に設定できます。現環境ではまだ有効化できません。");
+        return;
+      }
+      if (aiEnabled && !geminiFreeConfirmed) {
+        setMessage("Geminiを有効にする前に、課金未設定プロジェクトと公開データ送信の確認が必要です。");
+        return;
+      }
+      if (aiEnabled && !geminiStatus.keyConfigured && !aiApiKey.trim()) {
+        setMessage("Gemini FreeのAPIキーを設定してください。OpenAIキーとは別にVaultへ保存します。");
+        return;
+      }
+    }
     setBusy(true);
     setMessage("");
     try {
       await adminSetKnowledgeAutomationAiConfig(getSupabaseClient(), {
         enabled: aiEnabled,
-        provider: "openai",
-        model: aiModel,
-        maxCandidatesPerRun: aiMaxCandidates,
+        provider: aiProvider,
+        model: aiProvider === "gemini" ? "gemini-3.5-flash-lite" : aiModel,
+        maxCandidatesPerRun: aiProvider === "gemini" ? Math.min(3, aiMaxCandidates) : aiMaxCandidates,
         apiKey: aiApiKey,
       });
       setAiApiKey("");
-      await reload();
-      setMessage(aiEnabled
-        ? "AI候補JSON自動生成を有効化しました。APIキーはVaultへ保存され、画面には再表示しません。"
-        : "AI候補JSON自動生成を無効化しました。公式ソース監視は継続します。");
+      setGeminiFreeConfirmed(false);
+      try {
+        await reload();
+        setMessage(aiEnabled
+          ? "設定を保存しました。公開ソースの更新候補だけをAI分析します。承認と公開は引き続き別操作です。"
+          : "AI候補JSON自動生成を無効化しました。無料の定型判定と公式ソース監視は継続します。");
+      } catch {
+        setMessage("AI設定は保存済みですが一覧再読込に失敗しました。重複保存せず再読込してください。");
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "AI自動解析設定を保存できませんでした。");
     } finally {
@@ -816,56 +848,94 @@ export function KnowledgeRefreshPanel() {
               <strong>AI候補JSON自動生成</strong>
               <p>公式ソースの取得・差分検知後にAIが候補JSONを作成します。AIが候補を作っても自動公開はされません。</p>
             </div>
-            <span className={automationAiConfig?.apiKeyConfigured ? "configured" : "missing"}>
-              APIキー {automationAiConfig?.apiKeyConfigured ? "Vault設定済み" : "未設定"}
+            <span className={(aiProvider === "gemini"
+                ? geminiStatus?.keyConfigured
+                : automationAiConfig?.provider === "openai" && automationAiConfig?.apiKeyConfigured) ? "configured" : "missing"}>
+              APIキー {(aiProvider === "gemini"
+                ? geminiStatus?.keyConfigured
+                : automationAiConfig?.provider === "openai" && automationAiConfig?.apiKeyConfigured)
+                ? "Vault設定済み" : "未設定／切替後は要確認"}
             </span>
           </div>
           <div className="knowledge-ai-config-grid">
+            <label>
+              <span>AIプロバイダー</span>
+              <select value={aiProvider} disabled={busy} onChange={(event) => {
+                const provider = event.target.value === "gemini" ? "gemini" : "openai";
+                setAiProvider(provider);
+                setAiModel(provider === "gemini" ? "gemini-3.5-flash-lite" : "gpt-5.6");
+                setAiMaxCandidates(provider === "gemini" ? 3 : 6);
+                setAiEnabled(false); // Explicit opt-in after every provider switch.
+                setAiApiKey("");
+                setGeminiFreeConfirmed(false);
+              }}>
+                <option value="openai">OpenAI API（従来方式）</option>
+                <option value="gemini">Gemini Free（管理者・公開ソース限定）</option>
+              </select>
+            </label>
+            {aiProvider === "gemini" && (
+              <div className="knowledge-automation-guard">
+                <strong>Gemini無料枠：事前確認が必要</strong>
+                <span>Gemini 3.5 Flash-Lite固定、1回最大3件・1日最大10 API呼出し。これはAAS独自制限であり、無料・無課金を保証するものではありません。課金を有効にしていないGoogle AI Studioプロジェクトのキーだけを使用してください。Googleの無料枠では送信データが製品改善に利用され得ます。既存Knowledge本文・ユーザーデータは送信せず、更新候補は人が差分を確認します。</span>
+                <small>{geminiStatus
+                  ? `バックエンド対応済み：本日 ${geminiStatus.dailyUsed}/${geminiStatus.dailyLimit} API呼出し・Geminiキー ${geminiStatus.keyConfigured ? "設定済み" : "未設定"}。※ Edge Workerの配布状態は別途確認してください。`
+                  : "DB側のGemini機能は未導入です。マイグレーション・Workerの検証と配布までAIを有効化できません。"}</small>
+                <label className="knowledge-ai-toggle">
+                  <input type="checkbox" checked={geminiFreeConfirmed} disabled={busy || !geminiStatus}
+                    onChange={(event) => setGeminiFreeConfirmed(event.target.checked)} />
+                  <span>課金未設定のGoogleプロジェクトを確認し、公開ソース本文の送信に同意する</span>
+                </label>
+              </div>
+            )}
             <label className="knowledge-ai-toggle">
               <input
                 type="checkbox"
                 checked={aiEnabled}
+                disabled={busy || (aiProvider === "gemini" && !geminiStatus?.supported)}
                 onChange={(event) => setAiEnabled(event.target.checked)}
               />
               <span>AI自動解析を有効にする</span>
             </label>
-            <SelectWithCustom
-              label="モデル"
-              value={aiModel}
-              onChange={setAiModel}
-              options={[
-                { value: "gpt-6-luna", label: "GPT-6 Luna（低コスト・大量処理向け）" },
-                { value: "gpt-5.6-luna", label: "GPT-5.6 Luna（低コスト）" },
-                { value: "gpt-5.6-terra", label: "GPT-5.6 Terra（バランス）" },
-                { value: "gpt-5.6", label: "GPT-5.6 Sol（高精度）" },
-              ]}
-              description="候補作成用AIです。新しいモデルIDを使う場合は「その他・自由入力」を選べます。"
-              customPlaceholder="OpenAI APIのモデルIDを入力"
-            />
+            {aiProvider === "gemini"
+              ? <label><span>無料枠対象モデル</span><input readOnly value="gemini-3.5-flash-lite" /></label>
+              : <SelectWithCustom
+                  label="モデル"
+                  value={aiModel}
+                  onChange={setAiModel}
+                  options={[
+                    { value: "gpt-6-luna", label: "GPT-6 Luna（低コスト・大量処理向け）" },
+                    { value: "gpt-5.6-luna", label: "GPT-5.6 Luna（低コスト）" },
+                    { value: "gpt-5.6-terra", label: "GPT-5.6 Terra（バランス）" },
+                    { value: "gpt-5.6", label: "GPT-5.6 Sol（高精度）" },
+                  ]}
+                  description="候補作成用AIです。新しいモデルIDを使う場合は「その他・自由入力」を選べます。"
+                  customPlaceholder="OpenAI APIのモデルIDを入力"
+                />}
             <PresetNumberSelectWithCustom
               label="1回の最大解析候補数"
               value={aiMaxCandidates}
               onChange={setAiMaxCandidates}
-              presets={[1, 3, 6, 10, 15, 20]}
+              presets={aiProvider === "gemini" ? [1, 2, 3] : [1, 3, 6, 10, 15, 20]}
               min={1}
-              max={20}
+              max={aiProvider === "gemini" ? 3 : 20}
               suffix="件"
-              description="API費用を抑えたい場合は1〜3件から始める設定がおすすめです。"
+              description={aiProvider === "gemini" ? "無料枠向けの独自上限：1回最大3件・1日最大10回。" : "API費用を抑えたい場合は1〜3件から始める設定がおすすめです。"}
             />
             <label>
-              <span>OpenAI APIキー（変更時のみ入力）</span>
+              <span>{aiProvider === "gemini" ? "Gemini APIキー（別Vaultで保存）" : "OpenAI APIキー（変更時のみ入力）"}</span>
               <input
                 type="password"
                 value={aiApiKey}
                 onChange={(event) => setAiApiKey(event.target.value)}
-                placeholder={automationAiConfig?.apiKeyConfigured ? "設定済み・変更する場合だけ入力" : "APIキーを入力"}
+                placeholder={(aiProvider === "gemini" ? geminiStatus?.keyConfigured : automationAiConfig?.provider === "openai" && automationAiConfig?.apiKeyConfigured)
+                  ? "設定済み・変更する場合だけ入力" : "APIキーを入力"}
                 autoComplete="new-password"
               />
             </label>
           </div>
           <div className="knowledge-ai-config-actions">
             <small>APIキーはSupabase Vaultへ保存し、この画面では再表示しません。AI解析が無効でも公式ソース監視は動き続けます。</small>
-            <button type="button" disabled={busy || !aiModel.trim()} onClick={() => void saveAutomationAiConfig()}>
+            <button type="button" disabled={busy || !aiModel.trim() || (aiProvider === "gemini" && (!geminiStatus || (aiEnabled && !geminiFreeConfirmed)))} onClick={() => void saveAutomationAiConfig()}>
               AI自動解析設定を保存
             </button>
           </div>
@@ -923,7 +993,7 @@ export function KnowledgeRefreshPanel() {
                 : "new / update候補は保留し、AI APIは呼び出しません。recheck / retireの無料自動判定と公式ソース監視は継続します。"}
             </span>
           </div>
-          <small>{automationAiConfig?.model ?? "gpt-5.6"} / 1回最大 {automationAiConfig?.maxCandidatesPerRun ?? 6}候補</small>
+          <small>{automationAiConfig?.provider === "gemini" ? "Gemini Free / " : "OpenAI / "}{automationAiConfig?.model ?? "gpt-5.6"} / 1回最大 {automationAiConfig?.maxCandidatesPerRun ?? 6}候補</small>
         </div>
 
         <div className="knowledge-candidate-analysis-summary" aria-label="自動調査候補の解析状態">
