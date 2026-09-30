@@ -52,6 +52,7 @@ test("knowledge refresh scheduler keeps unstarted admin review tasks pending acr
   assert.doesNotMatch(migration, /request\.status = 'pending'[\s\S]*?status = 'failed'/);
   assert.match(display, /旧仕様で未着手のレビュー待ちが更新周期を超えたため自動解除された履歴/);
   assert.match(display, /現在は未着手のpendingを失敗扱いしません/);
+  assert.match(display, /case "pending": return "管理者レビュー待ち"/);
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
 });
 
@@ -371,6 +372,32 @@ test("AI enrichment can be disabled while zero-cost recheck/retire analysis stil
   assert.match(worker, /status:"completed"/);
   assert.match(worker, /candidates_analyzed:ai\.analyzed/);
   assert.match(worker, /analysis_failures:ai\.failed/);
+});
+
+test("knowledge candidate dashboard distinguishes deterministic results from intentionally held AI work", async () => {
+  const [panel, css] = await Promise.all([
+    readKnowledgeRefreshSource(),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(panel, /candidateAnalysisPresentation/);
+  assert.match(panel, /AI OFF・手動確認待ち/);
+  assert.match(panel, /APIキー未設定・保留/);
+  assert.match(panel, /自動判定済み/);
+  assert.match(panel, /自動判定待ち/);
+  assert.match(panel, /AI APIは呼び出しません/);
+  assert.match(panel, /adminListKnowledgeAutomationCandidates\(client, "pending", 200\)/);
+  assert.match(panel, /candidateAnalysisSummary/);
+  assert.match(panel, /レビュー待ち/);
+  assert.match(panel, /無料判定済み/);
+  assert.match(panel, /AI保留/);
+  assert.match(panel, /無料判定待ち/);
+  assert.match(panel, /解析失敗/);
+  assert.match(css, /\.knowledge-ai-mode-status/);
+  assert.match(css, /\.knowledge-candidate-analysis-summary/);
+  assert.match(css, /\.knowledge-ai-analysis\.deterministic/);
+  assert.match(css, /\.knowledge-ai-analysis\.held/);
+  assert.match(css, /\.knowledge-ai-analysis\.automatic/);
 });
 
 test("AI proposal handoff only pre-fills a Fresh review request and does not bypass diff confirmation", async () => {
