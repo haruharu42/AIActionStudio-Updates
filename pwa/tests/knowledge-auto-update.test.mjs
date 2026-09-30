@@ -540,6 +540,21 @@ test("Knowledge candidate review text search combines with existing filters with
   assert.ok(css.includes(".knowledge-candidate-search button:disabled"));
 });
 
+test("Knowledge candidate search includes saved review evidence without changing review or publication", async () => {
+  const panel = await readKnowledgeRefreshSource();
+  const start = panel.indexOf("const searchedAutomationCandidates = useMemo");
+  const end = panel.indexOf("const visibleAutomationCandidates = useMemo", start);
+  assert.ok(start >= 0 && end > start);
+  const searchable = panel.slice(start, end);
+  assert.ok(searchable.includes("candidate.reviewNotes"));
+  assert.ok(searchable.includes("...candidate.verifiedSourceUrls"));
+  assert.ok(searchable.includes("candidate.analysisError"));
+  assert.ok(searchable.includes("candidate.sourceTitle"));
+  assert.ok(searchable.includes("candidate.existingItemKey"));
+  assert.ok(panel.includes("placeholder=\"タイトル・URL・カテゴリ・理由・レビュー記録で検索\""));
+  assert.doesNotMatch(searchable, /adminReviewKnowledgeAutomationCandidate|adminPublishKnowledgeRefreshBundle|adminSetKnowledgeAutomationSourceEnabled|\\.rpc\\(/);
+});
+
 test("Knowledge candidate search also scopes both five-item research batches and resets their pagination", async () => {
   const panel = await readKnowledgeRefreshSource();
   const start = panel.indexOf("const normalizedCandidateSearch");
