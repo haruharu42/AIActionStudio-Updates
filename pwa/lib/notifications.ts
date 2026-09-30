@@ -393,6 +393,42 @@ export async function adminGetNotificationReadiness(client: SupabaseClient): Pro
   return normalizeAdminNotificationReadiness(data);
 }
 
+export type NotificationPublicManualChecks = {
+  testerDevicePushReceive: boolean;
+  testerDeviceNotificationTap: boolean;
+  pcMobileMajorFlow: boolean;
+};
+
+export async function adminPromoteNotificationFeaturePublic(
+  client: SupabaseClient,
+  checks: NotificationPublicManualChecks,
+): Promise<void> {
+  const { error } = await client.rpc("admin_promote_notification_feature_public", {
+    p_tester_device_push_receive: checks.testerDevicePushReceive,
+    p_tester_device_notification_tap: checks.testerDeviceNotificationTap,
+    p_pc_mobile_major_flow: checks.pcMobileMajorFlow,
+  });
+  if (!error) return;
+
+  const message = String(error.message ?? "").toLowerCase();
+  if (message.includes("aal2 required for notification public promotion")) {
+    throw new Error("通知センターの全体公開には、現在の管理者セッションでMFA認証（AAL2）が必要です。");
+  }
+  if (message.includes("all notification manual checks are required")) {
+    throw new Error("通知センターの全体公開には、3つの実機・導線確認をすべて完了してください。");
+  }
+  if (message.includes("notification maintenance must be disabled before public promotion")) {
+    throw new Error("通知センターがメンテナンス中です。先にメンテナンスを解除してください。");
+  }
+  if (message.includes("notification rollout readiness requirements not met")) {
+    throw new Error("通知センターの自動公開準備が未完了です。テスター端末・Push設定・配信キューを再確認してください。");
+  }
+  if (message.includes("notification tester rollout stage required")) {
+    throw new Error("通知センターは先にテスター段階で実機確認してください。");
+  }
+  throw error;
+}
+
 export async function adminListNotificationTesterReadiness(
   client: SupabaseClient,
 ): Promise<AdminNotificationTesterReadiness[]> {
