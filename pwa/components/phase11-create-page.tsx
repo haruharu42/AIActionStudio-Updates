@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import {
@@ -404,7 +405,9 @@ export function Phase11CreatePage() {
     }
   };
 
-  if (gate.kind === "loading") return null;
+  if (gate.kind === "loading") {
+    return <AppLoadingScreen message="記事作成の利用権と設定を確認しています…" />;
+  }
 
   if (gate.kind !== "ready") {
     return (

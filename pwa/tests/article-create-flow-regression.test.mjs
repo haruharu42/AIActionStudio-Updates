@@ -350,3 +350,15 @@ test("article external AI handoff copies safely before opening", async () => {
   assert.match(finish, /<CopyAndOpenAiButton[\s\S]*?value=\{item\.prompt\}/);
   assert.doesNotMatch(finish, /launchAiApp\(/);
 });
+
+
+test("article creation shows a safe loading shell instead of a blank screen during access verification", async () => {
+  const source = await readFile(
+    new URL("../components/phase11-create-page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /import \{ AppLoadingScreen \} from "@\/components\/app-loading-screen"/);
+  assert.match(source, /<AppLoadingScreen message="記事作成の利用権と設定を確認しています…"/);
+  assert.doesNotMatch(source, /if \(gate\.kind === "loading"\) return null/);
+});
