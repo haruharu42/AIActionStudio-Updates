@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 type JsonRecord = Record<string, unknown>;
 
-const REPO = "haruharu42/AIArticleStudio-Updates";
+const REPO = "haruharu42/AIActionStudio-Updates";
 const WORKFLOW = "pwa-admin-public-release.yml";
 const DEFAULT_PREVIEW_BRANCH = "main";
 const ALLOWED_PREVIEW_BRANCHES = new Set(["main", "preview/current"]);
