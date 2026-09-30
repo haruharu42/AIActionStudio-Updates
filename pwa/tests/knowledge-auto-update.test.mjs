@@ -483,6 +483,34 @@ test("candidate reviews can store bounded manual verification notes without bypa
 });
 
 
+test("Knowledge candidate review text search combines with existing filters without mutating state", async () => {
+  const [panel, css] = await Promise.all([
+    readKnowledgeRefreshSource(),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+  const start = panel.indexOf("const normalizedCandidateSearch");
+  const end = panel.indexOf("const heldCandidates", start);
+  assert.ok(start !== -1 && end > start);
+  const filter = panel.slice(start, end);
+  assert.ok(panel.includes('const [candidateSearch, setCandidateSearch] = useState("");'));
+  assert.ok(filter.includes("candidateSearch.trim().toLowerCase()"));
+  assert.ok(filter.includes('if (candidateView === "ready")'));
+  assert.ok(filter.includes('if (candidateView === "unanalysed")'));
+  assert.ok(filter.includes("if (!normalizedCandidateSearch) return true;"));
+  for (const field of ["sourceTitle", "sourceUrl", "existingItemKey", "existingItemType", "candidateAction", "reason", "analysisReason", "matchedTasks"]) {
+    assert.ok(filter.includes("candidate." + field), field + " is searchable");
+  }
+  assert.ok(filter.includes(".includes(normalizedCandidateSearch)"));
+  assert.ok(panel.includes("表示 {visibleAutomationCandidates.length}件"));
+  assert.ok(panel.includes('id="knowledge-candidate-search-input"'));
+  assert.ok(panel.includes('type="search"'));
+  assert.ok(panel.includes("検索をクリア"));
+  assert.ok(panel.includes("検索条件に一致する候補はありません"));
+  assert.doesNotMatch(filter, /adminReviewKnowledgeAutomationCandidate|adminSetKnowledgeAutomationSourceEnabled|adminPublishKnowledgeRefreshBundle|\.rpc\(/);
+  assert.ok(css.includes(".knowledge-candidate-search input"));
+  assert.ok(css.includes(".knowledge-candidate-search button:disabled"));
+});
+
 test("knowledge candidate dashboard distinguishes deterministic results from intentionally held AI work", async () => {
   const [panel, css] = await Promise.all([
     readKnowledgeRefreshSource(),
