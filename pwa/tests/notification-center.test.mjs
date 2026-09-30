@@ -38,6 +38,9 @@ test("Web Push secrets stay out of the repository and worker uses Vault-backed c
   assert.doesNotMatch(worker, /0je0qMnP9VOhI5CZmOme/);
   assert.match(worker, /x-aas-worker-token/);
   assert.match(worker, /get_notification_push_worker_config/);
+  assert.match(worker, /timingSafeEqualHex/);
+  assert.match(worker, /\^\[0-9a-f\]\{64\}\$/);
+  assert.doesNotMatch(worker, /suppliedHash !== workerTokenHash/);
   assert.match(worker, /npm:web-push@3\.6\.7/);
   assert.match(worker, /statusCode === 404 \|\| statusCode === 410/);
 });

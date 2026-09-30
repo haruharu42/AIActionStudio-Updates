@@ -735,6 +735,12 @@ test("note membership cockpit covers grounded improvement metrics and article so
   assert.doesNotMatch(advisor, /const copyTask = copyPrompt\(\);[\s\S]*?launchAiApp\(selectedAi\)/);
   assert.match(cockpit, /membershipLaunchStorageKey/);
   assert.match(cockpit, /window\.localStorage\.setItem/);
+  assert.match(cockpit, /const \[launchHydrated, setLaunchHydrated\] = useState\(false\)/);
+  assert.match(cockpit, /const launchOwnerRef = useRef\(""\)/);
+  assert.match(cockpit, /launchOwnerRef\.current = ""/);
+  assert.match(cockpit, /let restored: MembershipLaunchChecklistKey\[\] = \[\]/);
+  assert.match(cockpit, /setChecked\(restored\);[\s\S]*?launchOwnerRef\.current = userId;[\s\S]*?setLaunchHydrated\(true\)/);
+  assert.match(cockpit, /if \(!launchHydrated \|\| launchOwnerRef\.current !== userId\) return/);
   assert.match(cockpit, /buildMembershipPricingPrompt/);
   assert.match(cockpit, /buildMembershipPagePrompt/);
   assert.match(cockpit, /buildMembershipPromotionPrompt/);

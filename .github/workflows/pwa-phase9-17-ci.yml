@@ -23,6 +23,8 @@ jobs:
   pwa-validation:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: preview
     defaults:
       run:
         working-directory: pwa
