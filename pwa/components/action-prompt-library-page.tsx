@@ -263,17 +263,21 @@ export function ActionPromptLibraryPage() {
       selectedAi,
     });
 
+    let copied = false;
     try {
       await navigator.clipboard.writeText(prompt);
+      copied = true;
       setMessage(openAi
         ? `プロンプトをコピーして${AI_APP_LINKS[openAi].name}を開きます。`
         : "プロンプトをコピーしました。");
     } catch {
-      setMessage("自動コピーできません。下のプロンプト欄からコピーしてください。");
+      setMessage(openAi
+        ? "自動コピーできなかったためAIは開いていません。下のプロンプト欄から手動でコピーしてください。"
+        : "自動コピーできません。下のプロンプト欄からコピーしてください。");
     }
 
     markRecent(selected.id);
-    if (openAi) launchAiApp(openAi);
+    if (openAi && copied) launchAiApp(openAi);
   };
 
   if (!selected) return null;

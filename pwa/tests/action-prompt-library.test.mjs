@@ -428,3 +428,16 @@ test("prompt library groups the long switcher by category and recovers from zero
   assert.match(list, /条件に一致するプロンプトがありません/);
   assert.match(list, /検索条件をクリア/);
 });
+
+
+test("prompt library opens external AI only after its prompt was copied successfully", async () => {
+  const page = await read("components/action-prompt-library-page.tsx");
+
+  assert.match(page, /let copied = false/);
+  assert.match(page, /await navigator\.clipboard\.writeText\(prompt\)/);
+  assert.match(page, /copied = true/);
+  assert.match(page, /自動コピーできなかったためAIは開いていません/);
+  assert.match(page, /if \(openAi && copied\) launchAiApp\(openAi\)/);
+  assert.doesNotMatch(page, /if \(openAi\) launchAiApp\(openAi\)/);
+  assert.match(page, /writeActionPromptProgress\(userId/);
+});
