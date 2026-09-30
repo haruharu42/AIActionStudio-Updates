@@ -3,7 +3,8 @@ import test from "node:test";
 
 const phase56Meta =
   /<meta(?=[^>]*\bname=["']aas-phase["'])(?=[^>]*\bcontent=["']56["'])[^>]*>/i;
-const expectedReleaseStage = process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE ?? "development";
+const expectedReleaseStage =
+  process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview" ? "preview" : "public";
 const releaseStageMeta = new RegExp(
   `<meta(?=[^>]*\\bname=["']aas-release-stage["'])(?=[^>]*\\bcontent=["']${expectedReleaseStage}["'])[^>]*>`,
   "i",
