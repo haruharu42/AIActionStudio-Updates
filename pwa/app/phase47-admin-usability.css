@@ -602,6 +602,82 @@
   gap: 14px;
 }
 
+.membership-library-readiness {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d4e7dd;
+  border-radius: 14px;
+  background: #f7fcf9;
+  padding: 12px 13px;
+}
+
+.membership-library-readiness.blocked {
+  border-color: #eadfc6;
+  background: #fffaf0;
+}
+
+.membership-library-readiness-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.membership-library-readiness-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.membership-library-readiness-head span,
+.membership-library-readiness-grid span,
+.membership-library-readiness-grid small,
+.membership-library-activation-actions small {
+  color: #71857b;
+  font-size: 9px;
+}
+
+.membership-library-readiness-head strong {
+  color: #245e48;
+  font-size: 14px;
+}
+
+.membership-library-readiness.blocked .membership-library-readiness-head strong {
+  color: #95651d;
+}
+
+.membership-library-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.membership-library-readiness-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(72, 106, 96, .13);
+  border-radius: 11px;
+  background: #fff;
+  padding: 9px 10px;
+}
+
+.membership-library-readiness-grid strong {
+  color: #274c40;
+  font-size: 17px;
+}
+
+.membership-library-activation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.membership-library-activation-actions small {
+  flex: 1 1 300px;
+  line-height: 1.55;
+}
+
 .membership-library-quota-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -657,11 +733,25 @@
   .membership-library-quota-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .membership-library-readiness-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
-  .membership-library-quota-grid {
+  .membership-library-quota-grid,
+  .membership-library-readiness-grid {
     grid-template-columns: 1fr;
+  }
+
+  .membership-library-readiness-head,
+  .membership-library-activation-actions {
+    align-items: stretch;
+  }
+
+  .membership-library-readiness-head {
+    display: grid;
   }
 }
 

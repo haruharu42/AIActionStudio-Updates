@@ -204,6 +204,42 @@ test("membership admin exposes article library plan quotas without activating th
   assert.doesNotMatch(page, /admin_update_article_library_quota_settings|plan_limits_enabled\s*=\s*true/i);
 });
 
+test("article library quota activation requires aggregate readiness and AAL2 while keeping emergency stop available", () => {
+  const page = readAdminMembershipSource();
+  const client = read("lib/admin-membership.ts");
+  const migration = readRepo("supabase/migrations/20260930021747_article_library_quota_activation_guard_v1.sql");
+  const css = read("app/phase47-admin-usability.css");
+
+  assert.match(migration, /admin_get_article_library_quota_readiness/);
+  assert.match(migration, /users_over_future_limit/);
+  assert.match(migration, /automated_checks_pass/);
+  assert.match(migration, /admin_set_article_library_plan_limits_enabled/);
+  assert.match(migration, /v_aal <> 'aal2'/);
+  assert.match(migration, /lock table public\.articles in share mode/);
+  assert.match(migration, /lock table public\.creator_membership_plans in share mode/);
+  assert.match(migration, /lock table public\.user_entitlements in share mode/);
+  assert.match(migration, /if p_enabled then[\s\S]*?aal2 required for article library quota activation/);
+  assert.match(migration, /update public\.article_library_quota_settings[\s\S]*?plan_limits_enabled=p_enabled/);
+  assert.match(migration, /revoke all on function public\.admin_set_article_library_plan_limits_enabled\(boolean\) from public, anon, authenticated/);
+  assert.match(migration, /grant execute on function public\.admin_set_article_library_plan_limits_enabled\(boolean\) to authenticated/);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+
+  assert.match(client, /ArticleLibraryQuotaReadiness/);
+  assert.match(client, /admin_get_article_library_quota_readiness/);
+  assert.match(client, /admin_set_article_library_plan_limits_enabled/);
+  assert.match(client, /aal2 required for article library quota activation/);
+  assert.match(page, /自動確認 通過/);
+  assert.match(page, /将来上限の超過/);
+  assert.match(page, /0名のみ発効可能/);
+  assert.match(page, /プラン別上限を発効（MFA必須）/);
+  assert.match(page, /従来上限へ戻す（緊急停止）/);
+  assert.match(page, /管理者MFAを確認/);
+  assert.match(page, /window\.confirm\(warning\)/);
+  assert.match(css, /\.membership-library-readiness/);
+  assert.match(css, /\.membership-library-readiness-grid/);
+  assert.match(css, /\.membership-library-activation-actions/);
+});
+
 test("membership defaults make cloud image storage a member-only capability across active plans", () => {
   const migration = readRepo("supabase/migrations/20260924034928_membership_management_center.sql");
 
