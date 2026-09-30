@@ -77,7 +77,7 @@ export function ArticleLibraryDetailView({
             <strong>この記事は現在複製できません。</strong>
             <span>{duplicateDisabledReason}</span>
           </div>
-          <Link href="/plans">利用プランを確認 →</Link>
+          <Link href="/membership">Creator Club特典を確認 →</Link>
         </div>
       )}
 
