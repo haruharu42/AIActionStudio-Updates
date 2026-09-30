@@ -1536,6 +1536,53 @@
   font-size: 15px;
 }
 
+.knowledge-source-bulk-pause {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #e7c6a0;
+  border-radius: 10px;
+  background: #fff8ef;
+  padding: 10px;
+}
+
+.knowledge-source-bulk-pause > div {
+  min-width: 180px;
+  flex: 1 1 260px;
+  display: grid;
+  gap: 3px;
+}
+
+.knowledge-source-bulk-pause strong {
+  color: #85531d;
+  font-size: 9px;
+}
+
+.knowledge-source-bulk-pause small {
+  color: #876d50;
+  font-size: 7px;
+  line-height: 1.5;
+}
+
+.knowledge-source-bulk-pause button {
+  min-height: 32px;
+  border: 1px solid #dfba8a;
+  border-radius: 8px;
+  background: #fff;
+  color: #85531d;
+  padding: 6px 9px;
+  font-size: 7px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.knowledge-source-bulk-pause button:disabled {
+  cursor: default;
+  opacity: .55;
+}
+
 .knowledge-source-manual-review {
   display: flex;
   flex-wrap: wrap;

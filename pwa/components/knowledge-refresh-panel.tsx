@@ -298,6 +298,28 @@ export function KnowledgeRefreshPanel() {
     }
   };
 
+  const pauseRepeatedRestrictedSources = async (sources: KnowledgeAutomationSource[]) => {
+    if (sources.length === 0) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const client = getSupabaseClient();
+      const results = await Promise.allSettled(
+        sources.map((source) => adminSetKnowledgeAutomationSourceEnabled(client, source.id, false)),
+      );
+      const failed = results.filter((result) => result.status === "rejected").length;
+      const succeeded = results.length - failed;
+      await reload();
+      setMessage(failed === 0
+        ? `繰り返しアクセス制限の監視URL ${succeeded}件を停止しました。履歴・既存候補・手動検証導線は保持しています。`
+        : `監視停止 ${succeeded}件 / 失敗 ${failed}件です。再読込後、失敗したURLだけ個別に再試行してください。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "繰り返しアクセス制限の監視URLを停止できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const retryAutomationAi = async (candidate: KnowledgeAutomationCandidate) => {
     setBusy(true);
     setMessage("");
@@ -654,6 +676,7 @@ export function KnowledgeRefreshPanel() {
           dueSources={automationStatus?.dueSources}
           busy={busy}
           onSetSourceEnabled={(source, enabled) => void setAutomationSourceEnabled(source, enabled)}
+          onPauseRepeatedRestrictedSources={(sources) => void pauseRepeatedRestrictedSources(sources)}
         />
 
         <KnowledgeQualityAnalyzer

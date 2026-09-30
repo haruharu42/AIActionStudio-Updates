@@ -114,11 +114,13 @@ export function KnowledgeSourceHealthPanel({
   dueSources,
   busy,
   onSetSourceEnabled,
+  onPauseRepeatedRestrictedSources,
 }: {
   sources: KnowledgeAutomationSource[];
   dueSources: number | null | undefined;
   busy: boolean;
   onSetSourceEnabled: (source: KnowledgeAutomationSource, enabled: boolean) => void;
+  onPauseRepeatedRestrictedSources: (sources: KnowledgeAutomationSource[]) => void;
 }) {
   const [copyFeedback, setCopyFeedback] = useState<Record<number, string>>({});
   const [batchCopyFeedback, setBatchCopyFeedback] = useState("");
@@ -191,6 +193,10 @@ export function KnowledgeSourceHealthPanel({
     () => enabledSources.filter((source) => source.lastHttpStatus === 401 || source.lastHttpStatus === 403),
     [enabledSources],
   );
+  const repeatedRestrictedSources = useMemo(
+    () => restrictedSources.filter((source) => source.consecutiveFailures >= 3),
+    [restrictedSources],
+  );
   const disabledSources = useMemo(
     () => sources.filter((source) => !source.enabled),
     [sources],
@@ -251,6 +257,30 @@ export function KnowledgeSourceHealthPanel({
         <article className={disabledSources.length > 0 ? "disabled" : ""}><span>停止中</span><strong>{disabledSources.length}</strong></article>
         <article><span>次回対象</span><strong>{dueSources ?? "-"}</strong></article>
       </div>
+
+      {repeatedRestrictedSources.length > 0 && (
+        <div className="knowledge-source-bulk-pause" role="note">
+          <div>
+            <strong>繰り返しアクセス制限 {repeatedRestrictedSources.length}件</strong>
+            <small>HTTP 401/403が3回以上連続している有効URLです。監視を止めても履歴・既存候補は保持され、手動検証は続けられます。</small>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              const preview = repeatedRestrictedSources
+                .slice(0, 5)
+                .map((source) => `・${knowledgeSourceHost(source.sourceUrl)} / HTTP ${source.lastHttpStatus} / ${source.consecutiveFailures}回`)
+                .join("\n");
+              const rest = repeatedRestrictedSources.length > 5 ? `\nほか ${repeatedRestrictedSources.length - 5}件` : "";
+              if (!window.confirm(`繰り返しアクセス制限の監視URL ${repeatedRestrictedSources.length}件をまとめて停止しますか？\n\n${preview}${rest}\n\n停止しても履歴・既存候補は削除されません。自動で代替URLへ差し替えたり公開したりもしません。`)) return;
+              onPauseRepeatedRestrictedSources(repeatedRestrictedSources);
+            }}
+          >
+            {repeatedRestrictedSources.length}件をまとめて停止
+          </button>
+        </div>
+      )}
 
       {manualReviewSources.length > 0 && (
         <div className="knowledge-source-manual-review" role="note">
