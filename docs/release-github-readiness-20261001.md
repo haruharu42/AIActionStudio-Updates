@@ -49,3 +49,18 @@
 - Staging Edge Functionへの無認証GETでは `pwa-release-deploy` がHTTP 401（authorization header不足）、`knowledge-research-worker` がHTTP 405（POST required）を返し、GET経由では処理開始されないことを確認。
 - Release用GitHub token、workflow dispatch、Production URLへの公開処理は未実施。
 
+
+
+## Managed Staging release checkpoint（2026-10-01）
+
+- GitHub main checkpoint: `61886c3a505498982eed5eaa617bbd8d8f58af8c`.
+- `pwa-release-deploy` v1 is ACTIVE in Managed Staging with `verify_jwt=true`; deployed source matches current main exactly and points to `haruharu42/AIActionStudio-Updates`.
+- Managed Staging has empty read-side release tables plus `admin_list_app_release_deployments()`; active-admin guard tests passed and persistent release/deployment row counts remain 0.
+- Unauthenticated HTTP GET to the release Worker is rejected with HTTP 401.
+- Formal migration `20260930210846_update_release_github_run_url_constraint.sql` was generated with Supabase CLI, validated in disposable CI, merged in PR #242, and applied to Managed Staging.
+- The constraint deliberately accepts both renamed `AIActionStudio-Updates` and legacy `AIArticleStudio-Updates` GitHub run URLs during rollout/rollback, while rejecting unrelated repositories.
+- Issue #240 remains open until the migration is explicitly applied to Production and the production release Worker rollout is separately verified.
+- No real `AAS_GITHUB_RELEASE_TOKEN` has been copied to Managed Staging or validated there; no workflow dispatch has been performed.
+
+Production remains unchanged: the production release Worker and DB constraint must be handled as separate explicit rollout steps.
+
