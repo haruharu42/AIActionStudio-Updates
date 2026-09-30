@@ -3,10 +3,14 @@ import test from "node:test";
 
 const phase56Meta =
   /<meta(?=[^>]*\bname=["']aas-phase["'])(?=[^>]*\bcontent=["']56["'])[^>]*>/i;
-const previewStageMeta =
-  /<meta(?=[^>]*\bname=["']aas-release-stage["'])(?=[^>]*\bcontent=["']preview["'])[^>]*>/i;
+const expectedReleaseStage =
+  process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview" ? "preview" : "public";
+const releaseStageMeta = new RegExp(
+  `<meta(?=[^>]*\\bname=["']aas-release-stage["'])(?=[^>]*\\bcontent=["']${expectedReleaseStage}["'])[^>]*>`,
+  "i",
+);
 
-test("renders current Phase 56 preview metadata", async () => {
+test("renders current Phase 56 deployment metadata", async () => {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
@@ -33,7 +37,7 @@ test("renders current Phase 56 preview metadata", async () => {
   );
   const html = await response.text();
   assert.match(html, phase56Meta);
-  assert.match(html, previewStageMeta);
+  assert.match(html, releaseStageMeta);
   assert.doesNotMatch(html, /codex-preview/i);
   assert.doesNotMatch(html, /phase8-local/i);
 });
