@@ -1,5 +1,6 @@
-import { quoteUntrustedKnowledgeResearchData } from "@/lib/untrusted-knowledge-research";
 "use client";
+
+import { quoteUntrustedKnowledgeResearchData } from "@/lib/untrusted-knowledge-research";
 
 import { useMemo, useState } from "react";
 
