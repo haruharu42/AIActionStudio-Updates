@@ -53,7 +53,19 @@ function pageTitle(raw: string) {
 }
 
 function nextCheck(hours: number) {
-  return new Date(Date.now() + Math.max(1, hours) * 3600000).toISOString();
+  const next = new Date(Date.now() + Math.max(1, hours) * 3600000);
+  // The scheduler runs on a fixed minute. Normalizing generated due-times to
+  // the minute avoids a few seconds of worker/fetch latency pushing a source
+  // just past the cron invocation and delaying it by a full scheduler cycle.
+  next.setUTCSeconds(0,0);
+  return next.toISOString();
+}
+
+function dueSourceCutoff() {
+  // Compatibility grace for rows scheduled before minute normalization.
+  // This can inspect an existing source at most 60 seconds early, but prevents
+  // legacy second offsets from missing a six-hour scheduler invocation.
+  return new Date(Date.now() + 60000).toISOString();
 }
 
 function failureBackoffHours(failures: number) {
@@ -636,7 +648,7 @@ Deno.serve(async (req) => {
 
     const items = await loadItems();
     await syncSources(items);
-    const due = await db.from("knowledge_automation_sources").select("*").eq("enabled",true).lte("next_check_at",new Date().toISOString()).order("next_check_at",{ascending:true}).limit(settings.max_sources_per_run);
+    const due = await db.from("knowledge_automation_sources").select("*").eq("enabled",true).lte("next_check_at",dueSourceCutoff()).order("next_check_at",{ascending:true}).limit(settings.max_sources_per_run);
     if (due.error) throw due.error;
     const known = new Set<string>();
     const all = await db.from("knowledge_automation_sources").select("source_url");
