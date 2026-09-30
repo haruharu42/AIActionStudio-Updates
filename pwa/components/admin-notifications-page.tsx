@@ -7,8 +7,10 @@ import { SelectWithCustom } from "@/components/select-with-custom";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import {
   adminCreateNotification,
+  adminGetNotificationReadiness,
   adminListNotifications,
   type AdminNotification,
+  type AdminNotificationReadiness,
   type NotificationAudience,
   type NotificationCategory,
 } from "@/lib/notifications";
@@ -41,6 +43,7 @@ export function AdminNotificationsPage() {
   const [body, setBody] = useState("");
   const [href, setHref] = useState("/");
   const [items, setItems] = useState<AdminNotification[]>([]);
+  const [readiness, setReadiness] = useState<AdminNotificationReadiness | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -48,15 +51,29 @@ export function AdminNotificationsPage() {
   const activeAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
 
   const refresh = async () => {
-    setItems(await adminListNotifications(getSupabaseClient(), 80));
+    const client = getSupabaseClient();
+    const [nextItems, nextReadiness] = await Promise.all([
+      adminListNotifications(client, 80),
+      adminGetNotificationReadiness(client),
+    ]);
+    setItems(nextItems);
+    setReadiness(nextReadiness);
   };
 
   useEffect(() => {
     if (!activeAdmin) return;
     let active = true;
-    void adminListNotifications(getSupabaseClient(), 80).then(
-      (next) => { if (active) setItems(next); },
-      () => { if (active) setError("通知履歴を取得できませんでした。"); },
+    const client = getSupabaseClient();
+    void Promise.all([
+      adminListNotifications(client, 80),
+      adminGetNotificationReadiness(client),
+    ]).then(
+      ([nextItems, nextReadiness]) => {
+        if (!active) return;
+        setItems(nextItems);
+        setReadiness(nextReadiness);
+      },
+      () => { if (active) setError("通知管理の状態を取得できませんでした。"); },
     );
     return () => { active = false; };
   }, [activeAdmin]);
@@ -107,6 +124,65 @@ export function AdminNotificationsPage() {
 
       {message && <p className="route-notice">{message}</p>}
       {error && <p className="route-notice error">{error}</p>}
+
+      <section className="admin-panel admin-dashboard-section admin-notification-readiness">
+        <div className="admin-panel-heading">
+          <div><p className="eyebrow">ROLLOUT READINESS</p><h2>通知センター公開準備状況</h2></div>
+          <button className="secondary-action" disabled={busy} type="button" onClick={() => void refresh().catch(() => setError("通知管理の状態を更新できませんでした。"))}>再確認</button>
+        </div>
+        {readiness ? (
+          <>
+            <div className={"admin-notification-readiness-summary " + (readiness.automatedChecksPass ? "ready" : "needs-check")}>
+              <div>
+                <span>自動確認</span>
+                <strong>{readiness.automatedChecksPass ? "通過" : "確認事項あり"}</strong>
+              </div>
+              <p>
+                自動確認は設定・テスター登録・配信キューだけを判定します。
+                実機でのPush受信・通知タップ・PC/スマホ主要導線は公開前に別途確認してください。
+              </p>
+            </div>
+            <div className="admin-notification-readiness-grid">
+              <article>
+                <span>公開段階</span>
+                <strong>{readiness.featureStage === "public" ? "全体公開" : readiness.featureStage === "tester" ? "テスター" : "管理者のみ"}</strong>
+                <small>{readiness.maintenanceMode ? "メンテナンス中" : "通常稼働"}</small>
+              </article>
+              <article>
+                <span>Push配信設定</span>
+                <strong>{readiness.pushConfigReady && readiness.pushEnabled ? "設定済み" : "要確認"}</strong>
+                <small>秘密値は表示しません</small>
+              </article>
+              <article>
+                <span>指定テスター端末</span>
+                <strong>{readiness.testerPushUsers} / {readiness.testerCount}</strong>
+                <small>Push有効ユーザー / active一般テスター</small>
+              </article>
+              <article>
+                <span>有効Push購読</span>
+                <strong>{readiness.enabledSubscriptions}</strong>
+                <small>全対象端末の有効購読数</small>
+              </article>
+              <article>
+                <span>未処理キュー</span>
+                <strong>{readiness.deliveries.pending + readiness.deliveries.processing}</strong>
+                <small>pending {readiness.deliveries.pending} / processing {readiness.deliveries.processing}</small>
+              </article>
+              <article>
+                <span>配信失敗</span>
+                <strong>{readiness.deliveries.failed}</strong>
+                <small>送信成功 {readiness.deliveries.sent} 件</small>
+              </article>
+            </div>
+            <p className="admin-notification-readiness-note">
+              最終送信: {readiness.deliveries.latestSentAt ? formatDate(readiness.deliveries.latestSentAt) : "まだありません"}。
+              この画面から公開段階は変更しません。実機確認後に<Link href="/admin/features">全機能管理</Link>で段階を変更してください。
+            </p>
+          </>
+        ) : (
+          <div className="admin-empty-state compact"><strong>公開準備状況を確認しています。</strong></div>
+        )}
+      </section>
 
       <section className="admin-panel admin-dashboard-section">
         <div className="admin-panel-heading"><div><p className="eyebrow">SEND</p><h2>お知らせを送信</h2></div></div>
