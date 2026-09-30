@@ -16,6 +16,8 @@ $$;
 
 set role authenticated;
 set test.mock_uid='11111111-1111-4111-8111-111111111111';
+-- Compatible with actual Supabase auth.uid(), while the mock fixture reads test.mock_uid.
+set request.jwt.claim.sub='11111111-1111-4111-8111-111111111111';
 set test.mock_admin='false';
 do $$
 begin
