@@ -603,6 +603,16 @@ test("access-restricted Knowledge sources offer safe manual review without overr
   assert.match(sourceHealth, /label: "アクセス制限"/);
   assert.match(sourceHealth, /label: "取得頻度制限"/);
   assert.match(sourceHealth, /label: "参照先を再確認"/);
+  assert.match(sourceHealth, /const PERSISTENT_ACCESS_RESTRICTION_FAILURES = 6/);
+  assert.match(sourceHealth, /function isPersistentAccessRestriction/);
+  assert.match(sourceHealth, /source\.enabled/);
+  assert.match(sourceHealth, /source\.consecutiveFailures >= PERSISTENT_ACCESS_RESTRICTION_FAILURES/);
+  assert.match(sourceHealth, /pauseRecommended: false/);
+  assert.match(sourceHealth, /const pauseRecommendedSources = useMemo/);
+  assert.match(sourceHealth, /<span>停止推奨<\/span><strong>\{pauseRecommendedSources\.length\}<\/strong>/);
+  assert.match(sourceHealth, /長期の401\/403により停止推奨/);
+  assert.match(sourceHealth, /diagnosis\.pauseRecommended && <span className="pause-recommended">停止推奨<\/span>/);
+  assert.match(sourceHealth, /履歴を保持したまま監視停止を検討/);
   assert.match(sourceHealth, /制限を迂回せず/);
   assert.match(sourceHealth, /公式の公開API・RSS・代替公式URL/);
   assert.match(sourceHealth, /const restrictedSources = useMemo/);
@@ -639,6 +649,8 @@ test("access-restricted Knowledge sources offer safe manual review without overr
   assert.match(css, /\.knowledge-source-manual-review/);
   assert.match(css, /\.knowledge-source-alternatives/);
   assert.match(css, /\.knowledge-source-alternatives a/);
+  assert.match(css, /\.knowledge-source-health-stats article\.pause-recommended/);
+  assert.match(css, /\.knowledge-source-list article > header > span\.pause-recommended/);
 });
 
 test("redundant OpenAI Help source is retired from scheduling after repeated 403s without deleting history", async () => {
