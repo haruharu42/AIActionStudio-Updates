@@ -917,6 +917,19 @@
   border-radius: 11px;
   background: #f2faf6;
 }
+.knowledge-recheck-batch {
+  border-color: #c6cde8;
+  background: #f6f7fd;
+}
+
+.knowledge-recheck-batch strong {
+  color: #4b5f9a;
+}
+
+.knowledge-recheck-batch p {
+  color: #667397;
+}
+
 .knowledge-held-batch > div:first-child {
   display: grid;
   gap: 4px;
