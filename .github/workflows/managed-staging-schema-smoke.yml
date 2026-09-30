@@ -1,0 +1,68 @@
+name: Managed Staging schema smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/tests/managed-staging/**"
+      - "supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql"
+      - ".github/workflows/managed-staging-schema-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  managed-staging-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.118.0
+
+      - name: Build isolated local Supabase project
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEST_ROOT="$RUNNER_TEMP/aas-managed-staging-schema"
+          mkdir -p "$TEST_ROOT"
+          cd "$TEST_ROOT"
+          supabase init
+          mkdir -p supabase/migrations
+          cp "$GITHUB_WORKSPACE/supabase/tests/managed-staging/minimal-base.sql"             supabase/migrations/20260930125100_managed_staging_fixture.sql
+          cp "$GITHUB_WORKSPACE/supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql"             supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql
+          echo "TEST_ROOT=$TEST_ROOT" >> "$GITHUB_ENV"
+
+      - name: Start disposable full Supabase stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TEST_ROOT"
+          supabase start
+
+      - name: Verify safe managed-staging defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TEST_ROOT"
+          supabase status -o env > local.env
+          set -a
+          # shellcheck disable=SC1091
+          source local.env
+          set +a
+          psql "$DB_URL" -v ON_ERROR_STOP=1             -f "$GITHUB_WORKSPACE/supabase/tests/managed-staging/verify.sql"
+          echo "PASS: managed Staging reconstruction fixture and Gemini migration are compatible."
+
+      - name: Stop disposable Supabase stack
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${TEST_ROOT:-}" && -d "$TEST_ROOT" ]]; then
+            cd "$TEST_ROOT"
+            supabase stop --no-backup || true
+          fi
