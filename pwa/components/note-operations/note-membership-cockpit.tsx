@@ -231,6 +231,8 @@ export function NoteMembershipCockpit({
   const [metricsEntries, setMetricsEntries] = useState<NoteMembershipMetricsEntry[]>([]);
   const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
   const workspaceOwnerRef = useRef("");
+  const [launchHydrated, setLaunchHydrated] = useState(false);
+  const launchOwnerRef = useRef("");
 
   useEffect(() => {
     let active = true;
@@ -288,31 +290,42 @@ export function NoteMembershipCockpit({
 
   useEffect(() => {
     let active = true;
+    launchOwnerRef.current = "";
+    setLaunchHydrated(false);
+
+    let restored: MembershipLaunchChecklistKey[] = [];
     try {
       const raw = window.localStorage.getItem(membershipLaunchStorageKey(userId));
-      if (!raw) return () => { active = false; };
-      const value: unknown = JSON.parse(raw);
-      if (!Array.isArray(value)) return () => { active = false; };
-      const allowed = new Set(NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.map((item) => item.key));
-      const restored = value.filter((item): item is MembershipLaunchChecklistKey =>
-        typeof item === "string" && allowed.has(item as MembershipLaunchChecklistKey),
-      );
-      queueMicrotask(() => {
-        if (active) setChecked(restored);
-      });
+      if (raw) {
+        const value: unknown = JSON.parse(raw);
+        if (Array.isArray(value)) {
+          const allowed = new Set(NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.map((item) => item.key));
+          restored = value.filter((item): item is MembershipLaunchChecklistKey =>
+            typeof item === "string" && allowed.has(item as MembershipLaunchChecklistKey),
+          );
+        }
+      }
     } catch {
-      // Device storage is optional.
+      // Device storage is optional. Start this account with an empty checklist.
     }
+
+    queueMicrotask(() => {
+      if (!active) return;
+      setChecked(restored);
+      launchOwnerRef.current = userId;
+      setLaunchHydrated(true);
+    });
     return () => { active = false; };
   }, [userId]);
 
   useEffect(() => {
+    if (!launchHydrated || launchOwnerRef.current !== userId) return;
     try {
       window.localStorage.setItem(membershipLaunchStorageKey(userId), JSON.stringify(checked));
     } catch {
       // Progress remains available for this session.
     }
-  }, [checked, userId]);
+  }, [checked, launchHydrated, userId]);
 
   const pricingPrompt = useMemo(() => buildMembershipPricingPrompt(profile, pricing), [profile, pricing]);
   const pagePrompt = useMemo(
