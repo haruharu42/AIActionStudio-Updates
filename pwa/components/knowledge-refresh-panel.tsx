@@ -405,12 +405,17 @@ export function KnowledgeRefreshPanel() {
       setPreparedAutomationCandidateId(candidate.id);
       setBundleText(JSON.stringify(bundle, null, 2));
       setDiffPreview(null);
-      await reload();
-      setSelectedId(requestId);
-      setPreparedAutomationCandidateId(candidate.id);
-      setMessage("AI提案をFresh差分レビューへ取り込みました。候補状態もまだ確定していません。「変更点を確認」後、公開に成功した場合だけ処理済みにします。");
+      try {
+        await reload();
+        setSelectedId(requestId);
+        setPreparedAutomationCandidateId(candidate.id);
+        setMessage("AI提案をFresh差分レビューへ取り込みました。候補状態もまだ確定していません。「変更点を確認」後、公開に成功した場合だけ処理済みにします。");
+      } catch {
+        setSelectedId(requestId);
+        setMessage(`Fresh更新 #${requestId} は作成済みで、候補 #${candidate.id} のJSONも保持しています。一覧再読込には失敗しました。新しい更新を再作成せず、再読込して状態を確認してください。`);
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "AI提案をFresh差分レビューへ取り込めませんでした。");
+      setMessage(`AI提案のFresh更新作成結果を確認できませんでした。二重作成を避けるため更新キューを再読込してから操作してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -440,12 +445,21 @@ export function KnowledgeRefreshPanel() {
     setMessage("");
     try {
       const result = await adminPrepareSourceDiversityResearch(getSupabaseClient(), 12);
+      // A newly prepared request is unrelated to any previous AI candidate.
       setSelectedId(result.requestId);
-      await reload();
-      setSelectedId(result.requestId);
-      setMessage(`追加根拠リサーチ ${result.itemCount}件をFresh更新 #${result.requestId} へ準備しました。差分確認・公開操作を行うまで正式Knowledgeは変わりません。`);
+      setPreparedAutomationCandidateId(null);
+      setBundleText("");
+      setDiffPreview(null);
+      try {
+        await reload();
+        setSelectedId(result.requestId);
+        setMessage(`追加根拠リサーチ ${result.itemCount}件をFresh更新 #${result.requestId} へ準備しました。差分確認・公開操作を行うまで正式Knowledgeは変わりません。`);
+      } catch {
+        setSelectedId(result.requestId);
+        setMessage(`追加根拠リサーチ ${result.itemCount}件はFresh更新 #${result.requestId} に準備済みです。一覧再読込には失敗しました。再作成せず、管理者の更新キューで確認してください。`);
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "追加根拠リサーチを準備できませんでした。");
+      setMessage(`追加根拠リサーチの作成結果を確認できませんでした。重複作成を避けるため更新キューを確認してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -559,12 +573,19 @@ export function KnowledgeRefreshPanel() {
         delete next[candidate.id];
         return next;
       });
-      await reload();
-      setMessage(decision === "approved"
-        ? "候補を承認しました。検証メモを保存しましたが、まだ正式Knowledgeには公開されていません。"
-        : "候補を却下し、検証メモを保存しました。");
+      // The review RPC has succeeded: hide its stale pending row immediately
+      // so a failed dashboard reload cannot invite an accidental second review.
+      setAutomationCandidates((current) => current.filter((item) => item.id !== candidate.id));
+      try {
+        await reload();
+        setMessage(decision === "approved"
+          ? "候補を承認しました。検証メモを保存しましたが、まだ正式Knowledgeには公開されていません。"
+          : "候補を却下し、検証メモを保存しました。");
+      } catch {
+        setMessage(`候補 #${candidate.id} の${actionLabel}と検証メモ保存は成功しましたが、一覧を再読込できませんでした。同じレビューを繰り返さず、後ほど更新状態を確認してください。`);
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "候補のレビュー結果を保存できませんでした。");
+      setMessage(`候補 #${candidate.id} のレビュー保存結果を確認できませんでした。再承認・再却下する前に一覧を再読込してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -578,12 +599,20 @@ export function KnowledgeRefreshPanel() {
       const id = await adminRequestKnowledgeRefresh(getSupabaseClient(), channel);
       setSelectedId(id);
       setPreparedAutomationCandidateId(null);
-      await reload();
-      setMessage(channel === "fresh"
-        ? "Fresh（先行確認版）の更新をキューへ追加しました。"
-        : "Stable（標準版）の更新をキューへ追加しました。");
+      setBundleText("");
+      setDiffPreview(null);
+      try {
+        await reload();
+        setSelectedId(id);
+        setMessage(channel === "fresh"
+          ? "Fresh（先行確認版）の更新をキューへ追加しました。"
+          : "Stable（標準版）の更新をキューへ追加しました。");
+      } catch {
+        setSelectedId(id);
+        setMessage(`更新 #${id} はキューへ追加済みですが一覧再読込に失敗しました。再度追加せず、更新キューを確認してください。`);
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "更新を追加できませんでした。");
+      setMessage(`更新の追加結果を確認できませんでした。二重登録を防ぐため更新キューを確認してから再操作してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -595,11 +624,27 @@ export function KnowledgeRefreshPanel() {
     setDiffPreview(null);
     try {
       await adminStartKnowledgeRefresh(getSupabaseClient(), request.id);
+      // Retain the AI candidate JSON only when starting its own selected request.
+      // Switching to another request must sever the previous candidate link.
+      if (selectedId !== request.id) {
+        setPreparedAutomationCandidateId(null);
+        setBundleText("");
+        setDiffPreview(null);
+      }
       setSelectedId(request.id);
-      await reload();
-      setMessage("更新を調査・確認中へ変更しました。");
+      setRequests((current) => current.map((item) => item.id === request.id
+        ? { ...item, status: "processing" as const }
+        : item));
+      try {
+        await reload();
+        setSelectedId(request.id);
+        setMessage("更新を調査・確認中へ変更しました。");
+      } catch {
+        setSelectedId(request.id);
+        setMessage(`更新 #${request.id} は調査・確認中に変更済みですが、一覧再読込には失敗しました。再度開始せず、後ほど更新キューを確認してください。`);
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "更新を開始できませんでした。");
+      setMessage(`更新 #${request.id} の開始結果を確認できませんでした。二重操作を防ぐため更新キューを再読込してから確認してください。${error instanceof Error ? ` 詳細: ${error.message}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -1138,6 +1183,8 @@ export function KnowledgeRefreshPanel() {
           {activeRequests.map((request) => (
             <article key={request.id} className={selectedId === request.id ? "active" : ""}>
               <button type="button" className="knowledge-refresh-select" onClick={() => {
+                // Re-selecting the same row must not silently discard its draft.
+                if (selectedId === request.id) return;
                 setSelectedId(request.id);
                 setPreparedAutomationCandidateId(null);
                 setDiffPreview(null);
