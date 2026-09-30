@@ -1,6 +1,6 @@
-# AIArticleStudio-Updates
+# AI Action Studio（AAS）
 
-AI記事スタジオの更新ファイル・バージョン管理用リポジトリ。
+AI Action Studio（AAS）の更新ファイル・バージョン管理用リポジトリ。
 
 ## Current product direction
 

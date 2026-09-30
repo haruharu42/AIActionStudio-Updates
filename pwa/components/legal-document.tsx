@@ -32,7 +32,7 @@ export function LegalDocument({
         }}
       >
         <Link href="/" style={{ color: "#2457d6", textDecoration: "none" }}>
-          ← AI記事スタジオへ戻る
+          ← AI Action Studioへ戻る
         </Link>
         <p
           style={{

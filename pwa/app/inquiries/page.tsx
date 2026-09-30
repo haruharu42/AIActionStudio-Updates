@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { UserInquiriesPage } from "@/components/user-inquiries-page";
 
 export const metadata: Metadata = {
-  title: "お問い合わせ | AI記事スタジオ",
+  title: "お問い合わせ | AI Action Studio",
   robots: { index: false, follow: false },
 };
 
