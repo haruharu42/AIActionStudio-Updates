@@ -32,6 +32,8 @@ The Edge Function has no call to the Knowledge publication RPC.
 - `aas-knowledge-research-worker-6h`: invokes the source monitor every six hours.
 - Each tracked source normally has a 24-hour recheck interval.
 - The worker processes a bounded number of due sources per run.
+- Generated `next_check_at` timestamps are normalized to the minute so fetch latency cannot push a source a few seconds past the fixed cron invocation.
+- Due-source selection includes a 60-second compatibility grace for older rows that still contain second offsets; backoff hours themselves are unchanged.
 - Existing Fresh / Stable scheduling remains independent.
 - AI enrichment processes only a bounded number of pending candidates per worker run.
 - If AI enrichment is disabled, unconfigured, or temporarily fails, official-source monitoring continues normally.
