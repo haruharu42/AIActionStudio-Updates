@@ -577,7 +577,8 @@ test("knowledge source health puts failing URLs first and never labels disabled 
   assert.match(sourceHealth, /source\.consecutiveFailures >= 3/);
   assert.match(sourceHealth, /const diagnosis = sourceFetchDiagnosis\(source\)/);
   assert.match(sourceHealth, /if \(!source\.enabled\)/);
-  assert.match(sourceHealth, /return \{ kind: "disabled", label: "停止中"/);
+  assert.match(sourceHealth, /kind: "disabled"/);
+  assert.match(sourceHealth, /label: "停止中"/);
   assert.match(sourceHealth, /<span>再試行待ち<\/span><strong>\{backoffSources\.length\}<\/strong>/);
   assert.match(sourceHealth, /orderedSources\.map/);
   assert.match(css, /\.knowledge-source-list article > header > span\.backoff/);
@@ -610,11 +611,19 @@ test("access-restricted Knowledge sources offer safe manual review without overr
   assert.match(sourceHealth, /navigator\.clipboard\.writeText\(prompt\)/);
   assert.match(sourceHealth, /候補承認やFresh \/ Stableへの反映は実行しない/);
   assert.match(sourceHealth, /diagnosis\.needsManualReview/);
+  assert.match(sourceHealth, /const manualReviewSources = useMemo/);
+  assert.match(sourceHealth, /sourceFetchDiagnosis\(source\)\.needsManualReview/);
+  assert.match(sourceHealth, /copyManualResearchBatch/);
+  assert.match(sourceHealth, /最大10件をまとめてコピー/);
+  assert.match(sourceHealth, /監視停止中です。履歴は保持されています/);
+  assert.match(sourceHealth, /open=\{failingSources\.length > 0 \|\| manualReviewSources\.length > 0\}/);
+  assert.match(sourceHealth, /自動再開・自動承認・自動公開は行いません/);
   assert.doesNotMatch(sourceHealth, /adminReviewKnowledgeAutomationCandidate|getSupabaseClient|\.rpc\(/);
   assert.match(css, /\.knowledge-source-health-stats article\.restricted/);
   assert.match(css, /\.knowledge-source-list article\.restricted/);
   assert.match(css, /\.knowledge-source-guidance/);
   assert.match(css, /\.knowledge-source-actions button\.manual-review/);
+  assert.match(css, /\.knowledge-source-manual-review/);
 });
 
 test("redundant OpenAI Help source is retired from scheduling after repeated 403s without deleting history", async () => {
