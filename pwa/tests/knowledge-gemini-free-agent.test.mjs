@@ -7,6 +7,7 @@ import {
   GEMINI_FREE_RUN_LIMIT,
   GEMINI_FREE_DAILY_LIMIT,
   publicKnowledgeCandidate,
+  geminiPublicSourceEligible,
   buildGeminiFreeRequest,
   parseGeminiFreeJson,
   callGeminiFreeJson,
@@ -41,6 +42,35 @@ test("Gemini Free request contains quoted official excerpts only, no private AAS
 test("Gemini Free refuses invalid or authenticated links", () => {
   assert.throws(() => publicKnowledgeCandidate({...candidate, source_url:"http://official.example/"}), /public HTTPS/);
   assert.throws(() => publicKnowledgeCandidate({...candidate, source_url:"https://user:pass@official.example/"}), /public HTTPS/);
+});
+
+test("Gemini Free refuses source excerpts containing likely personal data or credentials before quota reservation", async () => {
+  assert.equal(geminiPublicSourceEligible(candidate), true);
+  const blocked = [
+    { source_excerpt: candidate.source_excerpt + " Email admin@example.com" },
+    { source_excerpt: candidate.source_excerpt + " Authorization: Bearer ABCDEFGHIJKLMNOP123456" },
+    { source_excerpt: candidate.source_excerpt + " api_key=EXTERNAL_PRIVATE_VALUE_98765" },
+    { source_title: "Contact privacy@example.com" },
+    { reason: "access_token=PRIVATE_CREDENTIAL_123456" },
+    { source_url: "https://official.example/profiles/user@example.com?public=1" },
+    { source_http_status: 403 },
+    { source_excerpt: "short excerpt" },
+    { source_url: "https://user:pass@official.example/updates" },
+  ];
+  for (const change of blocked) {
+    const privateCandidate = { ...candidate, ...change };
+    assert.equal(geminiPublicSourceEligible(privateCandidate), false, JSON.stringify(change).slice(0, 60));
+    assert.throws(() => buildGeminiFreeRequest(privateCandidate), /eligible non-sensitive/);
+  }
+  let networkCalls = 0;
+  await assert.rejects(
+    callGeminiFreeJson("TEST_FAKE_KEY", GEMINI_FREE_MODEL, {...candidate, source_excerpt:candidate.source_excerpt+" owner@example.com"}, async()=>{
+      networkCalls++;
+      throw new Error("should never send private candidate");
+    }),
+    /eligible non-sensitive/,
+  );
+  assert.equal(networkCalls, 0);
 });
 
 test("Gemini Free calls exactly one allowlisted model and never falls back to paid", async () => {
@@ -88,6 +118,8 @@ test("staged Gemini database gates and worker leave existing OpenAI path intact"
   assert.match(worker,/callOpenAiJson/);
   assert.match(worker,/callGeminiFreeJson/);
   assert.match(worker,/reserve_knowledge_gemini_free_call/);
+  assert.match(worker,/if \(!geminiPublicSourceEligible\(item\)\)/);
+  assert.ok(worker.indexOf("if (!geminiPublicSourceEligible(item))") < worker.indexOf("reserve_knowledge_gemini_free_call"), "privacy gate precedes daily quota reservation");
   assert.match(worker,/if \(reservation\.data !== true\) break/);
   assert.match(worker,/config\.provider === "gemini" \? \{ \.\.\.candidate,current_payload:null,existing_item_key:"" \} : candidate/);
   assert.match(client,/admin_get_knowledge_gemini_free_agent_status/);
