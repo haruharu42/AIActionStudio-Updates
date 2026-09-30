@@ -731,7 +731,8 @@ export function KnowledgeRefreshPanel() {
   };
 
   const previewDiff = async () => {
-    if (!bundleText.trim()) return;
+    // A busy review must not apply a preview to a different request or draft.
+    if (busy || !selected || !bundleText.trim()) return;
     setBusy(true);
     setMessage("");
     try {
@@ -748,7 +749,7 @@ export function KnowledgeRefreshPanel() {
   };
 
   const publish = async () => {
-    if (!selected || !diffPreview || (selected.status !== "pending" && selected.status !== "processing")) return;
+    if (busy || !selected || !diffPreview || (selected.status !== "pending" && selected.status !== "processing")) return;
 
     const changedCount =
       diffPreview.knowledge.added + diffPreview.knowledge.updated +
@@ -1308,7 +1309,7 @@ export function KnowledgeRefreshPanel() {
         <div className="knowledge-refresh-list">
           {activeRequests.map((request) => (
             <article key={request.id} className={selectedId === request.id ? "active" : ""}>
-              <button type="button" className="knowledge-refresh-select" onClick={() => {
+              <button type="button" className="knowledge-refresh-select" disabled={busy} onClick={() => {
                 // Re-selecting the same row must not silently discard its draft.
                 if (selectedId === request.id) return;
                 setSelectedId(request.id);
@@ -1340,6 +1341,7 @@ export function KnowledgeRefreshPanel() {
           </div>
           <textarea
             rows={14}
+            disabled={busy}
             value={bundleText}
             onChange={(event) => {
               setBundleText(event.target.value);
