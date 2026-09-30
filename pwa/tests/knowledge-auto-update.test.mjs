@@ -427,6 +427,28 @@ test("AI enrichment can be disabled while zero-cost recheck/retire analysis stil
   assert.match(worker, /analysis_failures:ai\.failed/);
 });
 
+test("all bulk Knowledge research handoffs quote untrusted metadata instead of making it top-level instructions", async () => {
+  const [panel, sourceHealth] = await Promise.all([
+    readKnowledgeRefreshSource(),
+    readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
+  ]);
+  const sections = [
+    [panel, "copyHeldResearchBatch", "copyRecheckResearchBatch", "currentHeldBatch.map"],
+    [panel, "copyRecheckResearchBatch", "copyAutomationPrompt", "currentRecheckBatch.map"],
+    [sourceHealth, "copyManualResearchPrompt", "copyManualResearchBatch", "source_url: source.sourceUrl"],
+    [sourceHealth, "copyManualResearchBatch", "const enabledSources", "batch.map"],
+  ];
+  for (const [content, startName, endName, dataMarker] of sections) {
+    const start = content.indexOf("const " + startName);
+    const end = content.indexOf(endName === "const enabledSources" ? endName : "const " + endName, start);
+    assert.ok(start >= 0 && end > start, startName + " section exists");
+    const section = content.slice(start, end);
+    assert.match(section, /quoteUntrustedKnowledgeResearchData\(/);
+    assert.ok(section.includes(dataMarker), startName + " includes expected records");
+    assert.doesNotMatch(section, /adminReviewKnowledgeAutomationCandidate|adminPublishKnowledgeRefreshBundle|\.rpc\(/);
+  }
+});
+
 test("individual Knowledge research copy and optional Worker AI analysis fence untrusted source text", async () => {
   const [panel, worker] = await Promise.all([
     readKnowledgeRefreshSource(),
