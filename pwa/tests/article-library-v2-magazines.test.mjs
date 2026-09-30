@@ -137,6 +137,9 @@ test('article library shows the effective save quota and remaining slots without
   assert.match(libraryDetailUi, /この記事は現在複製できません/);
   assert.match(libraryDetailUi, /利用プランを確認/);
   assert.match(globalsCss, /\.library-duplicate-quota-note/);
+  const phase7Source = await fs.readFile(`${root}/lib/phase7-articles.ts`, 'utf8');
+  assert.match(phase7Source, /article_quota_exceeded/);
+  assert.match(phase7Source, /不要な記事を整理するか、利用プランを確認してください/);
 });
 
 test('article library filters start collapsed and can be opened without clearing the selected conditions', () => {
