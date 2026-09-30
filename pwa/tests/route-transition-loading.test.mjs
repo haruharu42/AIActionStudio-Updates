@@ -165,13 +165,14 @@ test("free trial usage verification stays invisible while loading", async () => 
 });
 
 test("member and admin route shells keep protected content hidden while safe shared loading shells may render", async () => {
-  const hiddenAccessStateRoutes = await Promise.all([
+  const safeAccessStateRoutes = await Promise.all([
     read("components/phase13-image-page.tsx"),
     read("components/article-export-page.tsx"),
   ]);
 
-  for (const source of hiddenAccessStateRoutes) {
-    assert.match(source, /if \(accessState\.kind === "loading"\) return null/);
+  for (const source of safeAccessStateRoutes) {
+    assert.match(source, /accessState\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
+    assert.doesNotMatch(source, /accessState\.kind === "loading"\) return null/);
   }
 
   const [snsPage, memberGate] = await Promise.all([
@@ -183,8 +184,12 @@ test("member and admin route shells keep protected content hidden while safe sha
   assert.match(memberGate, /state\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
   assert.match(memberGate, /会員機能の利用権を確認しています/);
 
+  const articleCreate = await read("components/phase11-create-page.tsx");
+  assert.match(articleCreate, /gate\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
+  assert.match(articleCreate, /記事作成の利用権と設定を確認しています/);
+  assert.doesNotMatch(articleCreate, /gate\.kind === "loading"\) return null/);
+
   const localGateRoutes = await Promise.all([
-    read("components/phase11-create-page.tsx"),
     read("components/free-trial-admin-page.tsx"),
     read("components/operations-admin-page.tsx"),
     read("components/sales-settings-admin-page.tsx"),
