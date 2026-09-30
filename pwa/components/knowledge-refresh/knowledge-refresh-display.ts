@@ -17,7 +17,7 @@ export function formatKnowledgeCycle(hours: number | null | undefined): string {
 
 export function knowledgeRefreshStatusLabel(status: KnowledgeRefreshRequest["status"]): string {
   switch (status) {
-    case "pending": return "待機中";
+    case "pending": return "管理者レビュー待ち";
     case "processing": return "調査・確認中";
     case "completed": return "公開済み";
     case "failed": return "失敗";
