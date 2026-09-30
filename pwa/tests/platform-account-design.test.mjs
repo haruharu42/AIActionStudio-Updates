@@ -249,3 +249,15 @@ test("account starter kit covers first account setup through icon creation with 
 
   assert.doesNotMatch(`${migration}\n${lib}\n${panel}\n${page}`, /sb_secret_|service[_-]?role|sk_(?:live|test)_|whsec_/i);
 });
+
+
+test("account design shows a safe loading shell while access and cloud drafts are loading", async () => {
+  const page = await read("components/platform-account-design-page.tsx");
+
+  assert.match(page, /import \{ AppLoadingScreen \}/);
+  assert.match(page, /state\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
+  assert.match(page, /アカウント設計の利用権を確認しています/);
+  assert.match(page, /state\.kind === "ready" && client && !designs && !loadError/);
+  assert.match(page, /note \/ Tips \/ Brain のアカウント設計を読み込んでいます/);
+  assert.doesNotMatch(page, /if \(state\.kind === "loading"\) return null/);
+});

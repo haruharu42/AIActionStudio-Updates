@@ -206,7 +206,10 @@ test("member and admin route shells keep protected content hidden while safe sha
   assert.match(adminGuard, /useSharedAccessState\(\)/);
   assert.match(adminGuard, /gate\.kind === "ready"/);
   assert.match(adminUsers, /state === "loading"/);
-  assert.match(accountDesign, /if \(state\.kind === "loading"\) return null/);
+  assert.match(accountDesign, /state\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
+  assert.match(accountDesign, /アカウント設計の利用権を確認しています/);
+  assert.match(accountDesign, /state\.kind === "ready" && client && !designs && !loadError[\s\S]*?<AppLoadingScreen/);
+  assert.match(accountDesign, /note \/ Tips \/ Brain のアカウント設計を読み込んでいます/);
   assert.match(invite, /if \(state\.kind === "loading"\) return null/);
   assert.match(inquiries, /if \(state\.kind === "loading"\) return null/);
   assert.match(noteOperations, /if \(gate\.kind === "loading" \|\| \(gate\.kind === "ready" && !profile\)\) return null/);

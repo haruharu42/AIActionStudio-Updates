@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { applyWorkspacePresetToAccountDesign } from "@/features/presets/preset-adapters";
@@ -177,7 +178,13 @@ export function PlatformAccountDesignPage() {
     }
   };
 
-  if (state.kind === "loading") return null;
+  if (state.kind === "loading") {
+    return <AppLoadingScreen message="アカウント設計の利用権を確認しています…" />;
+  }
+
+  if (state.kind === "ready" && client && !designs && !loadError) {
+    return <AppLoadingScreen message="note / Tips / Brain のアカウント設計を読み込んでいます…" />;
+  }
 
   if (state.kind !== "ready" || !client || !designs || !design || !labels) {
     return (
