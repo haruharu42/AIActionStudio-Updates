@@ -34,6 +34,7 @@ export type PublicDeployment = {
 
 export type PublicDeploymentSnapshot = {
   configured: boolean;
+  supportsGithubReadiness: boolean;
   previewBranch: string;
   publicUrl: string;
   deployments: PublicDeployment[];
@@ -172,8 +173,35 @@ export async function loadPublicPwaDeployments(
     : [];
   return {
     configured: row.configured === true,
+    supportsGithubReadiness: row.supportsGithubReadiness === true,
     previewBranch: text(row.previewBranch) || AAS_PREVIEW_RELEASE_BRANCH,
     publicUrl: text(row.publicUrl) || AAS_PUBLIC_PWA_URL,
     deployments,
+  };
+}
+
+/**
+ * Admin-only, opt-in diagnosis. Uses only GitHub GET requests on the server.
+ * A successful read does NOT verify Actions:write / workflow dispatch.
+ */
+export type GithubReleaseReadiness = {
+  supported: boolean;
+  configured: boolean;
+  repositoryReadable: boolean;
+  workflowReadable: boolean;
+  dispatchPermissionTested: false;
+};
+
+export async function checkGithubReleaseReadiness(
+  client: SupabaseClient,
+): Promise<GithubReleaseReadiness> {
+  await accessToken(client);
+  const row = await invokeReleaseDeploy(client, { action: "github_readiness" });
+  return {
+    supported: row.supported === true,
+    configured: row.configured === true,
+    repositoryReadable: row.repositoryReadable === true,
+    workflowReadable: row.workflowReadable === true,
+    dispatchPermissionTested: false,
   };
 }
