@@ -104,6 +104,7 @@ export function KnowledgeRefreshPanel() {
   const [automationSources, setAutomationSources] = useState<KnowledgeAutomationSource[]>([]);
   const [automationCandidates, setAutomationCandidates] = useState<KnowledgeAutomationCandidate[]>([]);
   const [candidateView, setCandidateView] = useState<AutomationCandidateView>("all");
+  // Client-side display filter only; never use search state to mutate candidate or publication state.
   const [candidateSearch, setCandidateSearch] = useState("");
   const [heldBatchIndex, setHeldBatchIndex] = useState(0);
   const [recheckBatchIndex, setRecheckBatchIndex] = useState(0);
