@@ -42,6 +42,7 @@ import {
   type KnowledgeProductionHealth,
   type KnowledgeRefreshChannelState,
   type KnowledgeRefreshDiff,
+  type KnowledgeRefreshPublishResult,
   type KnowledgeRefreshRequest,
   type KnowledgeSourceRiskReport,
 } from "@/lib/knowledge-auto-update";
