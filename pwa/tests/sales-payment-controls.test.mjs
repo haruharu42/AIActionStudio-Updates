@@ -225,10 +225,11 @@ test("external-sales readiness is isolated and does not treat it as full product
 
 
 test("sales center groups legal support, DB readiness, and explicit public approval", async () => {
-  const [page, preflight, readinessClient, approvalMigration, routeAwareMigration, css] = await Promise.all([
+  const [page, preflight, readinessClient, billingWorker, approvalMigration, routeAwareMigration, css] = await Promise.all([
     readPwa("components/sales-settings-admin-page.tsx"),
     readPwa("components/admin-sales/sales-release-preflight-panel.tsx"),
     readPwa("lib/sales-launch-readiness.ts"),
+    readPwa("worker/billing.ts"),
     readRepo("supabase/migrations/20260928035226_commerce_public_sales_approval_v1.sql"),
     readRepo("supabase/migrations/20260930041500_sales_launch_route_aware_readiness_v2.sql"),
     readPwa("app/phase32-sales-settings.css"),
@@ -270,6 +271,18 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(preflight, /Stripe受付をONにしているため、7日券または月額プランを1つ以上ON/);
   assert.match(preflight, /外部販売＋利用コード/);
   assert.match(preflight, /Stripe PWA販売/);
+  assert.match(preflight, /loadStripeBillingReadiness/);
+  assert.match(preflight, /stripeReadiness/);
+  assert.match(preflight, /pwa7DayWorkerReady/);
+  assert.match(preflight, /pwaMonthlyWorkerReady/);
+  assert.match(preflight, /selectedStripePlansReady/);
+  assert.match(preflight, /stripeReadiness\.backendReady/);
+  assert.match(preflight, /Stripe Workerの実設定を確認できません/);
+  assert.match(preflight, /AAS_COMMERCE_MODEがoff/);
+  assert.match(preflight, /Stripe WorkerのSupabase接続・Stripe秘密鍵・Webhook秘密鍵/);
+  assert.match(preflight, /PWA 7日利用パスのStripe Price/);
+  assert.match(preflight, /PWA 月額プランのStripe Price/);
+  assert.match(preflight, /sales-stripe-worker-readiness/);
   for (const route of ["/commercial-transactions", "/terms", "/privacy", "/ai-terms", "/support"]) {
     assert.ok(preflight.includes(route), `missing pre-sale review route: ${route}`);
   }
@@ -288,6 +301,21 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(readinessClient, /admin_get_public_sales_approval/);
   assert.match(readinessClient, /admin_set_public_sales_approval/);
   assert.match(readinessClient, /sales launch readiness requirements not met/);
+  assert.match(readinessClient, /StripeBillingReadiness/);
+  assert.match(readinessClient, /loadStripeBillingReadiness/);
+  assert.match(readinessClient, /client\.auth\.getSession/);
+  assert.match(readinessClient, /\/api\/billing\/admin-readiness/);
+  assert.match(readinessClient, /authorization: \`Bearer/);
+
+  assert.match(billingWorker, /\/api\/billing\/admin-readiness/);
+  assert.match(billingWorker, /adminBillingReadiness/);
+  assert.match(billingWorker, /identity\.profile\.role !== "admin" \|\| identity\.profile\.status !== "active"/);
+  assert.match(billingWorker, /stripeSecretConfigured/);
+  assert.match(billingWorker, /webhookSecretConfigured/);
+  assert.match(billingWorker, /priceConfigured/);
+  assert.match(billingWorker, /priceReachable/);
+  assert.match(billingWorker, /modeMatches/);
+  assert.match(billingWorker, /backendReady/);
 
   assert.match(approvalMigration, /public_sales_approved boolean not null default false/);
   assert.match(approvalMigration, /admin_set_public_sales_approval/);
@@ -310,6 +338,7 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(css, /\.sales-route-readiness-summary article\.ready/);
   assert.match(css, /\.sales-route-readiness-summary article\.action/);
   assert.match(css, /\.sales-route-readiness-summary article\.off/);
+  assert.match(css, /\.sales-stripe-worker-readiness/);
   assert.match(css, /\.sales-release-gate/);
   assert.match(css, /\.sales-public-approval/);
   assert.match(css, /\.sales-public-approval\.locked/);
