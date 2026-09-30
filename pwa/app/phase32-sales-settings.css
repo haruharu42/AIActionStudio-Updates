@@ -581,26 +581,6 @@
   accent-color: #26734c;
 }
 
-.sales-manual-approval-check {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid rgb(148 163 184 / 32%);
-  border-radius: 14px;
-  background: rgb(255 255 255 / 72%);
-}
-
-.sales-manual-approval-check input {
-  margin-top: 3px;
-}
-
-.sales-manual-approval-check span {
-  display: grid;
-  gap: 4px;
-}
-
-.sales-manual-approval-check small,
 .sales-approval-hint {
   font-size: 12px;
   line-height: 1.65;
