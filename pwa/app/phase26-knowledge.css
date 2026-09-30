@@ -1895,3 +1895,14 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Knowledge candidate review triage */
+.knowledge-candidate-triage { display:grid; gap:9px; margin:12px 0; padding:12px; border:1px solid #cbded6; border-radius:12px; background:#f8fcfa; }
+.knowledge-candidate-triage > strong { font-size:11px; }
+.knowledge-candidate-triage > span, .knowledge-candidate-triage > p { margin:0; color:#597b70; font-size:10px; line-height:1.6; }
+.knowledge-candidate-triage-filters { display:flex; flex-wrap:wrap; gap:7px; }
+.knowledge-candidate-triage-filters button { min-height:36px; padding:7px 10px; border:1px solid #d2e2dc; border-radius:10px; background:#fff; color:#356b58; font-size:10px; font-weight:800; cursor:pointer; }
+.knowledge-candidate-triage-filters button[aria-pressed="true"] { background:#deefe7; border-color:#8fbbaa; }
+.knowledge-candidate-triage-filters button:focus-visible { outline:2px solid #23674e; outline-offset:2px; }
+.knowledge-candidate-triage-filters button:disabled { opacity:.55; cursor:default; }
+@media (max-width:560px) { .knowledge-candidate-triage-filters button { flex:1 1 calc(50% - 7px); } }
