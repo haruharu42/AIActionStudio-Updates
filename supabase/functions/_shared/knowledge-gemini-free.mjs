@@ -8,6 +8,17 @@ export function publicKnowledgeCandidate(candidate) {
   if (!candidate || typeof candidate !== "object") throw new Error("Missing public Knowledge candidate.");
   const url = new URL(String(candidate.source_url || ""));
   if (url.protocol !== "https:" || url.username || url.password) throw new Error("Gemini requires a public HTTPS source URL.");
+  // HTTPS alone does not make a hostname publicly routable. Reject local and
+  // private network endpoints before copying a monitored URL to external AI.
+  const host = url.hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host.endsWith(".localhost") ||
+      host.endsWith(".local") || host.endsWith(".internal") ||
+      host === "::1" || host.startsWith("::ffff:") || host === "0.0.0.0" ||
+      /^(?:127|10|169\.254|192\.168)\./.test(host) ||
+      /^172\.(?:1[6-9]|2\d|3[01])\./.test(host) ||
+      /^(?:fc|fd|fe[89ab])[0-9a-f]*:/i.test(host)) {
+    throw new Error("Gemini requires a public HTTPS source URL.");
+  }
   url.search = ""; // Never forward possible tokens or private query parameters.
   url.hash = "";
   const action = candidate.candidate_action === "new" ? "new" : "update";
@@ -39,7 +50,7 @@ export function geminiPublicSourceEligible(candidate) {
     if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(body)) return false;
     if (/\b(?:AIza[A-Za-z0-9_-]{18,}|sk-(?:proj-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,})\b/.test(body)) return false;
     if (/\bbearer\s+[A-Za-z0-9._-]{16,}/i.test(body)) return false;
-    if (/(?:^|[\s?&])(?:api[_-]?key|access[_-]?token|client[_-]?secret|password|authorization)\s*[:=]\s*[^\s&,;]{5,}/i.test(body)) return false;
+    if (/(?:^|[\s?&#;/{,])["']?(?:x[-_]?api[-_]?key|api[-_]?key|access[-_]?token|refresh[-_]?token|id[-_]?token|session(?:[-_]?(?:id|token))?|token|client[-_]?secret|private[-_]?key|secret|password|authorization|set[-_]?cookie|cookie)["']?\s*[:=]\s*["']?[^\s&,;'"<>]{5,}/i.test(body)) return false;
     return true;
   } catch {
     return false;
