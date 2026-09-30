@@ -430,7 +430,7 @@ test("Knowledge candidate review supports read-only text search across review me
     readPwa("app/phase26-knowledge.css"),
   ]);
 
-  assert.match(panel, /const \[candidateSearch, setCandidateSearch\] = useState\("")/);
+  assert.match(panel, /const \[candidateSearch, setCandidateSearch\] = useState\(""\)/);
   assert.match(panel, /const normalizedCandidateSearch = candidateSearch\.trim\(\)\.toLowerCase\(\)/);
   assert.match(panel, /candidate\.sourceTitle/);
   assert.match(panel, /candidate\.sourceUrl/);
