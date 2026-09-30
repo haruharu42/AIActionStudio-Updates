@@ -1030,8 +1030,9 @@ export function KnowledgeRefreshPanel() {
                   {candidate.verifiedSourceUrls.length > 0 && (
                     <div className="knowledge-ai-sources">
                       {candidate.verifiedSourceUrls.map((url) => (
-                        <a key={url} href={url} target="_blank" rel="noreferrer">確認済み根拠</a>
+                        <a key={url} href={url} target="_blank" rel="noreferrer">根拠URL候補（要確認）</a>
                       ))}
+                      <small>AIが提示したURLは独立した事実確認の証明ではありません。管理者が公式情報を直接確認してください。</small>
                     </div>
                   )}
                   {candidate.proposedPayload && (
