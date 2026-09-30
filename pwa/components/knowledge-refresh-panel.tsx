@@ -58,10 +58,13 @@ const AUTOMATION_CANDIDATE_VIEWS: { key: AutomationCandidateView; label: string 
 
 function automationCandidatePriority(candidate: KnowledgeAutomationCandidate): number {
   if (buildKnowledgeAutomationCandidateBundle(candidate)) return 0;
-  if (candidate.candidateAction === "retire") return 1;
-  if (candidate.candidateAction === "update") return 2;
-  if (candidate.candidateAction === "recheck") return 3;
-  return 4;
+  // Reviewed AI / zero-cost analyses are actionable even when AI enrichment is disabled.
+  if (candidate.analysisStatus === "completed") return 1;
+  if (candidate.candidateAction === "retire") return 2;
+  if (candidate.analysisStatus === "failed") return 3;
+  if (candidate.candidateAction === "recheck") return 4;
+  if (candidate.candidateAction === "update") return 5;
+  return 6;
 }
 
 function candidateAnalysisPresentation(
