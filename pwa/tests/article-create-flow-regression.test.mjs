@@ -367,11 +367,12 @@ test("article save step prechecks the effective library quota and blocks a full 
   assert.match(page, /記事ライブラリの保存上限に達しています/);
   const createLib = await readFile(new URL("../lib/phase11-create.ts", import.meta.url), "utf8");
   assert.match(createLib, /article_quota_exceeded/);
-  assert.match(createLib, /不要な記事を整理するか、利用プランを確認してください/);
+  assert.match(createLib, /不要な記事を整理するか、Creator Club特典を確認してください/);
   assert.match(finish, /stockSummary/);
   assert.match(finish, /saveQuotaReached/);
   assert.match(finish, /保存枠: 残り/);
-  assert.match(finish, /利用プランを確認/);
+  assert.match(finish, /Creator Club特典を確認/);
+  assert.match(finish, /href="\/membership"/);
   assert.match(finish, /disabled=\{busy \|\| !draft\.title\.trim\(\) \|\| saveQuotaReached\}/);
   assert.match(css, /\.article-create-stock-status/);
   assert.match(css, /\.article-create-stock-status\.reached/);
