@@ -250,7 +250,7 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /copyNoteRichText/);
   assert.match(stepUi, /投稿先を開く/);
   assert.match(stepUi, /imagePrompts/);
-  assert.match(stepUi, /onBeforeExternalLaunch\(\); launchAiApp\(app\.key\)/);
+  assert.match(stepUi, /onBeforeExternalLaunch\(\);[\s\S]*?const ok = await copyText\(value, setMessage\);[\s\S]*?if \(!ok\)[\s\S]*?launchAiApp\(appKey\)/);
   assert.match(page, /setStep\(saved\.step\)/);
   assert.match(page, /前回の作業内容を復元しました/);
   assert.match(progress, /aas:pwa:article-wizard-progress:v1:/);
