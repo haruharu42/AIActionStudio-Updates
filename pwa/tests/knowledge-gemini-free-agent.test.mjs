@@ -93,7 +93,18 @@ test("staged Gemini database gates and worker leave existing OpenAI path intact"
   assert.match(client,/admin_get_knowledge_gemini_free_agent_status/);
   assert.match(panel,/setAiEnabled\(false\)/);
   assert.match(panel,/geminiFreeConfirmed/);
-  assert.ok((panel.match(/launchAiApp\\("gemini"\\)/g) ?? []).length >= 3, "Gemini Web handoff available from candidate and both batches");
+  assert.ok((panel.match(/launchAiApp\("gemini"\)/g) ?? []).length >= 3, "Gemini Web handoff available from candidate and both batches");
+  const publicStart = panel.indexOf("const copyGeminiPublicReviewPrompt");
+  const publicEnd = panel.indexOf("const copyAutomationPrompt", publicStart);
+  assert.ok(publicStart >= 0 && publicEnd > publicStart);
+  const publicOnly = panel.slice(publicStart, publicEnd);
+  assert.match(publicOnly,/quoteUntrustedKnowledgeResearchData/);
+  assert.match(publicOnly,/candidate.sourceExcerpt.slice\(0, 2500\)/);
+  assert.match(publicOnly,/url.search = ""/);
+  for (const privateField of ["researchPrompt", "currentPayload", "existingItemKey", "reviewNotes", "aiApiKey"]) {
+    assert.ok(!publicOnly.includes("candidate." + privateField), "manual Gemini Web must exclude " + privateField);
+  }
+  assert.ok((panel.match(/copyGeminiPublicReviewPrompt\(/g) ?? []).length >= 4);
   assert.match(panel,/aiProvider === "gemini" && !geminiStatus/);
   assert.doesNotMatch(worker,/admin_publish_knowledge_refresh_bundle/);
 });
