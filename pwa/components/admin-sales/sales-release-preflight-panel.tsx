@@ -17,45 +17,57 @@ import type { SalesSettings } from "@/lib/sales-settings";
 import { getSupabaseClient } from "@/lib/supabase";
 
 const REVIEW_LINKS = [
-  { href: "/commercial-transactions", label: "特定商取引法に基づく表記", note: "販売者情報・価格・支払・返金等の表示を人が最終確認" },
-  { href: "/terms", label: "利用規約", note: "現在の販売方法・利用権・停止条件と整合しているか確認" },
-  { href: "/privacy", label: "プライバシーポリシー", note: "現在取得するデータ・外部サービス・問い合わせ運用を確認" },
-  { href: "/ai-terms", label: "AI利用条件", note: "外部AI利用・生成物・禁止事項等の案内を確認" },
-  { href: "/support", label: "サポート・開示請求", note: "購入者が問い合わせできる導線と対応方法を確認" },
+  { key: "legal-commercial", href: "/commercial-transactions", label: "特定商取引法に基づく表記", note: "販売者情報・価格・支払・返金等の表示を人が最終確認" },
+  { key: "legal-terms", href: "/terms", label: "利用規約", note: "現在の販売方法・利用権・停止条件と整合しているか確認" },
+  { key: "legal-privacy", href: "/privacy", label: "プライバシーポリシー", note: "現在取得するデータ・外部サービス・問い合わせ運用を確認" },
+  { key: "legal-ai-terms", href: "/ai-terms", label: "AI利用条件", note: "外部AI利用・生成物・禁止事項等の案内を確認" },
+  { key: "legal-support", href: "/support", label: "サポート・開示請求", note: "購入者が問い合わせできる導線と対応方法を確認" },
 ] as const;
 
 const OPERATOR_RELEASE_CHECKS = [
   {
+    key: "operator-price-refund",
     label: "販売価格・返金条件",
     note: "実際の外部販売ページに出す価格、利用期間、返金・キャンセル条件を購入前表示と照合します。",
     href: "/commercial-transactions",
   },
   {
+    key: "operator-purchase-flow",
     label: "実ブラウザの購入後導線",
     note: "認証済みブラウザで購入後の利用コード登録、利用権反映、重複・期限切れ・上限到達時の失敗表示を確認します。",
     href: "/plans",
   },
   {
+    key: "operator-tester-push",
     label: "テスター実機通知",
     note: "テスター端末でPush購読を有効にし、テスター限定通知の受信・タップ遷移を確認します。",
     href: null,
   },
   {
+    key: "operator-closed-beta",
     label: "クローズド有料ベータ",
     note: "少人数の実購入で、購入→コード→登録→利用権→実利用→問い合わせ対応まで一連の運用を確認します。",
     href: null,
   },
   {
+    key: "operator-rc-device",
     label: "最終RC・実機確認",
     note: "販売対象の完全SHAでCIを通し、PC・スマホの主要導線と公開内容を実機で確認します。",
     href: null,
   },
   {
+    key: "operator-production-approval",
     label: "Production公開承認",
     note: "Feature Controlの公開範囲、Production Worker/route/domain反映を別途明示承認します。販売承認だけでProductionへ自動配布しません。",
     href: null,
   },
 ] as const;
+
+type ManualReviewKey =
+  | (typeof REVIEW_LINKS)[number]["key"]
+  | (typeof OPERATOR_RELEASE_CHECKS)[number]["key"];
+
+const MANUAL_REVIEW_TOTAL = REVIEW_LINKS.length + OPERATOR_RELEASE_CHECKS.length;
 
 function externalPurchaseUrl(value: string): string {
   const normalized = value.trim();
@@ -83,7 +95,7 @@ export function SalesReleasePreflightPanel({
   const [approval, setApproval] = useState<PublicSalesApproval | null>(null);
   const [approvalFailed, setApprovalFailed] = useState(false);
   const [approvalBusy, setApprovalBusy] = useState(false);
-  const [manualReviewConfirmed, setManualReviewConfirmed] = useState(false);
+  const [manualReviewKeys, setManualReviewKeys] = useState<ManualReviewKey[]>([]);
   const [approvalMessage, setApprovalMessage] = useState("");
   const [currentSessionAal, setCurrentSessionAal] = useState<"aal1" | "aal2" | null>(null);
   const [aalCheckFailed, setAalCheckFailed] = useState(false);
@@ -155,13 +167,26 @@ export function SalesReleasePreflightPanel({
       }
     };
 
+    const handleSalesStateChange = () => {
+      setManualReviewKeys([]);
+      refresh();
+    };
+
     refresh();
-    window.addEventListener(SALES_LAUNCH_STATE_EVENT, refresh);
+    window.addEventListener(SALES_LAUNCH_STATE_EVENT, handleSalesStateChange);
     return () => {
       active = false;
-      window.removeEventListener(SALES_LAUNCH_STATE_EVENT, refresh);
+      window.removeEventListener(SALES_LAUNCH_STATE_EVENT, handleSalesStateChange);
     };
   }, []);
+
+  const manualReviewConfirmed = manualReviewKeys.length === MANUAL_REVIEW_TOTAL;
+  const toggleManualReview = (key: ManualReviewKey, checked: boolean) => {
+    setManualReviewKeys((current) => {
+      if (checked) return current.includes(key) ? current : [...current, key];
+      return current.filter((item) => item !== key);
+    });
+  };
 
   const verifiedMfaCount = snapshot?.verifiedMfaCount ?? null;
   const usableInviteCount = snapshot?.usableInviteCount ?? null;
@@ -261,7 +286,7 @@ export function SalesReleasePreflightPanel({
     try {
       const next = await setPublicSalesApproval(getSupabaseClient(), nextApproved);
       setApproval(next);
-      setManualReviewConfirmed(false);
+      setManualReviewKeys([]);
       setApprovalMessage(
         nextApproved
           ? "公開販売を承認しました。Worker側の販売ロックが解除されます。"
@@ -374,17 +399,16 @@ export function SalesReleasePreflightPanel({
           </button>
         ) : (
           <>
-            <label className="sales-manual-approval-check">
-              <input
-                type="checkbox"
-                checked={manualReviewConfirmed}
-                onChange={(event) => setManualReviewConfirmed(event.target.checked)}
-              />
-              <span>
-                <strong>手動確認項目を確認済み</strong>
-                <small>法務・価格・返金・サポートに加え、実ブラウザの利用コード導線、テスター実機通知、クローズド有料ベータ、最終RC/実機確認、Production公開判断まで確認しました。</small>
-              </span>
-            </label>
+            <div className={`sales-manual-approval-progress ${manualReviewConfirmed ? "ready" : "pending"}`}>
+              <div>
+                <strong>手動確認 {manualReviewKeys.length} / {MANUAL_REVIEW_TOTAL}</strong>
+                <small>
+                  下の法務・販売条件・実機・運用項目を1件ずつ確認してください。
+                  販売設定または販売者情報が変わると、この確認状態はリセットされます。
+                </small>
+              </div>
+              <a href="#sales-manual-review">個別確認へ ↓</a>
+            </div>
             <button
               type="button"
               className="primary-action"
@@ -411,7 +435,7 @@ export function SalesReleasePreflightPanel({
         )}
       </section>
 
-      <div className="sales-release-preflight-grid">
+      <div className="sales-release-preflight-grid" id="sales-manual-review">
         <article>
           <div><strong>外部販売受付</strong><span className={settings.externalSalesEnabled ? "ready" : "action"}>{settings.externalSalesEnabled ? "ON" : "OFF"}</span></div>
           <small>最短販売ルートを使う場合はONを確認します。</small>
@@ -459,13 +483,24 @@ export function SalesReleasePreflightPanel({
           <small>Supabase Authの漏洩パスワード保護はDashboard設定のためAASから自動変更しません。販売公開前に有効化状態を確認します。</small>
         </article>
 
-        {REVIEW_LINKS.map((item) => (
-          <article key={item.href}>
-            <div><strong>{item.label}</strong><span className="review">要人確認</span></div>
-            <small>{item.note}</small>
-            <Link href={item.href}>内容を確認 →</Link>
-          </article>
-        ))}
+        {REVIEW_LINKS.map((item) => {
+          const checked = manualReviewKeys.includes(item.key);
+          return (
+            <article key={item.key}>
+              <div><strong>{item.label}</strong><span className={checked ? "ready" : "review"}>{checked ? "確認済み" : "要人確認"}</span></div>
+              <small>{item.note}</small>
+              <Link href={item.href}>内容を確認 →</Link>
+              <label className="sales-review-check">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) => toggleManualReview(item.key, event.target.checked)}
+                />
+                <span>内容を確認した</span>
+              </label>
+            </article>
+          );
+        })}
       </div>
 
       <section className="sales-release-operator-review" aria-labelledby="sales-release-operator-review-title">
@@ -477,13 +512,24 @@ export function SalesReleasePreflightPanel({
           </div>
         </div>
         <div className="sales-release-preflight-grid">
-          {OPERATOR_RELEASE_CHECKS.map((item) => (
-            <article key={item.label}>
-              <div><strong>{item.label}</strong><span className="review">要人確認</span></div>
-              <small>{item.note}</small>
-              {item.href && <Link href={item.href}>確認画面を開く →</Link>}
-            </article>
-          ))}
+          {OPERATOR_RELEASE_CHECKS.map((item) => {
+            const checked = manualReviewKeys.includes(item.key);
+            return (
+              <article key={item.key}>
+                <div><strong>{item.label}</strong><span className={checked ? "ready" : "review"}>{checked ? "確認済み" : "要人確認"}</span></div>
+                <small>{item.note}</small>
+                {item.href && <Link href={item.href}>確認画面を開く →</Link>}
+                <label className="sales-review-check">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(event) => toggleManualReview(item.key, event.target.checked)}
+                  />
+                  <span>実機・運用で確認した</span>
+                </label>
+              </article>
+            );
+          })}
         </div>
       </section>
 
