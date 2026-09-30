@@ -720,6 +720,36 @@ test("admins can manually bulk-pause repeatedly restricted Knowledge sources wit
 });
 
 
+test("knowledge source list supports operational filters and search without changing monitoring state", async () => {
+  const [sourceHealth, css] = await Promise.all([
+    readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(sourceHealth, /type SourceListView = "all" \| "attention" \| "manual" \| "disabled" \| "healthy"/);
+  assert.match(sourceHealth, /const \[sourceListView, setSourceListView\] = useState<SourceListView>\("all"\)/);
+  assert.match(sourceHealth, /const \[sourceQuery, setSourceQuery\] = useState\(""/);
+  assert.match(sourceHealth, /const sourceListCounts = useMemo/);
+  assert.match(sourceHealth, /const visibleSources = useMemo/);
+  assert.match(sourceHealth, /sourceListView === "attention"/);
+  assert.match(sourceHealth, /sourceListView === "manual"/);
+  assert.match(sourceHealth, /sourceListView === "disabled"/);
+  assert.match(sourceHealth, /sourceListView === "healthy"/);
+  assert.match(sourceHealth, /URL・カテゴリ検索/);
+  assert.match(sourceHealth, /placeholder="例: x\.com \/ sidejob_sns \/ official_policy"/);
+  assert.match(sourceHealth, /表示 \{visibleSources\.length\} \/ \{sources\.length\}件/);
+  assert.match(sourceHealth, /visibleSources\.map/);
+  assert.match(sourceHealth, /この条件に該当する監視URLはありません/);
+  assert.doesNotMatch(sourceHealth, /setAutomationSourceEnabled|getSupabaseClient|\.rpc\(/);
+
+  assert.match(css, /\.knowledge-source-list-tools/);
+  assert.match(css, /\.knowledge-source-list-filters/);
+  assert.match(css, /button\[aria-pressed="true"\]/);
+  assert.match(css, /\.knowledge-source-search input/);
+  assert.match(css, /\.knowledge-source-list-empty/);
+});
+
+
 test("redundant X analytics Help sources stop only when the healthy X Business fallback covers the same tasks", async () => {
   const migration = await readRepo(
     "supabase/migrations/20260930004300_disable_redundant_x_analytics_help_sources_v1.sql",
