@@ -71,6 +71,13 @@ export type ArticleLibraryPage = {
   hasMore: boolean;
 };
 
+export type ArticleStockSummary = {
+  currentArticles: number;
+  maxArticles: number | null;
+  remainingArticles: number | null;
+  isUnlimited: boolean;
+};
+
 function record(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${label}の応答形式が不正です。`);
@@ -154,6 +161,50 @@ function parseLibraryItem(value: unknown, ownerId: string): ArticleLibraryItem {
 function cleanOptional(value: string | undefined): string | null {
   const normalized = value?.trim() ?? "";
   return normalized || null;
+}
+
+function nonNegativeInteger(value: unknown, label: string): number {
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number < 0) {
+    throw new Error(`${label}の応答形式が不正です。`);
+  }
+  return number;
+}
+
+export async function getArticleStockSummary(
+  client: SupabaseClient,
+): Promise<ArticleStockSummary> {
+  const { data, error } = await client.rpc("get_my_article_stock_summary");
+  if (error) throw fromApiError(error, "記事ライブラリの保存上限を取得できませんでした。");
+  const value = Array.isArray(data) ? data[0] : data;
+  const row = record(value, "記事ライブラリ保存上限");
+  const currentArticles = nonNegativeInteger(row.current_articles, "現在の記事数");
+  const isUnlimited = row.is_unlimited === true;
+
+  if (isUnlimited) {
+    if (row.max_articles !== null || row.remaining_articles !== null) {
+      throw new Error("無制限保存上限の応答形式が不正です。");
+    }
+    return {
+      currentArticles,
+      maxArticles: null,
+      remainingArticles: null,
+      isUnlimited: true,
+    };
+  }
+
+  const maxArticles = nonNegativeInteger(row.max_articles, "記事保存上限");
+  const remainingArticles = nonNegativeInteger(row.remaining_articles, "記事残り保存数");
+  if (maxArticles < 1 || currentArticles + remainingArticles < maxArticles) {
+    throw new Error("記事ライブラリ保存上限の整合性を確認できませんでした。");
+  }
+
+  return {
+    currentArticles,
+    maxArticles,
+    remainingArticles,
+    isUnlimited: false,
+  };
 }
 
 export async function listArticleLibraryPage(
