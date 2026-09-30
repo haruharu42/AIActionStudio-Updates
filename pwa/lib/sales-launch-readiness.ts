@@ -162,6 +162,9 @@ export async function setPublicSalesApproval(
     if (message.includes("sales launch readiness requirements not met")) {
       throw new Error("販売前の自動確認が未完了のため、公開販売を承認できません。");
     }
+    if (message.includes("stripe worker readiness attestation required")) {
+      throw new Error("Stripe Workerの最新実設定確認が必要です。販売前チェックを再読み込みして、Worker・Webhook・選択プランのPriceが準備済みであることを確認してください。");
+    }
     throw new Error(approved ? "公開販売を承認できませんでした。" : "公開販売を停止できませんでした。");
   }
   const result = parseApproval(data);
