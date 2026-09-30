@@ -518,3 +518,41 @@ test("redundant OpenAI Help source is retired from scheduling after repeated 403
   assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
   assert.match(worker, /function failureBackoffHours\(failures: number\)/);
 });
+
+
+test("admins can pause and resume individual Knowledge monitoring sources without deleting source history", async () => {
+  const [migration, panel, sourceHealth, client, worker, css] = await Promise.all([
+    readRepo("supabase/migrations/20260930004019_knowledge_automation_source_toggle_v1.sql"),
+    readKnowledgeRefreshSource(),
+    readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
+    readPwa("lib/knowledge-auto-update.ts"),
+    readRepo("supabase/functions/knowledge-research-worker/index.ts"),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(migration, /admin_set_knowledge_automation_source_enabled/);
+  assert.match(migration, /private\.is_active_admin/);
+  assert.match(migration, /enabled=coalesce\(p_enabled,false\)/);
+  assert.match(migration, /when coalesce\(p_enabled,false\) then now\(\)/);
+  assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
+  assert.match(migration, /revoke all on function public\.admin_set_knowledge_automation_source_enabled\(bigint,boolean\)/);
+  assert.match(migration, /grant execute on function public\.admin_set_knowledge_automation_source_enabled\(bigint,boolean\)[\s\S]*to authenticated/);
+
+  assert.match(client, /export async function adminSetKnowledgeAutomationSourceEnabled/);
+  assert.match(client, /client\.rpc\("admin_set_knowledge_automation_source_enabled"/);
+  assert.match(panel, /adminSetKnowledgeAutomationSourceEnabled/);
+  assert.match(panel, /公式ソース監視を停止しました。履歴と既存候補は保持しています/);
+  assert.match(panel, /onSetSourceEnabled=\{\(source, enabled\)/);
+
+  assert.match(sourceHealth, /window\.confirm/);
+  assert.match(sourceHealth, /監視を停止/);
+  assert.match(sourceHealth, /監視を再開/);
+  assert.match(sourceHealth, /停止中も監視履歴とレビュー候補は保持されます/);
+  assert.match(css, /\.knowledge-source-actions/);
+
+  const syncStart = worker.indexOf("async function syncSources");
+  const syncEnd = worker.indexOf("async function inspectSource", syncStart);
+  assert.notEqual(syncStart, -1);
+  assert.notEqual(syncEnd, -1);
+  assert.doesNotMatch(worker.slice(syncStart, syncEnd), /enabled:true/);
+});

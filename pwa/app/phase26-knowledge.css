@@ -1430,6 +1430,50 @@
   line-height: 1.5;
 }
 
+.knowledge-source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #e5eeeb;
+  padding-top: 7px;
+}
+
+.knowledge-source-actions button {
+  min-height: 32px;
+  border: 1px solid #cbdad5;
+  border-radius: 8px;
+  background: #fff;
+  color: #42665c;
+  padding: 6px 9px;
+  font-size: 7px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.knowledge-source-actions button.pause {
+  border-color: #e6c9a4;
+  color: #8c5a1d;
+}
+
+.knowledge-source-actions button.resume {
+  border-color: #acd8c8;
+  background: #effaf6;
+  color: #257057;
+}
+
+.knowledge-source-actions button:disabled {
+  cursor: default;
+  opacity: .55;
+}
+
+.knowledge-source-actions small {
+  color: #83958f;
+  font-size: 7px;
+  line-height: 1.5;
+}
+
 .knowledge-source-list dl {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

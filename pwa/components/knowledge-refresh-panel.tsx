@@ -30,6 +30,7 @@ import {
   adminRetryKnowledgeAutomationCandidateAi,
   adminReviewKnowledgeAutomationCandidate,
   adminSetKnowledgeAutomationAiConfig,
+  adminSetKnowledgeAutomationSourceEnabled,
   adminStartKnowledgeRefresh,
   buildKnowledgeAutomationCandidateBundle,
   buildKnowledgeRefreshResearchPrompt,
@@ -156,6 +157,25 @@ export function KnowledgeRefreshPanel() {
         : "AI候補JSON自動生成を無効化しました。公式ソース監視は継続します。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "AI自動解析設定を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setAutomationSourceEnabled = async (
+    source: KnowledgeAutomationSource,
+    enabled: boolean,
+  ) => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminSetKnowledgeAutomationSourceEnabled(getSupabaseClient(), source.id, enabled);
+      await reload();
+      setMessage(enabled
+        ? "公式ソース監視を再開しました。次回の自動調査で再確認します。"
+        : "公式ソース監視を停止しました。履歴と既存候補は保持しています。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "公式ソース監視状態を変更できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -491,6 +511,8 @@ export function KnowledgeRefreshPanel() {
         <KnowledgeSourceHealthPanel
           sources={automationSources}
           dueSources={automationStatus?.dueSources}
+          busy={busy}
+          onSetSourceEnabled={(source, enabled) => void setAutomationSourceEnabled(source, enabled)}
         />
 
         <KnowledgeQualityAnalyzer

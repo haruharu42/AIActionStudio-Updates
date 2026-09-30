@@ -13,9 +13,13 @@ import type { KnowledgeAutomationSource } from "@/lib/knowledge-auto-update";
 export function KnowledgeSourceHealthPanel({
   sources,
   dueSources,
+  busy,
+  onSetSourceEnabled,
 }: {
   sources: KnowledgeAutomationSource[];
   dueSources: number | null | undefined;
+  busy: boolean;
+  onSetSourceEnabled: (source: KnowledgeAutomationSource, enabled: boolean) => void;
 }) {
   const enabledSources = useMemo(
     () => sources.filter((source) => source.enabled),
@@ -50,6 +54,16 @@ export function KnowledgeSourceHealthPanel({
     }),
     [sources],
   );
+  const requestSourceToggle = (source: KnowledgeAutomationSource) => {
+    const nextEnabled = !source.enabled;
+    const action = nextEnabled ? "再開" : "停止";
+    const description = nextEnabled
+      ? "再開後は次回の公式ソース監視対象として再確認されます。"
+      : "停止しても履歴・取得状態・既存候補は削除されません。";
+    if (!window.confirm(`この監視URLを${action}しますか？\n\n${description}`)) return;
+    onSetSourceEnabled(source, nextEnabled);
+  };
+
   const coverage = useMemo(
     () => SIDE_HUSTLE_COVERAGE_TASKS.map(([task, label]) => ({
       task,
@@ -127,6 +141,17 @@ export function KnowledgeSourceHealthPanel({
                   </div>
                 )}
                 {source.lastError && <p className="knowledge-source-error">{source.lastError}</p>}
+                <div className="knowledge-source-actions">
+                  <button
+                    type="button"
+                    className={source.enabled ? "pause" : "resume"}
+                    disabled={busy}
+                    onClick={() => requestSourceToggle(source)}
+                  >
+                    {source.enabled ? "監視を停止" : "監視を再開"}
+                  </button>
+                  <small>停止中も監視履歴とレビュー候補は保持されます。</small>
+                </div>
               </article>
             );
           })}

@@ -438,6 +438,18 @@ export async function adminListKnowledgeAutomationSources(
   }));
 }
 
+export async function adminSetKnowledgeAutomationSourceEnabled(
+  client: SupabaseClient,
+  sourceId: number,
+  enabled: boolean,
+): Promise<void> {
+  const { error } = await client.rpc("admin_set_knowledge_automation_source_enabled", {
+    p_source_id: Math.max(1, Math.trunc(sourceId)),
+    p_enabled: enabled,
+  });
+  if (error) throw new Error(error.message || "公式ソース監視状態を変更できませんでした。");
+}
+
 export async function adminGetKnowledgeProductionHealth(
   client: SupabaseClient,
 ): Promise<KnowledgeProductionHealth | null> {
