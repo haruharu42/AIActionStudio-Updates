@@ -201,3 +201,33 @@ test("package includes the Phase 12-17 contract test and keeps dependency pins u
   assert.equal(packageJson.devDependencies.vinext, "1.0.0-beta.9");
   assert.equal(packageJson.overrides.sharp, "0.35.4");
 });
+
+
+test("Phase 14 restores user-scoped SNS composer work without consuming another generation", async () => {
+  const [page, progress] = await Promise.all([
+    read("components/phase14-sns-page.tsx"),
+    read("lib/phase14-sns-progress.ts"),
+  ]);
+
+  assert.match(progress, /aas:pwa:sns-composer:v1/);
+  assert.match(progress, /snsComposerStorageKey\(userId: string\)/);
+  assert.match(progress, /window\.localStorage\.getItem/);
+  assert.match(progress, /window\.localStorage\.setItem/);
+  assert.match(progress, /generatedPrompt\.slice\(0, 120000\)/);
+  assert.match(progress, /generatedFingerprint\.slice\(0, 4000\)/);
+  assert.match(progress, /PLATFORMS\.includes/);
+  assert.match(progress, /GOALS\.includes/);
+
+  assert.match(page, /readSnsComposerProgress\(userId\)/);
+  assert.match(page, /writeSnsComposerProgress\(userId/);
+  assert.match(page, /getCloudArticleDetail\(client, userId, restored\.articleId\)/);
+  assert.match(page, /progressOwnerRef\.current = userId/);
+  assert.match(page, /restoredProgressRef\.current = Boolean\(restored\)/);
+  assert.match(page, /window\.addEventListener\("pagehide"/);
+  assert.match(page, /window\.addEventListener\("beforeunload"/);
+  assert.match(page, /document\.addEventListener\("visibilitychange"/);
+  assert.match(page, /AppLoadingScreen message="SNS投稿作成を準備しています/);
+  assert.match(page, /AppLoadingScreen message="SNS投稿作成の作業状態を復元しています/);
+  assert.doesNotMatch(page, /accessState\.kind === "loading"\) return null/);
+  assert.match(page, /再読み込みからの復元では追加消費しません/);
+});

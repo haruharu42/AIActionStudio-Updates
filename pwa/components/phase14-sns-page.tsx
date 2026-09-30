@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { PresetSelect } from "@/components/preset-select";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { workspacePresetSocialDefaults } from "@/features/presets/preset-adapters";
@@ -14,6 +15,10 @@ import { getCloudArticleDetail, listCloudArticles, type ArticleDetail, type Arti
 import { SOCIAL_PLATFORM_OPTIONS, socialLaunchHint, socialPlatformLabel, socialPlatformUrl } from "@/lib/social-links";
 import { getSupabaseClient } from "@/lib/supabase";
 import { CHARACTER_LIMIT_OPTIONS, TONE_OPTIONS } from "@/lib/tool-options";
+import {
+  readSnsComposerProgress,
+  writeSnsComposerProgress,
+} from "@/lib/phase14-sns-progress";
 
 const GOAL_OPTIONS: readonly { value: SocialGoal; label: string }[] = [
   { value: "article_traffic", label: "記事・ブログへの導線" },
@@ -28,6 +33,7 @@ const GOAL_OPTIONS: readonly { value: SocialGoal; label: string }[] = [
 export function Phase14SnsPage() {
   const { state: accessState, client } = useSharedAccessState();
   const { preference: workspacePreference } = useWorkspacePreset();
+  const userId = accessState.kind === "ready" ? accessState.profile.id : "";
   const [loadError, setLoadError] = useState("");
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [articleId, setArticleId] = useState("");
@@ -44,25 +50,67 @@ export function Phase14SnsPage() {
   const [generateBusy, setGenerateBusy] = useState(false);
   const generateInFlightRef = useRef(false);
   const workspacePresetAppliedRef = useRef(false);
+  const progressOwnerRef = useRef("");
+  const restoredProgressRef = useRef(false);
+  const [progressHydrated, setProgressHydrated] = useState(false);
 
   useEffect(() => {
-    if (accessState.kind !== "ready" || !client) return;
+    if (!userId || !client) return;
     let active = true;
-    queueMicrotask(() => {
-      if (active) setLoadError("");
-    });
-    void listCloudArticles(client, accessState.profile.id, 200).then(
-      (next) => {
-        if (active) setArticles(next);
-      },
-      (error) => {
-        if (active) setLoadError(error instanceof Error ? error.message : "記事ライブラリを読み込めませんでした。");
-      },
-    );
+    progressOwnerRef.current = "";
+    workspacePresetAppliedRef.current = false;
+
+    const boot = async () => {
+      const restored = readSnsComposerProgress(userId);
+      let nextArticles: ArticleSummary[] = [];
+      let nextLoadError = "";
+      let nextDetail: ArticleDetail | null = null;
+      let restoreMessage = "";
+
+      try {
+        nextArticles = await listCloudArticles(client, userId, 200);
+      } catch (error) {
+        nextLoadError = error instanceof Error ? error.message : "記事ライブラリを読み込めませんでした。";
+      }
+
+      if (restored?.articleId) {
+        try {
+          nextDetail = await getCloudArticleDetail(client, userId, restored.articleId);
+        } catch {
+          restoreMessage = "前回選択していた記事を読み込めなかったため、記事選択だけ解除しました。SNS条件は復元しています。";
+        }
+      }
+
+      queueMicrotask(() => {
+        if (!active) return;
+        setArticles(nextArticles);
+        setLoadError(nextLoadError);
+        setArticleId(nextDetail ? restored?.articleId ?? "" : "");
+        setDetail(nextDetail);
+        setPlatform(restored?.platform ?? "x");
+        setGoal(restored?.goal ?? "article_traffic");
+        setTone(restored?.tone ?? "親しみやすく具体的");
+        setMaxCharacters(restored?.maxCharacters ?? "140");
+        setHashtags(restored?.hashtags ?? true);
+        setGeneratedPrompt(nextDetail ? restored?.generatedPrompt ?? "" : "");
+        setGeneratedFingerprint(nextDetail ? restored?.generatedFingerprint ?? "" : "");
+        restoredProgressRef.current = Boolean(restored);
+        progressOwnerRef.current = userId;
+        setProgressHydrated(true);
+        if (restoreMessage) {
+          setMessage(restoreMessage);
+        } else if (restored) {
+          setMessage("前回のSNS投稿作成条件を復元しました。");
+        }
+      });
+    };
+
+    void boot();
     return () => { active = false; };
-  }, [accessState, client]);
+  }, [client, userId]);
 
   useEffect(() => {
+    if (!progressHydrated || restoredProgressRef.current) return;
     if (workspacePresetAppliedRef.current || !workspacePreference?.applySns) return;
     workspacePresetAppliedRef.current = true;
     const preferred = ["x", "instagram", "threads", "tiktok", "youtube"].includes(
@@ -78,7 +126,7 @@ export function Phase14SnsPage() {
       setPlatform(nextPlatform);
       if (defaults) setMaxCharacters(String(defaults.targetCharacters));
     });
-  }, [workspacePreference]);
+  }, [progressHydrated, workspacePreference]);
 
   const changePlatform = (next: SocialPlatform) => {
     setPlatform(next);
@@ -90,6 +138,51 @@ export function Phase14SnsPage() {
     );
     if (defaults) setMaxCharacters(String(defaults.targetCharacters));
   };
+
+  const persistComposerProgress = useCallback(() => {
+    if (!userId || !progressHydrated || progressOwnerRef.current !== userId) return;
+    writeSnsComposerProgress(userId, {
+      articleId,
+      platform,
+      goal,
+      tone,
+      maxCharacters,
+      hashtags,
+      generatedPrompt,
+      generatedFingerprint,
+    });
+  }, [
+    articleId,
+    generatedFingerprint,
+    generatedPrompt,
+    goal,
+    hashtags,
+    maxCharacters,
+    platform,
+    progressHydrated,
+    tone,
+    userId,
+  ]);
+
+  useEffect(() => {
+    persistComposerProgress();
+  }, [persistComposerProgress]);
+
+  useEffect(() => {
+    if (!progressHydrated || progressOwnerRef.current !== userId) return;
+    const persist = () => persistComposerProgress();
+    const persistWhenHidden = () => {
+      if (document.visibilityState === "hidden") persistComposerProgress();
+    };
+    window.addEventListener("pagehide", persist);
+    window.addEventListener("beforeunload", persist);
+    document.addEventListener("visibilitychange", persistWhenHidden);
+    return () => {
+      window.removeEventListener("pagehide", persist);
+      window.removeEventListener("beforeunload", persist);
+      document.removeEventListener("visibilitychange", persistWhenHidden);
+    };
+  }, [persistComposerProgress, progressHydrated, userId]);
 
   const loadArticle = async (id: string) => {
     if (accessState.kind !== "ready" || !client) return;
@@ -141,7 +234,9 @@ export function Phase14SnsPage() {
     catch { setMessage("自動コピーできません。テキスト欄からコピーしてください。"); }
   };
 
-  if (accessState.kind === "loading") return null;
+  if (accessState.kind === "loading") {
+    return <AppLoadingScreen message="SNS投稿作成を準備しています…" />;
+  }
 
   if (accessState.kind !== "ready" || !client) return (
     <main className="standalone-page"><section className="standalone-card">
@@ -154,6 +249,10 @@ export function Phase14SnsPage() {
       <Link className="route-back" href="/tools">← 機能一覧へ戻る</Link>
     </section></main>
   );
+
+  if (!progressHydrated || progressOwnerRef.current !== userId) {
+    return <AppLoadingScreen message="SNS投稿作成の作業状態を復元しています…" />;
+  }
 
   return (
     <main className="creator-page">
@@ -187,7 +286,7 @@ export function Phase14SnsPage() {
           {promptReady && <>
             <label className="route-field"><span>AI用SNS投稿プロンプト</span><textarea className="prompt-area large" readOnly value={generatedPrompt} /></label>
             <button className="secondary-action" type="button" onClick={() => void copy()}>プロンプトをコピー</button>
-            <p className="beginner-help">生成後のコピーでは追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
+            <p className="beginner-help">生成後のコピーや再読み込みからの復元では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
           </>}
         </>}
         {!detail && articles.length === 0 && <p className="panel-muted">記事ライブラリに記事がありません。先に記事を作成してください。</p>}
