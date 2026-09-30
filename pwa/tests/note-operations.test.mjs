@@ -1090,3 +1090,14 @@ test("note operations uses safe loading shells while access and owner data are l
   assert.match(page, /noteプロフィールと運営データを読み込んでいます/);
   assert.doesNotMatch(page, /gate\.kind === "loading" \|\| \(gate\.kind === "ready" && !profile\)\) return null/);
 });
+
+
+test("note operations confirms before deleting the persisted monthly AI schedule response", async () => {
+  const page = await readPwa("components/note-operations-page.tsx");
+
+  assert.match(page, /const clearScheduleResponse = \(\)/);
+  assert.match(page, /if \(!scheduleResponse\) return/);
+  assert.match(page, /保存している月間運用AI回答をクリアしますか？この操作は元に戻せません/);
+  assert.match(page, /window\.confirm/);
+  assert.match(page, /window\.localStorage\.removeItem\(noteScheduleResponseStorageKey\(gate\.userId\)\)/);
+});

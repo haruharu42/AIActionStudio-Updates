@@ -462,6 +462,8 @@ export function NoteOperationsPage() {
 
 
   const clearScheduleResponse = () => {
+    if (!scheduleResponse) return;
+    if (!window.confirm("保存している月間運用AI回答をクリアしますか？この操作は元に戻せません。")) return;
     setScheduleResponse("");
     setSchedulePreview(null);
     if (gate.kind === "ready") {
