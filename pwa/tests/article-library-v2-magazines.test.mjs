@@ -20,6 +20,7 @@ const libraryListUi = await fs.readFile(`${root}/components/article-library/arti
 const libraryDetailUi = await fs.readFile(`${root}/components/article-library/article-library-detail.tsx`, 'utf8');
 const notePostAssistantUi = await fs.readFile(`${root}/components/article-library/note-post-assistant.tsx`, 'utf8');
 const deviceLayoutCss = await fs.readFile(`${root}/app/phase35-device-layout.css`, 'utf8');
+const globalsCss = await fs.readFile(`${root}/app/globals.css`, 'utf8');
 const localArticleImagesSource = await fs.readFile(`${root}/lib/local-article-images.ts`, 'utf8');
 const imagePromptUi = await fs.readFile(`${root}/components/phase13-image-page.tsx`, 'utf8');
 const libraryEditorUi = await fs.readFile(`${root}/components/article-library/article-library-editor.tsx`, 'utf8');
@@ -67,6 +68,68 @@ test('article library exposes filters, sorting, paging, archive, duplicate and P
   assert.match(libraryController, /withNoteMagazineWorkspace/);
   assert.doesNotMatch(libraryListUi, /Windows版またはPWA/);
   assert.match(libraryListUi, /PWAで作成した記事や、これまでに同期済みの記事/);
+});
+
+test('article library shows the effective save quota and remaining slots without blocking the list', async () => {
+  const finite = await library.getArticleStockSummary({
+    async rpc(name) {
+      assert.equal(name, 'get_my_article_stock_summary');
+      return {
+        data: [{
+          current_articles: 4,
+          max_articles: 5,
+          remaining_articles: 1,
+          is_unlimited: false,
+          publication_counts: {},
+          status_counts: {},
+        }],
+        error: null,
+      };
+    },
+  });
+  assert.deepEqual(finite, {
+    currentArticles: 4,
+    maxArticles: 5,
+    remainingArticles: 1,
+    isUnlimited: false,
+  });
+
+  const unlimited = await library.getArticleStockSummary({
+    async rpc() {
+      return {
+        data: [{
+          current_articles: 12,
+          max_articles: null,
+          remaining_articles: null,
+          is_unlimited: true,
+          publication_counts: {},
+          status_counts: {},
+        }],
+        error: null,
+      };
+    },
+  });
+  assert.deepEqual(unlimited, {
+    currentArticles: 12,
+    maxArticles: null,
+    remainingArticles: null,
+    isUnlimited: true,
+  });
+
+  assert.match(libraryController, /getArticleStockSummary/);
+  assert.match(libraryController, /stockSummaryError/);
+  assert.match(libraryController, /Promise\.all\(\[reload\(\), refreshStockSummary\(\)\]\)/);
+  assert.match(libraryListUi, /記事ライブラリ保存状況/);
+  assert.match(libraryListUi, /保存済み/);
+  assert.match(libraryListUi, /保存上限/);
+  assert.match(libraryListUi, /残り保存可能/);
+  assert.match(libraryListUi, /保存上限に達しています/);
+  assert.match(libraryListUi, /保存上限が近づいています/);
+  assert.match(libraryListUi, /プランを確認/);
+  assert.match(libraryListUi, /記事一覧はそのまま利用できます/);
+  assert.match(globalsCss, /\.library-stock-summary/);
+  assert.match(globalsCss, /\.library-stock-summary\.warning/);
+  assert.match(globalsCss, /\.library-stock-summary\.reached/);
 });
 
 test('article library filters start collapsed and can be opened without clearing the selected conditions', () => {
