@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { AppLoadingScreen } from "@/components/app-loading-screen";
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { PresetSelect, type PresetOption } from "@/components/preset-select";
 import {
   buildSnsLaunchPrompt,
@@ -13,6 +15,10 @@ import {
 import { GENRE_OPTIONS } from "@/lib/phase18-content-options";
 import { SOCIAL_PLATFORM_OPTIONS, socialLaunchHint, socialPlatformLabel, socialPlatformUrl } from "@/lib/social-links";
 import { AUDIENCE_OPTIONS, OFFER_OPTIONS, STRENGTH_OPTIONS, TONE_OPTIONS, WEEKLY_POST_OPTIONS } from "@/lib/tool-options";
+import {
+  readSnsLaunchPlanProgress,
+  writeSnsLaunchPlanProgress,
+} from "@/lib/phase15-sns-plan-progress";
 
 const NICHE_OPTIONS: readonly PresetOption[] = GENRE_OPTIONS
   .filter((value) => value !== "その他")
@@ -42,10 +48,62 @@ const initial: SnsLaunchInput = {
 };
 
 export function Phase15SnsPlanPage() {
+  const { state } = useSharedAccessState();
+  const userId = state.kind === "ready" ? state.profile.id : "";
+
+  if (!userId) {
+    return <AppLoadingScreen message="SNSアカウント設計を準備しています…" />;
+  }
+
+  return <Phase15SnsPlanContent key={userId} userId={userId} />;
+}
+
+function Phase15SnsPlanContent({ userId }: { userId: string }) {
   const [input, setInput] = useState<SnsLaunchInput>(initial);
   const [weeklyPostsText, setWeeklyPostsText] = useState(String(initial.weeklyPosts));
   const [message, setMessage] = useState("");
+  const [hydrated, setHydrated] = useState(false);
   const prompt = useMemo(() => buildSnsLaunchPrompt(input), [input]);
+
+  useEffect(() => {
+    let active = true;
+    const restored = readSnsLaunchPlanProgress(userId);
+    queueMicrotask(() => {
+      if (!active) return;
+      if (restored) {
+        setInput(restored.input);
+        setWeeklyPostsText(restored.weeklyPostsText);
+        setMessage("前回のSNSアカウント設計条件を復元しました。");
+      }
+      setHydrated(true);
+    });
+    return () => { active = false; };
+  }, [userId]);
+
+  const persistProgress = useCallback(() => {
+    if (!hydrated) return;
+    writeSnsLaunchPlanProgress(userId, { input, weeklyPostsText });
+  }, [hydrated, input, userId, weeklyPostsText]);
+
+  useEffect(() => {
+    persistProgress();
+  }, [persistProgress]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const persist = () => persistProgress();
+    const persistWhenHidden = () => {
+      if (document.visibilityState === "hidden") persistProgress();
+    };
+    window.addEventListener("pagehide", persist);
+    window.addEventListener("beforeunload", persist);
+    document.addEventListener("visibilitychange", persistWhenHidden);
+    return () => {
+      window.removeEventListener("pagehide", persist);
+      window.removeEventListener("beforeunload", persist);
+      document.removeEventListener("visibilitychange", persistWhenHidden);
+    };
+  }, [hydrated, persistProgress]);
 
   const patch = <K extends keyof SnsLaunchInput>(key: K, value: SnsLaunchInput[K]) => {
     setInput((current) => ({ ...current, [key]: value }));
@@ -69,6 +127,7 @@ export function Phase15SnsPlanPage() {
   };
 
   const copy = async () => {
+    persistProgress();
     try {
       await navigator.clipboard.writeText(prompt);
       setMessage("SNS立ち上げ設計プロンプトをコピーしました。");
@@ -76,6 +135,10 @@ export function Phase15SnsPlanPage() {
       setMessage("自動コピーできません。テキスト欄からコピーしてください。");
     }
   };
+
+  if (!hydrated) {
+    return <AppLoadingScreen message="前回のSNSアカウント設計を確認しています…" />;
+  }
 
   return (
     <main className="creator-page">
@@ -123,7 +186,7 @@ export function Phase15SnsPlanPage() {
         </label>
         <button className="primary-action" type="button" onClick={() => void copy()}>設計プロンプトをコピー</button>
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">「その他（自由入力）」を選ぶと入力欄が表示されます。週の投稿目安は1〜21回の範囲に補正されます。アルゴリズムや収益額を決め打ちせず、実績を創作しない形で設計します。</p>
+        <p className="panel-muted">「その他（自由入力）」を選ぶと入力欄が表示されます。週の投稿目安は1〜21回の範囲に補正されます。入力条件はログイン中のAASアカウントごとに端末保存され、再読み込みしても続きから編集できます。アルゴリズムや収益額を決め打ちせず、実績を創作しない形で設計します。</p>
       </section>
     </main>
   );

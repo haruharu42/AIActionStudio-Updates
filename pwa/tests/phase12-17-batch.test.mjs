@@ -233,3 +233,29 @@ test("Phase 14 restores user-scoped SNS composer work without consuming another 
   assert.doesNotMatch(page, /accessState\.kind === "loading"\) return null/);
   assert.match(page, /再読み込みからの復元では追加消費しません/);
 });
+
+
+test("SNS launch planner restores account-scoped in-progress choices across reloads", async () => {
+  const [page, progress] = await Promise.all([
+    read("components/phase15-sns-plan-page.tsx"),
+    read("lib/phase15-sns-plan-progress.ts"),
+  ]);
+
+  assert.match(progress, /aas:pwa:sns-launch-plan:v1/);
+  assert.match(progress, /snsLaunchPlanStorageKey\(userId: string\)/);
+  assert.match(progress, /window\.localStorage\.getItem/);
+  assert.match(progress, /window\.localStorage\.setItem/);
+  assert.match(progress, /Math\.max\(1, Math\.min\(21/);
+  assert.match(progress, /niche: progress\.input\.niche\.slice\(0, 500\)/);
+
+  assert.match(page, /useSharedAccessState\(\)/);
+  assert.match(page, /<Phase15SnsPlanContent key=\{userId\} userId=\{userId\}/);
+  assert.match(page, /readSnsLaunchPlanProgress\(userId\)/);
+  assert.match(page, /writeSnsLaunchPlanProgress\(userId/);
+  assert.match(page, /window\.addEventListener\("pagehide"/);
+  assert.match(page, /window\.addEventListener\("beforeunload"/);
+  assert.match(page, /document\.addEventListener\("visibilitychange"/);
+  assert.match(page, /persistProgress\(\);[\s\S]*?navigator\.clipboard\.writeText/);
+  assert.match(page, /AppLoadingScreen message="前回のSNSアカウント設計を確認しています/);
+  assert.match(page, /AASアカウントごとに端末保存/);
+});
