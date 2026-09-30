@@ -288,7 +288,7 @@ export function Phase14SnsPage() {
           {promptReady && <>
             <label className="route-field"><span>AI用SNS投稿プロンプト</span><textarea className="prompt-area large" readOnly value={generatedPrompt} /></label>
             <button className="secondary-action" type="button" onClick={() => void copy()}>プロンプトをコピー</button>
-            <p className="beginner-help">生成後のコピーや再読み込みからの復元では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
+            <p className="beginner-help">生成後のコピーでは追加消費しません。再読み込みからの復元では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
           </>}
         </>}
         {!detail && articles.length === 0 && <p className="panel-muted">記事ライブラリに記事がありません。先に記事を作成してください。</p>}

@@ -71,7 +71,8 @@ test("beginner home and article wizard use the shared AI app launcher", async ()
   assert.match(creatorSteps, /key: "chatgpt", label: "ChatGPT"/);
   assert.match(creatorSteps, /key: "claude", label: "Claude"/);
   assert.match(creatorSteps, /key: "gemini", label: "Gemini"/);
-  assert.match(creatorSteps, /launchAiApp\(app\.key\)/);
+  assert.match(creatorSteps, /CopyAndOpenAiButton/);
+  assert.match(creatorSteps, /launchAiApp\(appKey\)/);
   assert.match(creatorSteps, /AI用タイトルプロンプト/);
   assert.match(creatorSteps, /AI用完成記事プロンプト/);
   assert.doesNotMatch(creatorSteps, /href=\{OPENAI_LINKS\.chatgpt\}/);

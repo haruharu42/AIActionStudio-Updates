@@ -153,7 +153,8 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /key: "chatgpt", label: "ChatGPT"/);
   assert.match(stepUi, /key: "claude", label: "Claude"/);
   assert.match(stepUi, /key: "gemini", label: "Gemini"/);
-  assert.match(stepUi, /launchAiApp\(app\.key\)/);
+  assert.match(stepUi, /CopyAndOpenAiButton/);
+  assert.match(stepUi, /launchAiApp\(appKey\)/);
   assert.match(api, /記事タイトル候補を5個作成してください/);
   assert.match(api, /parseTitleCandidates/);
   assert.match(api, /必ず5個だけ/);

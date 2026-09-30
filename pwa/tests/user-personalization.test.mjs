@@ -235,7 +235,8 @@ test("article wizard supports direct back navigation and safe clearing of pasted
   assert.match(steps, /window\.confirm\("貼り付けたタイトル候補/);
   assert.match(steps, /window\.confirm\("貼り付けた本文/);
   assert.match(steps, /currentAiLaunchOptions/);
-  assert.match(steps, /選択中の\{app\.label\}を開く/);
+  assert.match(steps, /CopyAndOpenAiButton/);
+  assert.match(steps, /コピーして\{appLabel\}を開く/);
   assert.match(css, /\.wizard-steps li\.done button/);
   assert.match(css, /\.clear-content-action/);
 });

@@ -53,7 +53,8 @@ test("AI launch explains provider-specific regular and temporary/private chat be
   assert.match(links, /openAiProvider\(app\)/);
   assert.doesNotMatch(links, /showChatGptUsageGuide/);
 
-  assert.match(articleSteps, /launchAiApp\(app\.key\)/);
+  assert.match(articleSteps, /CopyAndOpenAiButton/);
+  assert.match(articleSteps, /launchAiApp\(appKey\)/);
   assert.match(promotionFields, /launchAiApp\(key\)/);
 
   assert.match(css, /\.ai-usage-backdrop/);

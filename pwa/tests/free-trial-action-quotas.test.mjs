@@ -86,6 +86,7 @@ test("SNS quota is consumed only when the SNS prompt is explicitly created", asy
   assert.match(sns, /setGeneratedPrompt\(prompt\)/);
   assert.match(sns, /generatedFingerprint === promptFingerprint/);
   assert.match(sns, /生成後のコピーでは追加消費しません/);
+  assert.match(sns, /再読み込みからの復元では追加消費しません/);
 });
 
 test("rewrite and AI assist prompts consume once before reveal and guard fast double clicks", async () => {

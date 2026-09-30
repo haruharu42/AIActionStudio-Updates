@@ -133,7 +133,8 @@ test("Phase 15 member tools require the same PWA access gate as the rest of the 
   assert.match(gate, /useSharedAccessState\(\)/);
   assert.doesNotMatch(gate, /loadAccessState|getSupabaseClient/);
   assert.match(gate, /state\.kind === "ready"/);
-  assert.match(gate, /state\.kind === "loading"\) return null/);
+  assert.match(gate, /state\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
+  assert.match(gate, /会員機能の利用権を確認しています/);
   assert.match(gate, /state\.kind === "entitlement_denied"/);
   assert.match(sideJobRoute, /Phase15MemberGate/);
   assert.match(snsPlanRoute, /Phase15MemberGate/);
