@@ -10,6 +10,8 @@ import {
 } from "@/components/knowledge-refresh/knowledge-refresh-display";
 import type { KnowledgeAutomationSource } from "@/lib/knowledge-auto-update";
 
+type SourceListView = "all" | "attention" | "manual" | "disabled" | "healthy";
+
 type SourceFetchDiagnosis = {
   kind: "disabled" | "restricted" | "rate-limited" | "removed" | "backoff" | "warning" | "healthy";
   label: string;
@@ -124,6 +126,8 @@ export function KnowledgeSourceHealthPanel({
 }) {
   const [copyFeedback, setCopyFeedback] = useState<Record<number, string>>({});
   const [batchCopyFeedback, setBatchCopyFeedback] = useState("");
+  const [sourceListView, setSourceListView] = useState<SourceListView>("all");
+  const [sourceQuery, setSourceQuery] = useState("");
   const manualReviewSources = useMemo(
     () => sources.filter((source) => sourceFetchDiagnosis(source).needsManualReview),
     [sources],
@@ -215,6 +219,40 @@ export function KnowledgeSourceHealthPanel({
     }),
     [sources],
   );
+  const sourceListCounts = useMemo(() => ({
+    all: sources.length,
+    attention: failingSources.length,
+    manual: manualReviewSources.length,
+    disabled: disabledSources.length,
+    healthy: sources.filter((source) => sourceFetchDiagnosis(source).kind === "healthy").length,
+  }), [sources, failingSources.length, manualReviewSources.length, disabledSources.length]);
+  const visibleSources = useMemo(() => {
+    const query = sourceQuery.trim().toLowerCase();
+    return orderedSources.filter((source) => {
+      const diagnosis = sourceFetchDiagnosis(source);
+      if (sourceListView === "attention" && !failingSources.some((item) => item.id === source.id)) return false;
+      if (sourceListView === "manual" && !diagnosis.needsManualReview) return false;
+      if (sourceListView === "disabled" && source.enabled) return false;
+      if (sourceListView === "healthy" && diagnosis.kind !== "healthy") return false;
+      if (!query) return true;
+      const searchTarget = [
+        source.sourceUrl,
+        knowledgeSourceHost(source.sourceUrl),
+        knowledgeSourceKindLabel(source.sourceKind),
+        source.sourceKind,
+        ...source.tasks,
+      ].join(" ").toLowerCase();
+      return searchTarget.includes(query);
+    });
+  }, [orderedSources, sourceListView, sourceQuery, failingSources]);
+  const sourceListViews: Array<{ key: SourceListView; label: string }> = [
+    { key: "attention", label: "要確認" },
+    { key: "manual", label: "手動確認" },
+    { key: "disabled", label: "停止中" },
+    { key: "healthy", label: "正常" },
+    { key: "all", label: "すべて" },
+  ];
+
   const requestSourceToggle = (source: KnowledgeAutomationSource) => {
     const nextEnabled = !source.enabled;
     const action = nextEnabled ? "再開" : "停止";
@@ -312,8 +350,35 @@ export function KnowledgeSourceHealthPanel({
 
       <details className="knowledge-source-list" open={failingSources.length > 0 || manualReviewSources.length > 0}>
         <summary>監視URL一覧（{sources.length}件）</summary>
+        <div className="knowledge-source-list-tools">
+          <div className="knowledge-source-list-filters" role="group" aria-label="監視URLの絞り込み">
+            {sourceListViews.map((view) => (
+              <button
+                key={view.key}
+                type="button"
+                aria-pressed={sourceListView === view.key}
+                onClick={() => setSourceListView(view.key)}
+              >
+                {view.label} ({sourceListCounts[view.key]})
+              </button>
+            ))}
+          </div>
+          <label className="knowledge-source-search">
+            <span>URL・カテゴリ検索</span>
+            <input
+              type="search"
+              value={sourceQuery}
+              onChange={(event) => setSourceQuery(event.target.value.slice(0, 160))}
+              placeholder="例: x.com / sidejob_sns / official_policy"
+            />
+          </label>
+          <small>表示 {visibleSources.length} / {sources.length}件</small>
+        </div>
         <div>
-          {orderedSources.map((source) => {
+          {visibleSources.length === 0 && (
+            <p className="knowledge-source-list-empty">この条件に該当する監視URLはありません。</p>
+          )}
+          {visibleSources.map((source) => {
             const diagnosis = sourceFetchDiagnosis(source);
             const alternatives = diagnosis.needsManualReview
               ? manualReviewAlternativeSources(source, sources)
