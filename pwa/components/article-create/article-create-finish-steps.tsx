@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { useState } from "react";
+
+import type { ArticleStockSummary } from "@/lib/article-library-v2";
 
 import {
   publicationBodyForCopy,
