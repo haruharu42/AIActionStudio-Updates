@@ -48,16 +48,18 @@ import {
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
 import { quoteUntrustedKnowledgeResearchData } from "@/lib/untrusted-knowledge-research";
+import { parseKnowledgeCandidateIdQuery } from "@/lib/knowledge-review-search";
 
 const AUTOMATION_CANDIDATE_LIMIT = 200;
 const HELD_RESEARCH_BATCH_SIZE = 5;
 const RECHECK_RESEARCH_BATCH_SIZE = 5;
 const CANDIDATE_REVIEW_NOTE_MAX = 1600;
-type AutomationCandidateView = "all" | "ready" | "recheck" | "unanalysed" | "held" | "failed";
+type AutomationCandidateView = "all" | "ready" | "recheck" | "history403" | "unanalysed" | "held" | "failed";
 const AUTOMATION_CANDIDATE_VIEWS: { key: AutomationCandidateView; label: string }[] = [
   { key: "all", label: "すべて" },
   { key: "ready", label: "Fresh差分候補" },
   { key: "recheck", label: "再確認" },
+  { key: "history403", label: "検出時403" },
   { key: "unanalysed", label: "AI解析待ち" },
   { key: "held", label: "AI保留" },
   { key: "failed", label: "解析失敗" },
@@ -165,6 +167,7 @@ export function KnowledgeRefreshPanel() {
     all: automationCandidates.length,
     ready: automationCandidates.filter((candidate) => Boolean(buildKnowledgeAutomationCandidateBundle(candidate))).length,
     recheck: automationCandidates.filter((candidate) => candidate.candidateAction === "recheck").length,
+    history403: automationCandidates.filter((candidate) => candidate.sourceHttpStatus === 403).length,
     unanalysed: automationCandidates.filter((candidate) =>
       candidateAnalysisPresentation(candidate, automationAiConfig).className === "pending",
     ).length,
@@ -172,10 +175,21 @@ export function KnowledgeRefreshPanel() {
     failed: automationCandidates.filter((candidate) => candidate.analysisStatus === "failed").length,
   }), [automationCandidates, automationAiConfig]);
   const normalizedCandidateSearch = candidateSearch.trim().toLowerCase();
+  const exactCandidateIdQuery = parseKnowledgeCandidateIdQuery(normalizedCandidateSearch);
+  const candidateSourceOccurrences = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const candidate of automationCandidates) {
+      const key = candidate.sourceUrl.trim();
+      if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+  }, [automationCandidates]);
   // Shared display-only search: review and publication remain separate admin actions.
   const searchedAutomationCandidates = useMemo(() => automationCandidates
     .filter((candidate) => {
       if (!normalizedCandidateSearch) return true;
+      // A leading # means an exact candidate ID, not a substring in another URL.
+      if (normalizedCandidateSearch.startsWith("#")) return candidate.id === exactCandidateIdQuery;
       return [
         candidate.sourceTitle,
         candidate.sourceUrl,
@@ -192,11 +206,12 @@ export function KnowledgeRefreshPanel() {
         ...candidate.verifiedSourceUrls,
         ...candidate.matchedTasks,
       ].filter(Boolean).join("\n").toLowerCase().includes(normalizedCandidateSearch);
-    }), [automationCandidates, normalizedCandidateSearch]);
+    }), [automationCandidates, normalizedCandidateSearch, exactCandidateIdQuery]);
   const visibleAutomationCandidates = useMemo(() => searchedAutomationCandidates
     .filter((candidate) => {
       if (candidateView === "ready") return Boolean(buildKnowledgeAutomationCandidateBundle(candidate));
       if (candidateView === "recheck") return candidate.candidateAction === "recheck";
+      if (candidateView === "history403") return candidate.sourceHttpStatus === 403;
       if (candidateView === "unanalysed") return candidateAnalysisPresentation(candidate, automationAiConfig).className === "pending";
       if (candidateView === "held") return candidateAnalysisPresentation(candidate, automationAiConfig).className === "held";
       if (candidateView === "failed") return candidate.analysisStatus === "failed";
@@ -893,7 +908,7 @@ export function KnowledgeRefreshPanel() {
                   setHeldBatchIndex(0);
                   setRecheckBatchIndex(0);
                 }}
-                placeholder="タイトル・URL・カテゴリ・理由・レビュー記録で検索"
+                placeholder="候補ID（例：#73）・タイトル・URL・カテゴリ・レビュー記録"
                 autoComplete="off"
               />
               {candidateSearch && (
@@ -906,7 +921,7 @@ export function KnowledgeRefreshPanel() {
                 </button>
               )}
             </div>
-            <small>候補一覧と5件一括検証の対象に同じ検索条件を適用します。タブの括弧内は検索前の全体件数です。候補状態・監視設定・公開状態は変更しません。</small>
+            <small>#数字は候補IDの完全一致です。「検出時403」は候補生成時の履歴で、現在の監視HTTP状態ではありません。候補一覧と5件一括検証には同じ検索条件が適用されます。括弧内は検索前の全体件数です。候補状態・監視設定・公開状態は変更しません。</small>
           </div>
           <div className="knowledge-candidate-triage-filters" role="group" aria-label="自動調査候補の絞り込み">
             {AUTOMATION_CANDIDATE_VIEWS.map((view) => (
@@ -997,7 +1012,10 @@ export function KnowledgeRefreshPanel() {
                     {knowledgeAutomationActionLabel(candidate.candidateAction)}
                   </span>
                   <strong>{candidate.sourceTitle || candidate.existingItemKey || candidate.sourceUrl}</strong>
-                  <small>信頼度 {candidate.confidence}% / 検出 {formatKnowledgeDate(candidate.detectedAt)}</small>
+                  <small>候補 #{candidate.id} / 検出時HTTP {candidate.sourceHttpStatus ?? "不明"} / 信頼度 {candidate.confidence}% / 検出 {formatKnowledgeDate(candidate.detectedAt)}</small>
+                  {(candidateSourceOccurrences.get(candidate.sourceUrl.trim()) ?? 0) > 1 && (
+                    <small>同一URLの確認待ち候補：{candidateSourceOccurrences.get(candidate.sourceUrl.trim())}件（候補の同一性・実質変更は別途確認）</small>
+                  )}
                 </header>
 
                 <p>{candidate.reason}</p>
