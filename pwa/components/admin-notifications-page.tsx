@@ -9,6 +9,7 @@ import {
   adminCreateNotification,
   adminGetNotificationReadiness,
   adminListNotifications,
+  notificationReadinessIssues,
   type AdminNotification,
   type AdminNotificationReadiness,
   type NotificationAudience,
@@ -49,6 +50,7 @@ export function AdminNotificationsPage() {
   const [error, setError] = useState("");
 
   const activeAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
+  const readinessIssues = readiness ? notificationReadinessIssues(readiness) : [];
 
   const refresh = async () => {
     const client = getSupabaseClient();
@@ -142,6 +144,33 @@ export function AdminNotificationsPage() {
                 実機でのPush受信・通知タップ・PC/スマホ主要導線は公開前に別途確認してください。
               </p>
             </div>
+            {readinessIssues.length > 0 ? (
+              <div className="admin-notification-readiness-blockers" aria-label="公開前の自動確認ブロッカー">
+                <div className="admin-notification-readiness-blockers-head">
+                  <strong>公開前に解消する項目</strong>
+                  <span>{readinessIssues.length}件</span>
+                </div>
+                <div className="admin-notification-readiness-blocker-list">
+                  {readinessIssues.map((issue) => (
+                    <article key={issue.code}>
+                      <div>
+                        <span>要対応</span>
+                        <strong>{issue.title}</strong>
+                        <p>{issue.detail}</p>
+                      </div>
+                      {issue.actionHref && issue.actionLabel ? (
+                        <Link href={issue.actionHref}>{issue.actionLabel} →</Link>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="admin-notification-readiness-clear">
+                <strong>自動確認のブロッカーはありません。</strong>
+                <span>残りは実機Push受信・通知タップ・PC/スマホ主要導線の手動確認です。</span>
+              </div>
+            )}
             <div className="admin-notification-readiness-grid">
               <article>
                 <span>公開段階</span>
