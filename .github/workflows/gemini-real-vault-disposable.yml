@@ -38,6 +38,9 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Assert built-in auth.uid is available
+        run: |
+          psql -XAt -v ON_ERROR_STOP=1 -c "SELECT case when to_regprocedure('auth.uid()') is null then 1/0 else 1 end;"
       - name: Initialize real Vault and disposable Auth mock
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/gemini-free/real-vault-fixture.sql
       - name: Apply unchanged Gemini staged migration
