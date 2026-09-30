@@ -9,9 +9,11 @@ import {
   adminCreateNotification,
   adminGetNotificationReadiness,
   adminListNotifications,
+  adminListNotificationTesterReadiness,
   notificationReadinessIssues,
   type AdminNotification,
   type AdminNotificationReadiness,
+  type AdminNotificationTesterReadiness,
   type NotificationAudience,
   type NotificationCategory,
 } from "@/lib/notifications";
@@ -45,6 +47,7 @@ export function AdminNotificationsPage() {
   const [href, setHref] = useState("/");
   const [items, setItems] = useState<AdminNotification[]>([]);
   const [readiness, setReadiness] = useState<AdminNotificationReadiness | null>(null);
+  const [testerReadiness, setTesterReadiness] = useState<AdminNotificationTesterReadiness[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -54,12 +57,14 @@ export function AdminNotificationsPage() {
 
   const refresh = async () => {
     const client = getSupabaseClient();
-    const [nextItems, nextReadiness] = await Promise.all([
+    const [nextItems, nextReadiness, nextTesterReadiness] = await Promise.all([
       adminListNotifications(client, 80),
       adminGetNotificationReadiness(client),
+      adminListNotificationTesterReadiness(client),
     ]);
     setItems(nextItems);
     setReadiness(nextReadiness);
+    setTesterReadiness(nextTesterReadiness);
   };
 
   useEffect(() => {
@@ -69,11 +74,13 @@ export function AdminNotificationsPage() {
     void Promise.all([
       adminListNotifications(client, 80),
       adminGetNotificationReadiness(client),
+      adminListNotificationTesterReadiness(client),
     ]).then(
-      ([nextItems, nextReadiness]) => {
+      ([nextItems, nextReadiness, nextTesterReadiness]) => {
         if (!active) return;
         setItems(nextItems);
         setReadiness(nextReadiness);
+        setTesterReadiness(nextTesterReadiness);
       },
       () => { if (active) setError("通知管理の状態を取得できませんでした。"); },
     );
@@ -202,6 +209,62 @@ export function AdminNotificationsPage() {
                 <strong>{readiness.deliveries.failed}</strong>
                 <small>送信成功 {readiness.deliveries.sent} 件</small>
               </article>
+            </div>
+            <div className="admin-notification-tester-readiness" aria-label="指定テスターのPush準備状況">
+              <div className="admin-notification-tester-readiness-head">
+                <div>
+                  <strong>指定テスターの実機Push状況</strong>
+                  <span>endpoint・P-256鍵・auth鍵は表示せず、端末数と状態だけを確認します。</span>
+                </div>
+                <Link href="/admin/releases">テスター設定を開く →</Link>
+              </div>
+              <div className="admin-notification-tester-readiness-list">
+                {testerReadiness.map((tester) => {
+                  const ready = tester.pushEnabled && tester.healthyDeviceCount > 0;
+                  const stateLabel = ready
+                    ? "Push確認可"
+                    : !tester.pushEnabled
+                      ? "端末通知OFF"
+                      : tester.enabledDeviceCount === 0
+                        ? "端末登録待ち"
+                        : tester.errorDeviceCount > 0
+                          ? "配信エラー確認"
+                          : "要確認";
+                  return (
+                    <article className={ready ? "ready" : "action"} key={tester.aasUserId}>
+                      <div className="admin-notification-tester-identity">
+                        <strong>{tester.aasUserId}</strong>
+                        <span>{tester.displayName || "表示名なし"}</span>
+                      </div>
+                      <div className="admin-notification-tester-metrics">
+                        <span>Push設定 <b>{tester.pushEnabled ? "ON" : "OFF"}</b></span>
+                        <span>正常端末 <b>{tester.healthyDeviceCount}</b></span>
+                        <span>有効端末 <b>{tester.enabledDeviceCount}</b></span>
+                        <span>エラー端末 <b>{tester.errorDeviceCount}</b></span>
+                      </div>
+                      <div className="admin-notification-tester-state">
+                        <strong>{stateLabel}</strong>
+                        <small>
+                          {tester.latestDeviceUpdatedAt
+                            ? `最終端末更新: ${formatDate(tester.latestDeviceUpdatedAt)}`
+                            : "端末登録履歴なし"}
+                        </small>
+                      </div>
+                    </article>
+                  );
+                })}
+                {!testerReadiness.length && (
+                  <div className="admin-empty-state compact">
+                    <strong>activeな一般ユーザーテスターが見つかりません。</strong>
+                  </div>
+                )}
+              </div>
+              {testerReadiness.some((tester) => !tester.pushEnabled || tester.healthyDeviceCount === 0) && (
+                <p>
+                  未確認テスター本人のPWAで「設定 → 通知 → スマホ・PCへの端末通知」をONにし、
+                  この画面で正常端末が1台以上になったことを再確認してください。
+                </p>
+              )}
             </div>
             <p className="admin-notification-readiness-note">
               最終送信: {readiness.deliveries.latestSentAt ? formatDate(readiness.deliveries.latestSentAt) : "まだありません"}。
