@@ -72,3 +72,18 @@ Staging実DB上で外部Gemini APIを呼ばず、一時データをサブトラ�
 - [プロジェクト別のレート制限](https://ai.google.dev/gemini-api/docs/rate-limits)
 - [REST generateContent](https://ai.google.dev/api/generate-content)
 - [Supabase Vault](https://supabase.com/docs/guides/database/vault)
+
+
+## Managed Staging ready checkpoint（2026-10-01）
+
+- GitHub main checkpoint: `61886c3a505498982eed5eaa617bbd8d8f58af8c`.
+- Managed Staging: `AI Action Studio Staging` / `swwbfrhvsvouiwobodwh` / Tokyo `ap-northeast-1`.
+- Managed Staging reconstruction fixture and disposable local Supabase CI are tracked under `supabase/tests/managed-staging/`; PR #241 passed and is merged.
+- Real `20260930125200_knowledge_gemini_free_agent_v1.sql` is applied to Managed Staging.
+- `knowledge-research-worker` v1 is ACTIVE in Managed Staging and its deployed `index.ts` + shared Gemini adapter match current main exactly.
+- Managed Staging validation passed for admin guards, Gemini allowlist, per-run clamp=3, Vault fake-key roundtrip, 10/day quota, UTC rollover, and server-only quota permissions. All ephemeral data and fake secrets were rolled back.
+- Persistent safe state remains: automation OFF, AI enrichment OFF, provider OpenAI, model `gpt-5.6`, Gemini daily count 0, no Gemini API key, no worker token, no Knowledge/source/run/candidate data.
+- Real Gemini API calls have **not** been made from Managed Staging. A real Gemini key remains intentionally unconfigured.
+
+Next boundary: configure a real Staging-only Gemini key securely and a controlled worker token/source only when explicitly ready to perform external AI/network E2E. Production Gemini remains untouched.
+
