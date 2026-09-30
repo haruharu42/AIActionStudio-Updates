@@ -618,12 +618,27 @@ test("access-restricted Knowledge sources offer safe manual review without overr
   assert.match(sourceHealth, /監視停止中です。履歴は保持されています/);
   assert.match(sourceHealth, /open=\{failingSources\.length > 0 \|\| manualReviewSources\.length > 0\}/);
   assert.match(sourceHealth, /自動再開・自動承認・自動公開は行いません/);
+  assert.match(sourceHealth, /function sourceOrganizationDomain/);
+  assert.match(sourceHealth, /co\.jp/);
+  assert.match(sourceHealth, /go\.jp/);
+  assert.match(sourceHealth, /function manualReviewAlternativeSources/);
+  assert.match(sourceHealth, /candidate\.enabled/);
+  assert.match(sourceHealth, /candidate\.consecutiveFailures === 0/);
+  assert.match(sourceHealth, /candidate\.lastHttpStatus >= 200/);
+  assert.match(sourceHealth, /candidate\.lastHttpStatus < 400/);
+  assert.match(sourceHealth, /sourceOrganizationDomain\(candidate\.sourceUrl\) === organizationDomain/);
+  assert.match(sourceHealth, /sourceTasksOverlap\(source, candidate\)/);
+  assert.match(sourceHealth, /\.slice\(0, 3\)/);
+  assert.match(sourceHealth, /既存の健全な同一公式ドメイン候補/);
+  assert.match(sourceHealth, /自動差し替えはせず/);
   assert.doesNotMatch(sourceHealth, /adminReviewKnowledgeAutomationCandidate|getSupabaseClient|\.rpc\(/);
   assert.match(css, /\.knowledge-source-health-stats article\.restricted/);
   assert.match(css, /\.knowledge-source-list article\.restricted/);
   assert.match(css, /\.knowledge-source-guidance/);
   assert.match(css, /\.knowledge-source-actions button\.manual-review/);
   assert.match(css, /\.knowledge-source-manual-review/);
+  assert.match(css, /\.knowledge-source-alternatives/);
+  assert.match(css, /\.knowledge-source-alternatives a/);
 });
 
 test("redundant OpenAI Help source is retired from scheduling after repeated 403s without deleting history", async () => {
