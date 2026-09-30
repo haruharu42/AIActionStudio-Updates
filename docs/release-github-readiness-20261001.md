@@ -46,7 +46,7 @@
 - Productionに残る旧 `AIArticleStudio-Updates` のGitHub run URL制約はStagingへ持ち込んでいない。write/dispatch用RPCはまだ作成していない。
 - active adminなしでは `admin_list_app_release_deployments()` が `42501 active admin required` で拒否されることを確認。
 - 一時active-admin claimsのロールバックテストでは、管理者読み取りが空配列 `[]` を正常返却。
-- Staging Edge Functionへの無認証GETでは `pwa-release-deploy` がHTTP 401（authorization header不足）、`knowledge-research-worker` がHTTP 405（POST required）を返し、GET経由では処理開始されないことを確認。
+- Staging Edge Functionへの無認証GETでは `pwa-release-deploy` がHTTP 401（authorization header不足）。`knowledge-research-worker` はGETをHTTP 405（POST required）で拒否し、さらにトークンなしPOSTもHTTP 401 / `{"error":"unauthorized"}` で拒否。直後のDB確認でもRun/Candidate/Sourceは0件のままで副作用なし。
 - Release用GitHub token、workflow dispatch、Production URLへの公開処理は未実施。
 
 
@@ -63,4 +63,6 @@
 - No real `AAS_GITHUB_RELEASE_TOKEN` has been copied to Managed Staging or validated there; no workflow dispatch has been performed.
 
 Production remains unchanged: the production release Worker and DB constraint must be handled as separate explicit rollout steps.
+
+Supabase Managed StagingのRealtime内部スキーマ未初期化はAAS release pathとは別件で、Issue #244として追跡する。AASからSupabase所有の`realtime`内部テーブルを作成・修復しない。
 
