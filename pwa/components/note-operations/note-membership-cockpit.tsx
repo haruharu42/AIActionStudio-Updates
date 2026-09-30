@@ -96,6 +96,16 @@ function CopyActions({
   );
 }
 
+function MembershipInheritedDraftNotice({ labels }: { labels: string[] }) {
+  if (!labels.length) return null;
+  return (
+    <p className="route-notice note-membership-inherited-draft">
+      保存済みの{labels.join("・")}を、未確認ドラフトとして次のAIプロンプトへ引き継ぎます。
+      今回の入力・実績・最新のnote公式情報が優先されます。
+    </p>
+  );
+}
+
 function Field({
   label,
   value,
@@ -305,12 +315,31 @@ export function NoteMembershipCockpit({
   }, [checked, userId]);
 
   const pricingPrompt = useMemo(() => buildMembershipPricingPrompt(profile, pricing), [profile, pricing]);
-  const pagePrompt = useMemo(() => buildMembershipPagePrompt(profile, pageInput), [profile, pageInput]);
-  const promotionPrompt = useMemo(() => buildMembershipPromotionPrompt(profile, promotion), [profile, promotion]);
-  const calendarPrompt = useMemo(() => buildMembershipCalendarPrompt(profile, calendar), [profile, calendar]);
+  const pagePrompt = useMemo(
+    () => buildMembershipPagePrompt(profile, pageInput, { pricing: workspaceResults.pricing }),
+    [pageInput, profile, workspaceResults.pricing],
+  );
+  const promotionPrompt = useMemo(
+    () => buildMembershipPromotionPrompt(profile, promotion, {
+      pricing: workspaceResults.pricing,
+      page: workspaceResults.page,
+    }),
+    [profile, promotion, workspaceResults.page, workspaceResults.pricing],
+  );
+  const calendarPrompt = useMemo(
+    () => buildMembershipCalendarPrompt(profile, calendar, {
+      pricing: workspaceResults.pricing,
+      page: workspaceResults.page,
+    }),
+    [calendar, profile, workspaceResults.page, workspaceResults.pricing],
+  );
   const improvePrompt = useMemo(
-    () => buildMembershipImprovePrompt(profile, improve, metricsEntries),
-    [profile, improve, metricsEntries],
+    () => buildMembershipImprovePrompt(profile, improve, metricsEntries, {
+      pricing: workspaceResults.pricing,
+      page: workspaceResults.page,
+      calendar: workspaceResults.calendar,
+    }),
+    [improve, metricsEntries, profile, workspaceResults.calendar, workspaceResults.page, workspaceResults.pricing],
   );
 
   const progress = Math.round((checked.length / NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.length) * 100);
@@ -461,6 +490,7 @@ export function NoteMembershipCockpit({
               <option value="yes">入れる</option><option value="no">入れない</option>
             </Field>
           </div>
+          <MembershipInheritedDraftNotice labels={[workspaceResults.pricing.trim() ? "料金・特典診断" : ""].filter(Boolean)} />
           <CopyActions prompt={pagePrompt} selectedAi={selectedAi} onMessage={onMessage} onBeforeExternalLaunch={persistWorkspace} />
           <MembershipAiResultWorkspace
             label="紹介ページ"
@@ -491,6 +521,10 @@ export function NoteMembershipCockpit({
               <option value="ai">必要性をAIが判断</option><option value="yes">使う</option><option value="no">使わない</option>
             </Field>
           </div>
+          <MembershipInheritedDraftNotice labels={[
+            workspaceResults.pricing.trim() ? "料金・特典診断" : "",
+            workspaceResults.page.trim() ? "紹介ページ" : "",
+          ].filter(Boolean)} />
           <CopyActions prompt={promotionPrompt} selectedAi={selectedAi} onMessage={onMessage} onBeforeExternalLaunch={persistWorkspace} />
           <MembershipAiResultWorkspace
             label="告知・集客"
@@ -518,6 +552,10 @@ export function NoteMembershipCockpit({
               <option value="habit">無理なく継続</option><option value="value">会員価値を明確に</option><option value="conversation">交流を増やす</option><option value="retention">継続体験を整える</option>
             </Field>
           </div>
+          <MembershipInheritedDraftNotice labels={[
+            workspaceResults.pricing.trim() ? "料金・特典診断" : "",
+            workspaceResults.page.trim() ? "紹介ページ" : "",
+          ].filter(Boolean)} />
           <CopyActions prompt={calendarPrompt} selectedAi={selectedAi} onMessage={onMessage} onBeforeExternalLaunch={persistWorkspace} />
           <MembershipAiResultWorkspace
             label="月間運営"
@@ -564,6 +602,11 @@ export function NoteMembershipCockpit({
             onEntriesChange={setMetricsEntries}
             onMessage={onMessage}
           />
+          <MembershipInheritedDraftNotice labels={[
+            workspaceResults.pricing.trim() ? "料金・特典診断" : "",
+            workspaceResults.page.trim() ? "紹介ページ" : "",
+            workspaceResults.calendar.trim() ? "月間運営" : "",
+          ].filter(Boolean)} />
           <CopyActions prompt={improvePrompt} selectedAi={selectedAi} onMessage={onMessage} onBeforeExternalLaunch={persistWorkspace} />
           <MembershipAiResultWorkspace
             label="改善相談"

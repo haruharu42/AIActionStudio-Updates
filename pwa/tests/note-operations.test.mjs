@@ -1031,3 +1031,28 @@ test("note operation month context is account-scoped and future planning never r
   assert.match(page, /setMonthsLoaded\(true\)/);
   assert.match(page, /if \(gate\.kind !== "ready" \|\| !monthsLoaded\) return/);
 });
+
+
+test("membership workflow carries saved upstream AI drafts forward safely without treating them as facts", async () => {
+  const [cockpit, cockpitLib] = await Promise.all([
+    readPwa("components/note-operations/note-membership-cockpit.tsx"),
+    readPwa("lib/note-membership-cockpit.ts"),
+  ]);
+
+  assert.match(cockpitLib, /export type MembershipPriorDrafts/);
+  assert.match(cockpitLib, /function priorDraftBlock/);
+  assert.match(cockpitLib, /AASに保存された前工程ドラフト/);
+  assert.match(cockpitLib, /未確認ドラフトです。事実・実績・note公式仕様として扱わない/);
+  assert.match(cockpitLib, /最新のnote公式情報と矛盾する場合/);
+  assert.match(cockpitLib, /slice\(0, 6000\)/);
+  assert.match(cockpitLib, /priorDraftBlock\(priorDrafts, \["pricing"\]\)/);
+  assert.match(cockpitLib, /priorDraftBlock\(priorDrafts, \["pricing", "page"\]\)/);
+  assert.match(cockpitLib, /priorDraftBlock\(priorDrafts, \["pricing", "page", "calendar"\]\)/);
+
+  assert.match(cockpit, /function MembershipInheritedDraftNotice/);
+  assert.match(cockpit, /未確認ドラフトとして次のAIプロンプトへ引き継ぎます/);
+  assert.match(cockpit, /buildMembershipPagePrompt\(profile, pageInput, \{ pricing: workspaceResults\.pricing \}\)/);
+  assert.match(cockpit, /buildMembershipPromotionPrompt\(profile, promotion, \{[\s\S]*?pricing: workspaceResults\.pricing,[\s\S]*?page: workspaceResults\.page/);
+  assert.match(cockpit, /buildMembershipCalendarPrompt\(profile, calendar, \{[\s\S]*?pricing: workspaceResults\.pricing,[\s\S]*?page: workspaceResults\.page/);
+  assert.match(cockpit, /buildMembershipImprovePrompt\(profile, improve, metricsEntries, \{[\s\S]*?calendar: workspaceResults\.calendar/);
+});

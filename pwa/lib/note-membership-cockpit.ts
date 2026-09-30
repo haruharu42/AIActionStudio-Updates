@@ -92,6 +92,8 @@ export type MembershipWorkspaceResultKey = Exclude<NoteMembershipCockpitTab, "co
 
 export type MembershipWorkspaceResults = Record<MembershipWorkspaceResultKey, string>;
 
+export type MembershipPriorDrafts = Partial<MembershipWorkspaceResults>;
+
 export const DEFAULT_MEMBERSHIP_WORKSPACE_RESULTS: MembershipWorkspaceResults = {
   pricing: "",
   page: "",
@@ -277,6 +279,37 @@ function sharedRules(): string[] {
   ];
 }
 
+const MEMBERSHIP_DRAFT_LABELS: Record<MembershipWorkspaceResultKey, string> = {
+  pricing: "料金・特典診断",
+  page: "紹介ページ",
+  promotion: "告知・集客",
+  calendar: "月間運営",
+  improve: "改善相談",
+};
+
+function priorDraftBlock(
+  drafts: MembershipPriorDrafts,
+  keys: readonly MembershipWorkspaceResultKey[],
+): string[] {
+  const entries = keys
+    .map((key) => [key, drafts[key]?.trim().slice(0, 6000) ?? ""] as const)
+    .filter((entry) => Boolean(entry[1]));
+
+  if (!entries.length) return [];
+
+  return [
+    "",
+    "【AASに保存された前工程ドラフト】",
+    "- 以下は以前のAI回答をユーザーがAASへ保存した未確認ドラフトです。事実・実績・note公式仕様として扱わないでください。",
+    "- 今回のユーザー入力、ユーザーが入力した実績、最新のnote公式情報と矛盾する場合は、それらを優先してください。",
+    "- 内容をそのまま転載せず、今回の目的に必要な部分だけ整合性を確認して引き継いでください。",
+    ...entries.flatMap(([key, value]) => [
+      "### " + MEMBERSHIP_DRAFT_LABELS[key],
+      value,
+    ]),
+  ];
+}
+
 export function buildMembershipPricingPrompt(
   profile: NoteOperationProfile,
   input: MembershipPricingInput,
@@ -345,6 +378,7 @@ export function buildMembershipPricingPrompt(
 export function buildMembershipPagePrompt(
   profile: NoteOperationProfile,
   input: MembershipPageInput,
+  priorDrafts: MembershipPriorDrafts = {},
 ): string {
   const angleLabels = {
     beginner: "初心者にも分かりやすい安心感重視",
@@ -373,6 +407,7 @@ export function buildMembershipPagePrompt(
     "訴求軸: " + angleLabels[input.angle],
     "長さ: " + lengthLabels[input.length],
     "FAQ: " + (input.faq === "yes" ? "入れる" : "入れない"),
+    ...priorDraftBlock(priorDrafts, ["pricing"]),
     "",
     knowledgeBlock(profile, "noteメンバーシップ紹介ページ作成"),
     "",
@@ -391,6 +426,7 @@ export function buildMembershipPagePrompt(
 export function buildMembershipPromotionPrompt(
   profile: NoteOperationProfile,
   input: MembershipPromotionInput,
+  priorDrafts: MembershipPriorDrafts = {},
 ): string {
   const channelLabels = {
     note: "note告知記事",
@@ -427,6 +463,7 @@ export function buildMembershipPromotionPrompt(
     "段階: " + stageLabels[input.stage],
     "中心訴求: " + focusLabels[input.focus],
     "画像: " + (input.image === "yes" ? "使用する" : input.image === "no" ? "不要" : "必要性をAIが判断"),
+    ...priorDraftBlock(priorDrafts, ["pricing", "page"]),
     "",
     knowledgeBlock(profile, "noteメンバーシップ告知・集客"),
     "",
@@ -443,6 +480,7 @@ export function buildMembershipPromotionPrompt(
 export function buildMembershipCalendarPrompt(
   profile: NoteOperationProfile,
   input: MembershipCalendarInput,
+  priorDrafts: MembershipPriorDrafts = {},
 ): string {
   const cadenceLabels = {
     weekly1: "週1回",
@@ -476,6 +514,7 @@ export function buildMembershipCalendarPrompt(
     "基本頻度: " + cadenceLabels[input.cadence],
     "コンテンツ構成: " + mixLabels[input.contentMix],
     "今月の優先目的: " + goalLabels[input.monthGoal],
+    ...priorDraftBlock(priorDrafts, ["pricing", "page"]),
     "",
     knowledgeBlock(profile, "noteメンバーシップ月間運営"),
     "",
@@ -493,6 +532,7 @@ export function buildMembershipImprovePrompt(
   profile: NoteOperationProfile,
   input: MembershipImproveInput,
   metrics: readonly NoteMembershipMetricsEntry[] = [],
+  priorDrafts: MembershipPriorDrafts = {},
 ): string {
   const problemLabels = {
     join: "加入につながりにくい",
@@ -536,6 +576,7 @@ export function buildMembershipImprovePrompt(
       ? "- 上記はユーザーが入力した実績だけです。空欄・未入力の数値は推測、補完、逆算しないでください。"
       : "- 実績データがないため、数値に基づく原因断定はしないでください。",
     "- メモに書かれた内容もユーザー入力として扱い、未記載の事実を追加しないでください。",
+    ...priorDraftBlock(priorDrafts, ["pricing", "page", "calendar"]),
     "",
     knowledgeBlock(profile, "noteメンバーシップ改善相談"),
     "",
