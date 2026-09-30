@@ -47,6 +47,7 @@ import {
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
 
+const AUTOMATION_CANDIDATE_LIMIT = 200;
 type AutomationCandidateView = "all" | "ready" | "recheck" | "unanalysed";
 const AUTOMATION_CANDIDATE_VIEWS: { key: AutomationCandidateView; label: string }[] = [
   { key: "all", label: "すべて" },
@@ -169,7 +170,7 @@ export function KnowledgeRefreshPanel() {
       adminGetKnowledgeProductionHealth(client),
       adminGetKnowledgeSourceRiskReport(client),
       adminListKnowledgeAutomationSources(client, 200),
-      adminListKnowledgeAutomationCandidates(client, "pending", 200),
+      adminListKnowledgeAutomationCandidates(client, "pending", AUTOMATION_CANDIDATE_LIMIT),
       adminGetKnowledgeAutomationAiConfig(client),
     ]);
     setRequests(nextRequests);
@@ -201,7 +202,7 @@ export function KnowledgeRefreshPanel() {
           adminGetKnowledgeProductionHealth(client),
           adminGetKnowledgeSourceRiskReport(client),
           adminListKnowledgeAutomationSources(client, 200),
-          adminListKnowledgeAutomationCandidates(client, "pending", 200),
+          adminListKnowledgeAutomationCandidates(client, "pending", AUTOMATION_CANDIDATE_LIMIT),
           adminGetKnowledgeAutomationAiConfig(client),
         ]);
         if (!active) return;
@@ -661,7 +662,7 @@ export function KnowledgeRefreshPanel() {
             ))}
           </div>
           {automationStatus && automationStatus.pendingCandidates > automationCandidates.length
-            && automationCandidates.length === 200 && (
+            && automationCandidates.length === AUTOMATION_CANDIDATE_LIMIT && (
             <p className="knowledge-candidate-triage-note">
               一度に最大200件を表示します。確認後に再読込すると、残りの候補を確認できます。
             </p>
