@@ -290,6 +290,11 @@ test("official-source automation detects changes but never auto-publishes Knowle
   assert.match(worker, /if \(failures <= 6\) return 48/);
   assert.match(worker, /return 168/);
   assert.equal((worker.match(/nextCheck\(failureBackoffHours\(failures\)\)/g) ?? []).length, 3);
+  assert.ok(worker.includes("next.setUTCSeconds(0,0)"));
+  assert.ok(worker.includes("function dueSourceCutoff()"));
+  assert.ok(worker.includes("Date.now() + 60000"));
+  assert.ok(worker.includes('.lte("next_check_at",dueSourceCutoff())'));
+  assert.doesNotMatch(worker, /\.lte\("next_check_at",new Date\(\)\.toISOString\(\)\)/);
   assert.doesNotMatch(worker, /nextCheck\(12\).*consecutive_failures/);
   assert.doesNotMatch(worker, /admin_publish_knowledge_refresh_bundle/);
   assert.doesNotMatch(worker, /knowledge_catalog"\)\.insert|knowledge_catalog"\)\.update/);
@@ -308,6 +313,30 @@ test("official-source automation detects changes but never auto-publishes Knowle
   assert.match(client, /admin_publish_knowledge_refresh_bundle_v3/);
   assert.match(client, /admin_publish_knowledge_refresh_bundle_v2/);
 });
+
+test("Knowledge scheduler normalizes due timestamps and tolerates legacy second offsets without changing backoff hours", async () => {
+  const worker = await readRepo("supabase/functions/knowledge-research-worker/index.ts");
+
+  const nextStart = worker.indexOf("function nextCheck(hours: number)");
+  const cutoffStart = worker.indexOf("function dueSourceCutoff()", nextStart);
+  const backoffStart = worker.indexOf("function failureBackoffHours", cutoffStart);
+  assert.notEqual(nextStart, -1);
+  assert.notEqual(cutoffStart, -1);
+  assert.notEqual(backoffStart, -1);
+
+  const schedulingSource = worker.slice(nextStart, backoffStart);
+  assert.ok(schedulingSource.includes("Math.max(1, hours) * 3600000"));
+  assert.ok(schedulingSource.includes("next.setUTCSeconds(0,0)"));
+  assert.ok(schedulingSource.includes("Date.now() + 60000"));
+  assert.ok(worker.includes('.lte("next_check_at",dueSourceCutoff())'));
+
+  assert.match(worker, /if \(failures <= 2\) return 12/);
+  assert.match(worker, /if \(failures <= 4\) return 24/);
+  assert.match(worker, /if \(failures <= 6\) return 48/);
+  assert.match(worker, /if \(failures <= 8\) return 72/);
+  assert.match(worker, /return 168/);
+});
+
 
 test("automation approval is candidate review only and remains separate from publication", async () => {
   const [foundation, panel, client] = await Promise.all([
