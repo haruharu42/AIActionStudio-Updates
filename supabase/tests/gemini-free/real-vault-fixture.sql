@@ -13,9 +13,8 @@ create schema if not exists private;
 create schema if not exists vault;
 create extension if not exists supabase_vault with schema vault cascade;
 
-create or replace function auth.uid() returns uuid language sql stable as $$
-  select nullif(current_setting('test.mock_uid',true),'')::uuid;
-$$;
+-- Use Supabase's built-in auth.uid() and emulate only the JWT claim on this fixture.
+-- Unlike the mock-Postgres fixture, do not replace or grant on the protected auth schema.
 create or replace function private.is_active_admin() returns boolean language sql stable as $$
   select coalesce(nullif(current_setting('test.mock_admin',true),'')::boolean,false);
 $$;
