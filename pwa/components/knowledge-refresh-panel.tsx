@@ -104,6 +104,7 @@ export function KnowledgeRefreshPanel() {
   const [automationSources, setAutomationSources] = useState<KnowledgeAutomationSource[]>([]);
   const [automationCandidates, setAutomationCandidates] = useState<KnowledgeAutomationCandidate[]>([]);
   const [candidateView, setCandidateView] = useState<AutomationCandidateView>("all");
+  const [candidateSearch, setCandidateSearch] = useState("");
   const [heldBatchIndex, setHeldBatchIndex] = useState(0);
   const [recheckBatchIndex, setRecheckBatchIndex] = useState(0);
   const [automationAiConfig, setAutomationAiConfig] = useState<KnowledgeAutomationAiConfig | null>(null);
@@ -165,20 +166,35 @@ export function KnowledgeRefreshPanel() {
     held: automationCandidates.filter((candidate) => candidateAnalysisPresentation(candidate, automationAiConfig).className === "held").length,
     failed: automationCandidates.filter((candidate) => candidate.analysisStatus === "failed").length,
   }), [automationCandidates, automationAiConfig]);
+  const normalizedCandidateSearch = candidateSearch.trim().toLowerCase();
   const visibleAutomationCandidates = useMemo(() => automationCandidates
     .filter((candidate) => {
-      if (candidateView === "ready") return Boolean(buildKnowledgeAutomationCandidateBundle(candidate));
-      if (candidateView === "recheck") return candidate.candidateAction === "recheck";
-      if (candidateView === "unanalysed") return candidateAnalysisPresentation(candidate, automationAiConfig).className === "pending";
-      if (candidateView === "held") return candidateAnalysisPresentation(candidate, automationAiConfig).className === "held";
-      if (candidateView === "failed") return candidate.analysisStatus === "failed";
-      return true;
+      if (candidateView === "ready" && !buildKnowledgeAutomationCandidateBundle(candidate)) return false;
+      if (candidateView === "recheck" && candidate.candidateAction !== "recheck") return false;
+      if (candidateView === "unanalysed" && candidateAnalysisPresentation(candidate, automationAiConfig).className !== "pending") return false;
+      if (candidateView === "held" && candidateAnalysisPresentation(candidate, automationAiConfig).className !== "held") return false;
+      if (candidateView === "failed" && candidate.analysisStatus !== "failed") return false;
+      if (!normalizedCandidateSearch) return true;
+      const searchable = [
+        candidate.sourceTitle,
+        candidate.sourceUrl,
+        candidate.existingItemKey,
+        candidate.existingItemType,
+        candidate.candidateAction,
+        candidate.reason,
+        candidate.analysisReason,
+        candidate.analysisDecision,
+        candidate.analysisProvider,
+        candidate.analysisModel,
+        ...candidate.matchedTasks,
+      ].filter(Boolean).join("\n").toLowerCase();
+      return searchable.includes(normalizedCandidateSearch);
     })
     .sort((left, right) =>
       automationCandidatePriority(left) - automationCandidatePriority(right)
       || left.detectedAt.localeCompare(right.detectedAt)
       || left.id - right.id,
-    ), [automationCandidates, candidateView, automationAiConfig]);
+    ), [automationCandidates, candidateView, automationAiConfig, normalizedCandidateSearch]);
 
   const heldCandidates = useMemo(() => automationCandidates
     .filter((candidate) => candidateAnalysisPresentation(candidate, automationAiConfig).className === "held")
@@ -762,7 +778,26 @@ export function KnowledgeRefreshPanel() {
         <div className="knowledge-candidate-triage" aria-label="自動調査候補の確認順序">
           <div className="knowledge-candidate-triage-summary">
             <strong>管理者の候補確認</strong>
-            <span>取得 {automationCandidates.length}件 / 確認待ち {automationStatus?.pendingCandidates ?? "-"}件</span>
+            <span>表示 {visibleAutomationCandidates.length}件 / 取得 {automationCandidates.length}件 / 確認待ち {automationStatus?.pendingCandidates ?? "-"}件</span>
+          </div>
+          <div className="knowledge-candidate-search">
+            <label htmlFor="knowledge-candidate-search-input">候補を検索</label>
+            <div>
+              <input
+                id="knowledge-candidate-search-input"
+                type="search"
+                value={candidateSearch}
+                onChange={(event) => setCandidateSearch(event.target.value)}
+                placeholder="タイトル・URL・カテゴリ・理由・現行キーで検索"
+                autoComplete="off"
+              />
+              {candidateSearch && (
+                <button type="button" disabled={busy} onClick={() => setCandidateSearch("")}>
+                  検索をクリア
+                </button>
+              )}
+            </div>
+            <small>表示だけを絞り込みます。候補状態・監視設定・公開状態は変更しません。</small>
           </div>
           <div className="knowledge-candidate-triage-filters" role="group" aria-label="自動調査候補の絞り込み">
             {AUTOMATION_CANDIDATE_VIEWS.map((view) => (
@@ -839,7 +874,11 @@ export function KnowledgeRefreshPanel() {
         {automationCandidates.length === 0 ? (
           <p className="knowledge-empty">現在、管理者確認が必要な自動調査候補はありません。</p>
         ) : visibleAutomationCandidates.length === 0 ? (
-          <p className="knowledge-empty">この条件に該当する候補はありません。別の絞り込みを選択してください。</p>
+          <p className="knowledge-empty">
+            {candidateSearch.trim()
+              ? "検索条件に一致する候補はありません。検索語を変えるか、検索をクリアしてください。"
+              : "この条件に該当する候補はありません。別の絞り込みを選択してください。"}
+          </p>
         ) : (
           <div className="knowledge-automation-candidates">
             {visibleAutomationCandidates.map((candidate) => (
