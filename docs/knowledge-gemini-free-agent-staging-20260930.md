@@ -48,7 +48,8 @@ PRとPreviewが成功しても、既存の稼働中Supabase Edge Functionが新�
 - `reserve_knowledge_gemini_free_call()` はauthenticatedにEXECUTE権限がなく、service_roleのみ実行可能であることをStagingで確認。
 - Security Advisorの追加指摘はRPC専用設定テーブルの「RLS enabled / policyなし」INFOと、意図した管理RPCのSECURITY DEFINER WARN。Performance Advisorは新規環境ゆえの未使用インデックスINFOのみ。
 - 実Geminiキー、Workerトークン、Production秘密情報はStagingへコピーしていない。
-- 次工程はKnowledge automationの依存スキーマを小分けで再現した後、`knowledge-research-worker` をStagingだけへ配布する。依存テーブル/RPCが揃う前にWorkerを実行しない。
+- Knowledge automationの最小依存（空のCatalog 2テーブル、Source/Run/Candidate 3テーブル、Catalog Snapshot / Worker AI Config RPC）を構造のみ再現。全件数0を確認。
+- `knowledge-research-worker` をStagingへv1として配布し `ACTIVE` を確認。カスタムWorkerトークンは作成しておらず、設定DB側も `enabled=false` / `ai_enrichment_enabled=false` の二重ロック。実行はまだ行わない。
 
 ## 監査・エラー方針
 公開情報のハッシュ差分は変更の**兆候**であり規則の改訂を保証しない。AIによる根拠URLも未確認。HTTP403の制限を迂回しない。外部APIエラーは本文や秘密キーを記録せずHTTP番号だけを記録する。429時はその実行の残りGemini解析を停止する。日次上限に達した場合は候補を保留する。データベースの上限RPCが欠落していれば外部APIを呼ばず失敗閉鎖する。
