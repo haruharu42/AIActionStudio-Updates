@@ -196,6 +196,7 @@ $oldEnv = @{
     NEXT_PUBLIC_AAS_TERMS_URL = $env:NEXT_PUBLIC_AAS_TERMS_URL
     NEXT_PUBLIC_AAS_PRIVACY_URL = $env:NEXT_PUBLIC_AAS_PRIVACY_URL
     NEXT_PUBLIC_AAS_AI_TERMS_URL = $env:NEXT_PUBLIC_AAS_AI_TERMS_URL
+    NEXT_PUBLIC_AAS_RELEASE_AUDIENCE = $env:NEXT_PUBLIC_AAS_RELEASE_AUDIENCE
 }
 
 try {
@@ -204,6 +205,7 @@ try {
     $env:NEXT_PUBLIC_AAS_TERMS_URL = $TermsUrl
     $env:NEXT_PUBLIC_AAS_PRIVACY_URL = $PrivacyUrl
     $env:NEXT_PUBLIC_AAS_AI_TERMS_URL = $AiTermsUrl
+    $env:NEXT_PUBLIC_AAS_RELEASE_AUDIENCE = "public"
 
     Set-Location $PwaRoot
     Invoke-NpmStep "npm ci" @("ci", "--ignore-scripts", "--no-audit", "--no-fund")
@@ -232,7 +234,7 @@ $report = [ordered]@{
     ai_terms_link = $AiTermsUrl
     pwa_assets_present = $true
     service_worker_auth_guards_present = $true
-    service_worker_cache_generation = "phase17-prod-v2"
+    service_worker_cache_generation = "phase56-runtime-v12-axia-generated"
     npm_ci = "pass"
     typecheck = "pass"
     lint = "pass"
