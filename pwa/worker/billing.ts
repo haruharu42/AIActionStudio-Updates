@@ -483,18 +483,28 @@ async function adminBillingReadiness(request: Request, env: BillingEnv): Promise
     };
   });
 
+  const planReady = new Map(plans.map((plan) => [plan.planCode, plan.ready] as const));
+  const backendReady = Boolean(
+    mode !== "off"
+    && supabaseConfigured
+    && stripeSecretConfigured
+    && webhookSecretConfigured
+  );
+
+  await supabaseRpc(env, "service_record_sales_worker_readiness", {
+    p_mode: mode,
+    p_backend_ready: backendReady,
+    p_pwa_7day_ready: planReady.get("AAS-PWA-7DAY") === true,
+    p_pwa_monthly_ready: planReady.get("AAS-PWA-MONTHLY") === true,
+  });
+
   return jsonResponse({
     mode,
     supabaseConfigured,
     stripeSecretConfigured,
     webhookSecretConfigured,
     sellerReady: legalReady,
-    backendReady: Boolean(
-      mode !== "off"
-      && supabaseConfigured
-      && stripeSecretConfigured
-      && webhookSecretConfigured
-    ),
+    backendReady,
     plans,
   });
 }
