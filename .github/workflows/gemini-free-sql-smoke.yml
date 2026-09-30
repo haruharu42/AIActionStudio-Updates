@@ -1,0 +1,45 @@
+name: Gemini Free SQL offline smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql"
+      - "supabase/tests/gemini-free/**"
+      - ".github/workflows/gemini-free-sql-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mock-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: local-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: local-test-only
+      PGDATABASE: postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Mock minimal Auth and Vault on disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/gemini-free/fixture.sql
+      - name: Apply unchanged staged migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql
+      - name: Check admin gate and UTC quota rollover
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/gemini-free/smoke.sql
