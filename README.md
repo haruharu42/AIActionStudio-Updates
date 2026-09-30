@@ -1,6 +1,6 @@
-# AIArticleStudio-Updates
+# AI Action Studio（AAS）
 
-AI記事スタジオの更新ファイル・バージョン管理用リポジトリ。
+AI Action Studio（AAS）の更新ファイル・バージョン管理用リポジトリ。
 
 ## Current product direction
 
@@ -18,7 +18,7 @@ AI記事スタジオの更新ファイル・バージョン管理用リポジト
 
 ## Preview deployment
 
-PWAの実機確認は、GitHub Actionsの **[🚀 Previewへデプロイ](https://github.com/haruharu42/AIArticleStudio-Updates/actions/workflows/pwa-preview-deploy.yml)** から手動実行する。
+PWAの実機確認は、GitHub Actionsの **[🚀 Previewへデプロイ](https://github.com/haruharu42/AIActionStudio-Updates/actions/workflows/pwa-preview-deploy.yml)** から手動実行する。
 
 1. `Run workflow` を開き、確認対象のPRブランチを選ぶ。
 2. `expected_sha` に確認対象HEADの40文字コミットSHAを入力する。

@@ -116,10 +116,10 @@ export function BillingAccountPage() {
   return (
     <main className="commerce-page billing-page">
       <section className="commerce-hero">
-        <Link href="/" className="commerce-back">← AI記事スタジオへ戻る</Link>
+        <Link href="/" className="commerce-back">← AI Action Studioへ戻る</Link>
         <p className="eyebrow">BILLING</p>
         <h1>契約・利用権</h1>
-        <p>現在のPWA利用権、月額契約、更新予定を確認できます。カード番号などの決済情報はAI記事スタジオでは保持せず、Stripeの契約管理画面で扱います。</p>
+        <p>現在のPWA利用権、月額契約、更新予定を確認できます。カード番号などの決済情報はAI Action Studioでは保持せず、Stripeの契約管理画面で扱います。</p>
       </section>
 
       {message && <p className="commerce-message" role="status">{message}</p>}

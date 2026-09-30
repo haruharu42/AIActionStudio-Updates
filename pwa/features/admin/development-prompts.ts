@@ -108,7 +108,7 @@ export function buildAdminDevelopmentPrompt(input: AdminDevelopmentPromptInput):
   const subTarget = input.subTarget.trim() || "対象全体";
   const details = input.details.trim() || "ここに入力した依頼内容を実装してください。";
   const lines = [
-    "AI Article Studio（AAS）の開発作業を行ってください。",
+    "AI Action Studio（AAS）の開発作業を行ってください。",
     "",
     "【依頼種別】",
     requestLabel,

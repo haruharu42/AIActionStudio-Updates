@@ -162,7 +162,7 @@ export function buildAccountStarterPrompt(design: PlatformAccountDesign, provide
   const workspacePresetContext = buildWorkspacePresetPromptContext("account_design");
   const accountPresetContext = buildPlatformAccountPresetPromptContext(design.platform);
   return `あなたは日本の${platformName}運営に詳しい編集者・ブランド設計者です。
-目的は、これから${platformName}を始める初心者のために「アカウント作成直後から運営を開始できる一式」を設計し、AI Article Studio（AAS）が読み込めるJSONだけで返すことです。
+目的は、これから${platformName}を始める初心者のために「アカウント作成直後から運営を開始できる一式」を設計し、AI Action Studio（AAS）が読み込めるJSONだけで返すことです。
 
 【最新情報の確認】
 - ${providerSearchInstruction(provider)}。

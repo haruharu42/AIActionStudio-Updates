@@ -26,7 +26,7 @@ export function buildSecurityRepairPrompt(input: {
     .join("\n");
 
   return [
-    "AI Article Studio のセキュリティ問題を調査して、安全に修正してください。",
+    "AI Action Studio のセキュリティ問題を調査して、安全に修正してください。",
     "",
     "【対象】",
     sanitizeDiagnosticText(input.context),

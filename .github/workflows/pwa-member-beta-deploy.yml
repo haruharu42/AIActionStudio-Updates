@@ -231,7 +231,7 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo '## AI Article Studio PWA — note Member Beta'
+            echo '## AI Action Studio PWA — note Member Beta'
             echo
             echo "- SHA: $EXPECTED_SHA"
             echo '- Worker: ai-article-studio-pwa'

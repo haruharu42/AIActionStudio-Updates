@@ -632,7 +632,7 @@ export function NoteOperationsPage() {
                   <div>
                     <span>ADMIN ONLY</span>
                     <h3 id="aas-note-admin-preset-title">AAS運営用プロフィール設定</h3>
-                    <p>AI Article Studio自体のnote運営に使う管理者専用プリセットです。一般ユーザーには表示されません。</p>
+                    <p>AI Action Studio自体のnote運営に使う管理者専用プリセットです。一般ユーザーには表示されません。</p>
                   </div>
                   <b>管理者限定</b>
                 </div>
