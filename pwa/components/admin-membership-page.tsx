@@ -95,6 +95,8 @@ export function AdminMembershipPage() {
   const [articleLibraryQuotaReady, setArticleLibraryQuotaReady] = useState(true);
   const [articleLibraryReadiness, setArticleLibraryReadiness] = useState<ArticleLibraryQuotaReadiness | null>(null);
   const [articleLibraryActivationReady, setArticleLibraryActivationReady] = useState(true);
+  const [articleLibraryCurrentAal, setArticleLibraryCurrentAal] = useState<"aal1" | "aal2" | null>(null);
+  const [articleLibraryAalCheckFailed, setArticleLibraryAalCheckFailed] = useState(false);
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -184,6 +186,16 @@ export function AdminMembershipPage() {
     } catch {
       setArticleLibraryReadiness(null);
       setArticleLibraryActivationReady(false);
+    }
+
+    try {
+      const { data, error } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (error) throw error;
+      setArticleLibraryCurrentAal(data.currentLevel === "aal2" ? "aal2" : "aal1");
+      setArticleLibraryAalCheckFailed(false);
+    } catch {
+      setArticleLibraryCurrentAal(null);
+      setArticleLibraryAalCheckFailed(true);
     }
 
     try {
@@ -395,6 +407,10 @@ export function AdminMembershipPage() {
       setMessage("公開前チェックを通過していないため、プラン別保存上限を発効できません。");
       return;
     }
+    if (enabled && (articleLibraryAalCheckFailed || articleLibraryCurrentAal !== "aal2")) {
+      setMessage("プラン別保存上限の発効には、現在の管理者セッションでMFA認証（AAL2）が必要です。管理者MFAで再認証してから再確認してください。");
+      return;
+    }
     const warning = enabled
       ? `プラン別の記事ライブラリ保存上限を一般ユーザーへ発効しますか？\n\nactive一般ユーザー: ${articleLibraryReadiness.activeGeneralUsers}名\n将来上限の超過ユーザー: ${articleLibraryReadiness.usersOverFutureLimit}名\n\n発効には現在の管理者セッションでMFA認証（AAL2）が必要です。`
       : "プラン別の記事ライブラリ保存上限を停止し、従来の保存上限へ戻しますか？\n\nこれは緊急停止用の操作です。";
@@ -404,6 +420,17 @@ export function AdminMembershipPage() {
     setMessage("");
     try {
       const client = getSupabaseClient();
+      if (enabled) {
+        const { data, error } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (error || data.currentLevel !== "aal2") {
+          setArticleLibraryCurrentAal(data?.currentLevel === "aal2" ? "aal2" : data ? "aal1" : null);
+          setArticleLibraryAalCheckFailed(Boolean(error));
+          setMessage("MFA認証状態がAAL2ではないため、プラン別保存上限を発効しませんでした。管理者MFAで再認証してください。");
+          return;
+        }
+        setArticleLibraryCurrentAal("aal2");
+        setArticleLibraryAalCheckFailed(false);
+      }
       const next = await setArticleLibraryPlanLimitsEnabled(client, enabled);
       setArticleLibraryReadiness(next);
       setArticleLibraryQuota((current) => current ? { ...current, planLimitsEnabled: next.planLimitsEnabled } : current);
@@ -775,13 +802,31 @@ export function AdminMembershipPage() {
               ) : (
                 <button
                   type="button"
-                  disabled={busy || !articleLibraryReadiness.automatedChecksPass}
+                  disabled={
+                    busy
+                    || !articleLibraryReadiness.automatedChecksPass
+                    || articleLibraryAalCheckFailed
+                    || articleLibraryCurrentAal !== "aal2"
+                  }
                   onClick={() => void setArticleLibraryQuotaEnforcement(true)}
                 >
                   プラン別上限を発効（MFA必須）
                 </button>
               )}
               <Link className="secondary-action" href="/admin/security">管理者MFAを確認</Link>
+              <span className={
+                articleLibraryAalCheckFailed
+                  ? "membership-library-mfa-status review"
+                  : articleLibraryCurrentAal === "aal2"
+                    ? "membership-library-mfa-status ready"
+                    : "membership-library-mfa-status action"
+              }>
+                {articleLibraryAalCheckFailed
+                  ? "MFA状態: 確認失敗"
+                  : articleLibraryCurrentAal === "aal2"
+                    ? "MFA状態: AAL2認証済み"
+                    : "MFA状態: AAL2未認証"}
+              </span>
               <small>ONはAAL2＋DB側の再チェック必須。OFFは緊急停止としてactive管理者が実行できます。</small>
             </div>
           </div>
