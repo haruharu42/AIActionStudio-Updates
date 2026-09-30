@@ -311,6 +311,13 @@
 .knowledge-refresh-history small { color: #7b8da3; font-size: 8px; }
 .knowledge-refresh-history p { margin: 0; color: #607894; font-size: 9px; line-height: 1.6; }
 .knowledge-refresh-history p.error { color: #a65252; }
+.knowledge-refresh-history p.recovery {
+  border-left: 3px solid #7da6c7;
+  border-radius: 5px;
+  background: #f0f6fb;
+  color: #4e708d;
+  padding: 7px 8px;
+}
 
 @media (max-width: 560px) {
   .knowledge-refresh-actions button,
