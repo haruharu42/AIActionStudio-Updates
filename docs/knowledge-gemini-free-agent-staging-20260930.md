@@ -36,6 +36,20 @@ PRとPreviewが成功しても、既存の稼働中Supabase Edge Functionが新�
 - 本番Supabaseは `ACTIVE_HEALTHY`。Gemini migration `20260930125200_knowledge_gemini_free_agent_v1.sql` は**未適用**、本番 `knowledge-research-worker` はv11、AI設定はOpenAI / `gpt-5.6` / OFFのまま。
 - したがって次の本番ゲートは、対応migration・Worker・実Geminiキーを**別承認で**段階的に投入し、OFFのまま認証済み管理者E2Eを再確認してからONを判断する。
 
+## 2026-10-01 Managed Staging Supabase 検証
+
+本番とは別のFreeプロジェクト `AI Action Studio Staging` を東京リージョン（`ap-northeast-1`）に作成した。Project refは `swwbfrhvsvouiwobodwh`。本番 `nwttfmjsgzpjqqubxbff` のデータはコピーしていない。
+
+- Staging PostgreSQL: 17.11系、状態 `ACTIVE_HEALTHY`。
+- 初期2本の古いMigration artifactが現行GitHubに存在しないため、本番の現行定義を読み取り、Gemini検証に必要な最小の `profiles` / `private.is_active_admin()` / `knowledge_automation_settings` だけをStagingへ構造再現した。これは本番全体のクローンではない。
+- `20260930125200_knowledge_gemini_free_agent_v1.sql` をStagingへ適用成功。
+- 適用直後は `ai_enrichment_enabled=false`、provider=`openai`、model=`gpt-5.6`、Gemini日次使用0、`aas_knowledge_gemini_api_key` 未設定。Geminiは自動で有効化されていない。
+- `admin_get_knowledge_gemini_free_agent_status` と `admin_set_knowledge_automation_ai_config` はauthenticatedから呼び出し可能だが、関数本体でactive adminを要求する。
+- `reserve_knowledge_gemini_free_call()` はauthenticatedにEXECUTE権限がなく、service_roleのみ実行可能であることをStagingで確認。
+- Security Advisorの追加指摘はRPC専用設定テーブルの「RLS enabled / policyなし」INFOと、意図した管理RPCのSECURITY DEFINER WARN。Performance Advisorは新規環境ゆえの未使用インデックスINFOのみ。
+- 実Geminiキー、Workerトークン、Production秘密情報はStagingへコピーしていない。
+- 次工程はKnowledge automationの依存スキーマを小分けで再現した後、`knowledge-research-worker` をStagingだけへ配布する。依存テーブル/RPCが揃う前にWorkerを実行しない。
+
 ## 監査・エラー方針
 公開情報のハッシュ差分は変更の**兆候**であり規則の改訂を保証しない。AIによる根拠URLも未確認。HTTP403の制限を迂回しない。外部APIエラーは本文や秘密キーを記録せずHTTP番号だけを記録する。429時はその実行の残りGemini解析を停止する。日次上限に達した場合は候補を保留する。データベースの上限RPCが欠落していれば外部APIを呼ばず失敗閉鎖する。
 
