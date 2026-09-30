@@ -1132,7 +1132,7 @@
 
 .knowledge-candidate-analysis-summary {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 7px;
 }
 
@@ -1954,5 +1954,13 @@
   .knowledge-quality-metrics,
   .knowledge-quality-review dl {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Keep the seven candidate-analysis metrics readable on narrow phones.
+   Placed after the earlier tablet rule to avoid cascade overrides. */
+@media (max-width: 560px) {
+  .knowledge-candidate-analysis-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
