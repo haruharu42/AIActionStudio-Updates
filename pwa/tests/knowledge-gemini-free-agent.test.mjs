@@ -104,7 +104,7 @@ test("staged Gemini database gates and worker leave existing OpenAI path intact"
   for (const privateField of ["researchPrompt", "currentPayload", "existingItemKey", "reviewNotes", "aiApiKey"]) {
     assert.ok(!publicOnly.includes("candidate." + privateField), "manual Gemini Web must exclude " + privateField);
   }
-  assert.ok((panel.match(/copyGeminiPublicReviewPrompt\(/g) ?? []).length >= 4);
+  assert.equal((panel.match(/copyGeminiPublicReviewPrompt\(/g) ?? []).length, 3, "both batches and individual candidate use public-only copies");
   assert.match(panel,/aiProvider === "gemini" && !geminiStatus/);
   assert.doesNotMatch(worker,/admin_publish_knowledge_refresh_bundle/);
 });
