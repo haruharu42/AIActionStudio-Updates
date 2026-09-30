@@ -1,0 +1,35 @@
+name: Generate release constraint migration name
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/release-constraint-migration-name.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.118.0
+
+      - name: Generate migration filename with Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$RUNNER_TEMP/aas-release-migration-name"
+          mkdir -p "$ROOT"
+          cd "$ROOT"
+          supabase init
+          supabase migration new update_release_github_run_url_constraint
+          file="$(find supabase/migrations -maxdepth 1 -type f -name '*_update_release_github_run_url_constraint.sql' -printf '%f\n' | head -n1)"
+          test -n "$file"
+          echo "GENERATED_MIGRATION_FILENAME=$file"
