@@ -1,0 +1,31 @@
+# 管理者専用 Knowledge Gemini Free エージェント（段階的導入）
+
+## 目的
+既存の公式ソース自動監視と管理者レビューを維持し、公開ソース由来の**新規Knowledge提案・再確認理由**をGeminiの無料枠で作成する。記事本文の自動生成、コードの自律修正、セキュリティ監査の自動適用やFresh/Stable自動公開は本フェーズの対象外。
+
+## 無料と費用の境界
+- **既存の無料・定型判定**：recheck/retireと本文不足/制限による要再確認はGoogleへの送信なし。
+- **任意のGemini Free**：公式資料でFree tierを確認できた `gemini-3.5-flash-lite` のみ。AAS独自上限は1実行3件、**全Worker合計でUTC日次10回**。上限超過は未処理候補として次回へ持ち越し。有料モデルへの代替、429時の連続再試行、検索Groundingは行わない。
+- **無課金を保証しない**：Googleの無料枠はプロジェクト単位・モデル単位で異なり変更される。キーが課金設定のあるプロジェクトに属する場合、AASの件数制限だけでは利用料金を防げない。管理者が課金未設定プロジェクト・現在の無料対象をGoogle AI Studioで確認する。管理者がチェックを入れない限りUIからONにできない。
+- Free tierで送信された情報はGoogleの製品改善に使われ得る。送信対象は**公開URL（クエリ除去）・タイトル・公開本文抜粋2500文字・HTTP状態・カテゴリ・変更検知理由**のみ。個人情報、記事、元の研究プロンプト、既存非公開Knowledge、内部キー、管理者メモは送らない。公開サイト由来でも個人情報が含まれる場合は、そのソースを対象にしない。
+- 更新(update)は既存内部文面を送信して比較しないため、Gemini提案の結論を常に `recheck` とし管理者へ回す。新規(new)のみ一次ソース抜粋が十分なら未検証提案JSONを作れる。ソースアクセス403/抜粋不足は外部AIへ送らず無料定型判定。
+
+## 重要：現時点はステージングコードのみ
+PRとPreviewが成功しても、既存の稼働中Supabase Edge Functionが新しいコードに切り替わることはない。**実サービスのAI設定はOFFのまま**。マイグレーションとEdge配布は別承認・別検証。
+
+1. 専用の検証環境でSQL `20260930125200_knowledge_gemini_free_agent_v1.sql` を適用。既存OpenAI鍵は別Vaultに保管して残る。新Geminiキー名は `aas_knowledge_gemini_api_key`。
+2. 検証環境の管理者RPCと日次上限制御をテスト：`admin_get_knowledge_gemini_free_agent_status` は管理者のみ、`reserve_knowledge_gemini_free_call` はservice_roleのみ。匿名ユーザー・通常ユーザーは拒否。
+3. 対応する `knowledge-research-worker` を**検証環境だけ**に配布し、公式のテスト対象のみで解析を確認。個人情報、秘密情報、アクセス制限されたページを送らない。
+4. Google AI Studioで課金未設定のFree利用プロジェクトを作り、管理者がGeminiキーを設定。キーをGitHub Actionsログやブラウザの直接APIに渡さない。
+5. Previewの管理者画面で、Gemini切替→無料・データ送信同意→最大1〜3件→明示的にON。1日10回の到達後は未処理候補を保留すること、候補承認・Fresh/Stable公開が独立していることを確認。
+6. 現行main Previewが新機能に対応した後も、実機/認証後のE2Eとセキュリティ監査を終えるまでProductionへ適用しない。
+
+## 監査・エラー方針
+公開情報のハッシュ差分は変更の**兆候**であり規則の改訂を保証しない。AIによる根拠URLも未確認。HTTP403の制限を迂回しない。外部APIエラーは本文や秘密キーを記録せずHTTP番号だけを記録する。429時はその実行の残りGemini解析を停止する。日次上限に達した場合は候補を保留する。データベースの上限RPCが欠落していれば外部APIを呼ばず失敗閉鎖する。
+
+## 公式参照（運用時に再確認）
+- [Gemini 3.5 Flash-Liteモデル](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite)
+- [料金と無料枠](https://ai.google.dev/gemini-api/docs/pricing)
+- [プロジェクト別のレート制限](https://ai.google.dev/gemini-api/docs/rate-limits)
+- [REST generateContent](https://ai.google.dev/api/generate-content)
+- [Supabase Vault](https://supabase.com/docs/guides/database/vault)
