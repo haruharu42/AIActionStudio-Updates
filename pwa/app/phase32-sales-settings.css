@@ -471,6 +471,10 @@
 }
 
 @media (max-width: 720px) {
+  .sales-manual-approval-progress {
+    display: grid;
+  }
+
   .seller-settings-grid {
     grid-template-columns: 1fr;
   }
@@ -512,6 +516,69 @@
 .sales-public-approval.approved {
   border-color: rgb(34 197 94 / 32%);
   background: rgb(240 253 244 / 80%);
+}
+
+.sales-manual-approval-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgb(245 158 11 / 32%);
+  border-radius: 14px;
+  background: rgb(255 251 235 / 78%);
+}
+
+.sales-manual-approval-progress > div {
+  display: grid;
+  gap: 4px;
+}
+
+.sales-manual-approval-progress strong {
+  color: #8a6219;
+  font-size: 13px;
+}
+
+.sales-manual-approval-progress small {
+  color: #77633b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.sales-manual-approval-progress a {
+  flex: 0 0 auto;
+  color: #246bb8;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sales-manual-approval-progress.ready {
+  border-color: rgb(34 197 94 / 30%);
+  background: rgb(240 253 244 / 80%);
+}
+
+.sales-manual-approval-progress.ready strong {
+  color: #26734c;
+}
+
+.sales-review-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 2px;
+  color: #49647e;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sales-review-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #26734c;
 }
 
 .sales-manual-approval-check {
