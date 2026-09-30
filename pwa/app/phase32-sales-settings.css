@@ -302,6 +302,34 @@
   color: #68798e;
 }
 
+.sales-stripe-worker-readiness {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sales-stripe-worker-readiness article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #d9e5f1;
+  border-radius: 11px;
+  background: #f8fbff;
+  padding: 10px 11px;
+}
+
+.sales-stripe-worker-readiness span {
+  color: #71849b;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.sales-stripe-worker-readiness strong {
+  color: #24496f;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 .sales-release-gate {
   display: grid;
   gap: 10px;
@@ -409,6 +437,7 @@
 
 @media (max-width: 720px) {
   .sales-route-readiness-summary,
+  .sales-stripe-worker-readiness,
   .sales-release-preflight-grid {
     grid-template-columns: 1fr;
   }
