@@ -157,18 +157,37 @@ export function SalesReleasePreflightPanel({
         ? `${verifiedMfaCount}個確認済み`
         : "未登録";
 
+  const stripePlanSelected = settings.pwa7DayEnabled || settings.pwaMonthlyEnabled;
+  const externalRouteConfigured = Boolean(
+    settings.externalSalesEnabled
+      && settings.accessCodeEnabled
+      && purchaseUrl
+      && snapshot
+      && snapshot.usableInviteCount > 0,
+  );
+  const stripeRouteConfigured = settings.stripeCheckoutEnabled && stripePlanSelected;
+
   const automatedBlockers = [
-    !settings.externalSalesEnabled ? "外部販売受付がOFFです。" : "",
-    !settings.accessCodeEnabled ? "利用コード受付がOFFです。" : "",
-    !purchaseUrl ? "購入ページURLが未設定、または安全なHTTPS URLではありません。" : "",
+    !settings.externalSalesEnabled && !settings.stripeCheckoutEnabled
+      ? "新規販売経路がすべてOFFです。外部販売またはStripeのどちらかを有効にしてください。"
+      : "",
+    settings.externalSalesEnabled && !settings.accessCodeEnabled
+      ? "外部販売をONにしているため、利用コード受付もONにしてください。"
+      : "",
+    settings.externalSalesEnabled && !purchaseUrl
+      ? "外部販売をONにしているため、安全なHTTPS購入ページURLを設定してください。"
+      : "",
+    settings.stripeCheckoutEnabled && !stripePlanSelected
+      ? "Stripe受付をONにしているため、7日券または月額プランを1つ以上ONにしてください。"
+      : "",
     snapshotFailed ? "販売前のセキュリティ状態を確認できません。" : "",
     !snapshotFailed && snapshot === null ? "販売前のセキュリティ状態を確認中です。" : "",
     snapshot && !mfaReady ? "active管理者に確認済みMFAがありません。" : "",
     snapshot && !snapshot.sellerReady
       ? "販売者情報（氏名・所在地・電話・メール・サポートURL）が未完了です。"
       : "",
-    snapshot && snapshot.usableInviteCount < 1
-      ? "購入者へ渡せる有効な利用コードがありません。"
+    settings.externalSalesEnabled && snapshot && snapshot.usableInviteCount < 1
+      ? "外部販売をONにしているため、購入者へ渡せる有効な利用コードが1件以上必要です。"
       : "",
   ].filter(Boolean);
   const automatedReady = automatedBlockers.length === 0;
@@ -218,6 +237,23 @@ export function SalesReleasePreflightPanel({
           現在は未保存の販売設定を含んでいます。保存前の内容を本番状態として扱わないでください。
         </p>
       )}
+
+      <div className="sales-route-readiness-summary" aria-label="販売経路ごとの準備状況">
+        <article className={settings.externalSalesEnabled ? (externalRouteConfigured ? "ready" : "action") : "off"}>
+          <div>
+            <strong>外部販売＋利用コード</strong>
+            <span>{!settings.externalSalesEnabled ? "OFF" : externalRouteConfigured ? "経路設定済み" : "要対応"}</span>
+          </div>
+          <small>ONの場合は利用コード・安全な購入URL・利用可能コードが必要です。</small>
+        </article>
+        <article className={settings.stripeCheckoutEnabled ? (stripeRouteConfigured ? "ready" : "action") : "off"}>
+          <div>
+            <strong>Stripe PWA販売</strong>
+            <span>{!settings.stripeCheckoutEnabled ? "OFF" : stripeRouteConfigured ? "経路設定済み" : "要対応"}</span>
+          </div>
+          <small>ONの場合は7日券または月額プランを1つ以上有効にします。</small>
+        </article>
+      </div>
 
       <div className={`sales-release-gate ${automatedReady ? "review" : "blocked"}`} role="status">
         <div>
