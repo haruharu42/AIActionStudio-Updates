@@ -225,11 +225,12 @@ test("external-sales readiness is isolated and does not treat it as full product
 
 
 test("sales center groups legal support, DB readiness, and explicit public approval", async () => {
-  const [page, preflight, readinessClient, approvalMigration, css] = await Promise.all([
+  const [page, preflight, readinessClient, approvalMigration, routeAwareMigration, css] = await Promise.all([
     readPwa("components/sales-settings-admin-page.tsx"),
     readPwa("components/admin-sales/sales-release-preflight-panel.tsx"),
     readPwa("lib/sales-launch-readiness.ts"),
     readRepo("supabase/migrations/20260928035226_commerce_public_sales_approval_v1.sql"),
+    readRepo("supabase/migrations/20260930041500_sales_launch_route_aware_readiness_v2.sql"),
     readPwa("app/phase32-sales-settings.css"),
   ]);
 
@@ -261,6 +262,14 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(preflight, /persistedAutomatedReady/);
   assert.match(preflight, /hasUnsavedChanges/);
   assert.match(preflight, /販売設定または販売者情報を変更すると承認は自動解除/);
+  assert.match(preflight, /stripePlanSelected/);
+  assert.match(preflight, /externalRouteConfigured/);
+  assert.match(preflight, /stripeRouteConfigured/);
+  assert.match(preflight, /新規販売経路がすべてOFF/);
+  assert.match(preflight, /外部販売をONにしているため、利用コード受付もON/);
+  assert.match(preflight, /Stripe受付をONにしているため、7日券または月額プランを1つ以上ON/);
+  assert.match(preflight, /外部販売＋利用コード/);
+  assert.match(preflight, /Stripe PWA販売/);
   for (const route of ["/commercial-transactions", "/terms", "/privacy", "/ai-terms", "/support"]) {
     assert.ok(preflight.includes(route), `missing pre-sale review route: ${route}`);
   }
@@ -289,6 +298,18 @@ test("sales center groups legal support, DB readiness, and explicit public appro
   assert.match(approvalMigration, /public_sales_approved_at = null/);
   assert.match(approvalMigration, /public_sales_approved_by = null/);
 
+  assert.match(routeAwareMigration, /settings\.stripe_checkout_enabled/);
+  assert.match(routeAwareMigration, /settings\.pwa_7day_enabled/);
+  assert.match(routeAwareMigration, /settings\.pwa_monthly_enabled/);
+  assert.match(routeAwareMigration, /v_external_sales_enabled[\s\S]*?or v_stripe_checkout_enabled/);
+  assert.match(routeAwareMigration, /not v_external_sales_enabled[\s\S]*?v_access_code_enabled[\s\S]*?v_purchase_url_ready[\s\S]*?v_usable_invite_count > 0/);
+  assert.match(routeAwareMigration, /not v_stripe_checkout_enabled[\s\S]*?v_pwa_7day_enabled[\s\S]*?or v_pwa_monthly_enabled/);
+  assert.match(routeAwareMigration, /v_seller_ready[\s\S]*?v_verified_mfa_count > 0/);
+
+  assert.match(css, /\.sales-route-readiness-summary/);
+  assert.match(css, /\.sales-route-readiness-summary article\.ready/);
+  assert.match(css, /\.sales-route-readiness-summary article\.action/);
+  assert.match(css, /\.sales-route-readiness-summary article\.off/);
   assert.match(css, /\.sales-release-gate/);
   assert.match(css, /\.sales-public-approval/);
   assert.match(css, /\.sales-public-approval\.locked/);
