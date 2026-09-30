@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "supabase/tests/managed-staging/**"
+      - "supabase/functions/knowledge-research-worker/**"
+      - "supabase/functions/_shared/knowledge-gemini-free.mjs"
+      - "supabase/functions/pwa-release-deploy/**"
       - "supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql"
       - "supabase/migrations/20260930210846_update_release_github_run_url_constraint.sql"
       - ".github/workflows/managed-staging-schema-smoke.yml"
@@ -38,6 +41,18 @@ jobs:
           cp "$GITHUB_WORKSPACE/supabase/tests/managed-staging/minimal-base.sql"             supabase/migrations/20260930125100_managed_staging_fixture.sql
           cp "$GITHUB_WORKSPACE/supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql"             supabase/migrations/20260930125200_knowledge_gemini_free_agent_v1.sql
           cp "$GITHUB_WORKSPACE/supabase/migrations/20260930210846_update_release_github_run_url_constraint.sql"             supabase/migrations/20260930210846_update_release_github_run_url_constraint.sql
+          mkdir -p supabase/functions/knowledge-research-worker supabase/functions/pwa-release-deploy supabase/functions/_shared
+          cp "$GITHUB_WORKSPACE/supabase/functions/knowledge-research-worker/index.ts" supabase/functions/knowledge-research-worker/index.ts
+          cp "$GITHUB_WORKSPACE/supabase/functions/pwa-release-deploy/index.ts" supabase/functions/pwa-release-deploy/index.ts
+          cp "$GITHUB_WORKSPACE/supabase/functions/_shared/knowledge-gemini-free.mjs" supabase/functions/_shared/knowledge-gemini-free.mjs
+          cat >> supabase/config.toml <<'EOF'
+
+          [functions.knowledge-research-worker]
+          verify_jwt = false
+
+          [functions.pwa-release-deploy]
+          verify_jwt = true
+          EOF
           echo "TEST_ROOT=$TEST_ROOT" >> "$GITHUB_ENV"
 
       - name: Start disposable full Supabase stack
@@ -59,6 +74,18 @@ jobs:
           set +a
           psql "$DB_URL" -v ON_ERROR_STOP=1             -f "$GITHUB_WORKSPACE/supabase/tests/managed-staging/verify.sql"
           echo "PASS: managed Staging fixture, Gemini migration, and release URL migration are compatible."
+
+      - name: Verify Edge Function auth gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TEST_ROOT"
+          supabase status -o env > local.env
+          set -a
+          # shellcheck disable=SC1091
+          source local.env
+          set +a
+          bash "$GITHUB_WORKSPACE/supabase/tests/managed-staging/verify-http-gates.sh"
 
       - name: Stop disposable Supabase stack
         if: always()
