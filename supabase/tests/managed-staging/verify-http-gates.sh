@@ -15,34 +15,35 @@ cleanup() {
 }
 trap cleanup EXIT
 
-ready=false
+knowledge_code="000"
 for _ in $(seq 1 60); do
-  code=$(curl -sS -o "$RELEASE_BODY" -w '%{http_code}'     "$BASE_URL/functions/v1/pwa-release-deploy" || true)
-  if [[ "$code" != "000" ]]; then
-    ready=true
+  knowledge_code=$(curl -sS -o "$KNOWLEDGE_BODY" -w '%{http_code}'     -X POST     -H 'Content-Type: application/json'     --data '{}'     "$BASE_URL/functions/v1/knowledge-research-worker" || true)
+
+  if [[ "$knowledge_code" == "401" ]]; then
     break
   fi
+
+  if ! kill -0 "$FUNCTIONS_PID" >/dev/null 2>&1; then
+    echo "Edge Function server exited before Knowledge Worker became ready." >&2
+    cat "$FUNCTION_LOG" >&2 || true
+    exit 1
+  fi
+
   sleep 1
 done
 
-if [[ "$ready" != "true" ]]; then
-  echo "Edge Functions did not become reachable." >&2
-  cat "$FUNCTION_LOG" >&2 || true
-  exit 1
-fi
-
-if [[ "$code" != "401" ]]; then
-  echo "Expected unauthenticated release Worker GET to return 401, got $code." >&2
-  cat "$RELEASE_BODY" >&2 || true
-  cat "$FUNCTION_LOG" >&2 || true
-  exit 1
-fi
-
-knowledge_code=$(curl -sS -o "$KNOWLEDGE_BODY" -w '%{http_code}'   -X POST   -H 'Content-Type: application/json'   --data '{}'   "$BASE_URL/functions/v1/knowledge-research-worker")
-
 if [[ "$knowledge_code" != "401" ]]; then
-  echo "Expected tokenless Knowledge Worker POST to return 401, got $knowledge_code." >&2
+  echo "Expected tokenless Knowledge Worker POST to settle on 401, got $knowledge_code." >&2
   cat "$KNOWLEDGE_BODY" >&2 || true
+  cat "$FUNCTION_LOG" >&2 || true
+  exit 1
+fi
+
+release_code=$(curl -sS -o "$RELEASE_BODY" -w '%{http_code}'   "$BASE_URL/functions/v1/pwa-release-deploy" || true)
+
+if [[ "$release_code" != "401" ]]; then
+  echo "Expected unauthenticated release Worker GET to return 401, got $release_code." >&2
+  cat "$RELEASE_BODY" >&2 || true
   cat "$FUNCTION_LOG" >&2 || true
   exit 1
 fi
