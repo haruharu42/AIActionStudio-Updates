@@ -434,7 +434,7 @@ export function fromApiError(error: unknown, fallback: string): ArticleLibraryEr
   const normalized = `${message} ${details}`.toLowerCase();
   if (normalized.includes("article_quota_exceeded")) {
     return new ArticleLibraryError(
-      "記事ライブラリの保存上限に達しています。不要な記事を整理するか、利用プランを確認してください。",
+      "記事ライブラリの保存上限に達しています。不要な記事を整理するか、Creator Club特典を確認してください。",
       { category: "validation", code: "article_quota_exceeded", status, cause: error },
     );
   }
