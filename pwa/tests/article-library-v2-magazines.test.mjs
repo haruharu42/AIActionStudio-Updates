@@ -130,6 +130,13 @@ test('article library shows the effective save quota and remaining slots without
   assert.match(globalsCss, /\.library-stock-summary/);
   assert.match(globalsCss, /\.library-stock-summary\.warning/);
   assert.match(globalsCss, /\.library-stock-summary\.reached/);
+  assert.match(libraryController, /stockSummary && !stockSummary\.isUnlimited && stockSummary\.remainingArticles === 0/);
+  assert.match(libraryController, /記事ライブラリの保存上限に達しているため複製できません/);
+  assert.match(libraryDetailUi, /duplicateDisabled/);
+  assert.match(libraryDetailUi, /disabled=\{busy \|\| duplicateDisabled\}/);
+  assert.match(libraryDetailUi, /この記事は現在複製できません/);
+  assert.match(libraryDetailUi, /利用プランを確認/);
+  assert.match(globalsCss, /\.library-duplicate-quota-note/);
 });
 
 test('article library filters start collapsed and can be opened without clearing the selected conditions', () => {
