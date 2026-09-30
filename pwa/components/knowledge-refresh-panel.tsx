@@ -1072,6 +1072,9 @@ export function KnowledgeRefreshPanel() {
                 <button type="button" disabled={busy} onClick={() => void copyRecheckResearchBatch()}>
                   この{currentRecheckBatch.length}件の検証プロンプトをコピー
                 </button>
+                <button type="button" disabled={busy} onClick={() => launchAiApp("gemini")}>
+                  Gemini Webを開く
+                </button>
               </div>
             </div>
           )}
@@ -1095,6 +1098,9 @@ export function KnowledgeRefreshPanel() {
                 >次の5件</button>
                 <button type="button" disabled={busy} onClick={() => void copyHeldResearchBatch()}>
                   この{currentHeldBatch.length}件の検証プロンプトをコピー
+                </button>
+                <button type="button" disabled={busy} onClick={() => launchAiApp("gemini")}>
+                  Gemini Webを開く
                 </button>
               </div>
             </div>
@@ -1210,6 +1216,9 @@ export function KnowledgeRefreshPanel() {
                   </button>
                   <button type="button" disabled={busy} onClick={() => launchAiApp("chatgpt")}>
                     ChatGPTを開く
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => launchAiApp("gemini")}>
+                    Gemini Webを開く
                   </button>
                   {candidate.analysisStatus === "failed" && (
                     <button type="button" disabled={busy} onClick={() => void retryAutomationAi(candidate)}>
