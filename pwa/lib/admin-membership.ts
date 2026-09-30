@@ -16,6 +16,15 @@ export type MembershipPlan = {
   monthlyPriceYen: number | null;
   description: string;
   pricingManaged: boolean;
+  articleLibraryLimit: number | null;
+  articleLibraryUnlimited: boolean;
+  articleLibraryManaged: boolean;
+};
+
+export type ArticleLibraryQuotaSettings = {
+  freeLimit: number;
+  planLimitsEnabled: boolean;
+  updatedAt: string | null;
 };
 
 export type MembershipFeature = {
@@ -87,6 +96,12 @@ function adminError(error: unknown, fallback: string): Error {
   if (message.includes("invalid membership plan price")) {
     return new Error("月額料金は0〜1,000,000円の範囲で入力してください。");
   }
+  if (message.includes("invalid article library plan limit")) {
+    return new Error("記事ライブラリ保存上限は1〜100,000件の範囲で入力してください。");
+  }
+  if (message.includes("invalid article library free limit")) {
+    return new Error("無料ユーザーの保存上限は1〜100,000件の範囲で入力してください。");
+  }
   return new Error(fallback);
 }
 
@@ -116,6 +131,23 @@ export async function updateMembershipSettings(
 }
 
 export async function listMembershipPlans(client: SupabaseClient): Promise<MembershipPlan[]> {
+  const v3 = await client.rpc("admin_list_creator_membership_plans_v3");
+  if (!v3.error) {
+    return rows(v3.data).map((row) => ({
+      planCode: text(row.plan_code, "plan_code"),
+      displayName: text(row.display_name, "display_name"),
+      tierRank: integer(row.tier_rank, "tier_rank"),
+      badgeLabel: text(row.badge_label, "badge_label"),
+      status: text(row.status, "status"),
+      monthlyPriceYen: nullableInteger(row.monthly_price_yen, "monthly_price_yen"),
+      description: text(row.description, "description"),
+      pricingManaged: true,
+      articleLibraryLimit: nullableInteger(row.article_library_limit, "article_library_limit"),
+      articleLibraryUnlimited: booleanValue(row.article_library_unlimited, "article_library_unlimited"),
+      articleLibraryManaged: true,
+    }));
+  }
+
   const v2 = await client.rpc("admin_list_creator_membership_plans_v2");
   if (!v2.error) {
     return rows(v2.data).map((row) => ({
@@ -127,6 +159,9 @@ export async function listMembershipPlans(client: SupabaseClient): Promise<Membe
       monthlyPriceYen: nullableInteger(row.monthly_price_yen, "monthly_price_yen"),
       description: text(row.description, "description"),
       pricingManaged: true,
+      articleLibraryLimit: null,
+      articleLibraryUnlimited: false,
+      articleLibraryManaged: false,
     }));
   }
 
@@ -141,6 +176,9 @@ export async function listMembershipPlans(client: SupabaseClient): Promise<Membe
     monthlyPriceYen: null,
     description: "",
     pricingManaged: false,
+    articleLibraryLimit: null,
+    articleLibraryUnlimited: false,
+    articleLibraryManaged: false,
   }));
 }
 
@@ -155,6 +193,45 @@ export async function updateMembershipPlan(
     p_description: input.description.trim(),
   });
   if (error) throw adminError(error, "メンバーシッププランを保存できませんでした。");
+}
+
+export async function getArticleLibraryQuotaSettings(
+  client: SupabaseClient,
+): Promise<ArticleLibraryQuotaSettings> {
+  const { data, error } = await client.rpc("admin_get_article_library_quota_settings");
+  if (error) throw adminError(error, "記事ライブラリ保存上限を取得できませんでした。");
+  const row = rows(data)[0];
+  if (!row) throw new Error("記事ライブラリ保存上限の設定が見つかりません。");
+  return {
+    freeLimit: integer(row.free_limit, "free_limit"),
+    planLimitsEnabled: booleanValue(row.plan_limits_enabled, "plan_limits_enabled"),
+    updatedAt: nullableText(row.updated_at, "updated_at"),
+  };
+}
+
+export async function updateArticleLibraryFreeLimit(
+  client: SupabaseClient,
+  freeLimit: number,
+): Promise<void> {
+  const { error } = await client.rpc("admin_update_article_library_quota_settings", {
+    p_free_limit: freeLimit,
+  });
+  if (error) throw adminError(error, "無料ユーザーの記事ライブラリ保存上限を保存できませんでした。");
+}
+
+export async function updateMembershipPlanArticleQuota(
+  client: SupabaseClient,
+  plan: MembershipPlan,
+): Promise<void> {
+  const { error } = await client.rpc("admin_update_creator_membership_plan_v2", {
+    p_plan_code: plan.planCode,
+    p_display_name: plan.displayName.trim(),
+    p_monthly_price_yen: plan.monthlyPriceYen,
+    p_description: plan.description.trim(),
+    p_article_library_limit: plan.articleLibraryUnlimited ? null : plan.articleLibraryLimit,
+    p_article_library_unlimited: plan.articleLibraryUnlimited,
+  });
+  if (error) throw adminError(error, "プラン別の記事ライブラリ保存上限を保存できませんでした。");
 }
 
 export async function listMembershipFeatures(client: SupabaseClient): Promise<MembershipFeature[]> {
