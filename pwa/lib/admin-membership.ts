@@ -27,6 +27,18 @@ export type ArticleLibraryQuotaSettings = {
   updatedAt: string | null;
 };
 
+export type ArticleLibraryQuotaReadiness = {
+  planLimitsEnabled: boolean;
+  freeLimit: number;
+  activeExpectedPlans: number;
+  planConfigReady: boolean;
+  activeGeneralUsers: number;
+  usersOverFutureLimit: number;
+  maxCurrentArticles: number;
+  maxOverage: number;
+  automatedChecksPass: boolean;
+};
+
 export type MembershipFeature = {
   featureKey: string;
   displayName: string;
@@ -50,6 +62,13 @@ function rows(value: unknown): Record<string, unknown>[] {
     }
     return item as Record<string, unknown>;
   });
+}
+
+function record(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("メンバーシップ管理APIの応答形式が不正です。");
+  }
+  return value as Record<string, unknown>;
 }
 
 function text(value: unknown, field: string): string {
@@ -101,6 +120,12 @@ function adminError(error: unknown, fallback: string): Error {
   }
   if (message.includes("invalid article library free limit")) {
     return new Error("無料ユーザーの保存上限は1〜100,000件の範囲で入力してください。");
+  }
+  if (message.includes("aal2 required for article library quota activation")) {
+    return new Error("プラン別保存上限の発効には管理者MFA認証（AAL2）が必要です。管理者MFA画面で再認証してください。");
+  }
+  if (message.includes("article library quota readiness requirements not met")) {
+    return new Error("記事ライブラリ上限の公開前チェックを通過していません。超過ユーザーやプラン設定を確認してください。");
   }
   return new Error(fallback);
 }
@@ -217,6 +242,42 @@ export async function updateArticleLibraryFreeLimit(
     p_free_limit: freeLimit,
   });
   if (error) throw adminError(error, "無料ユーザーの記事ライブラリ保存上限を保存できませんでした。");
+}
+
+function normalizeArticleLibraryQuotaReadiness(value: unknown): ArticleLibraryQuotaReadiness {
+  const row = record(value);
+  return {
+    planLimitsEnabled: row.plan_limits_enabled === true,
+    freeLimit: integer(row.free_limit, "free_limit"),
+    activeExpectedPlans: integer(row.active_expected_plans, "active_expected_plans"),
+    planConfigReady: row.plan_config_ready === true,
+    activeGeneralUsers: integer(row.active_general_users, "active_general_users"),
+    usersOverFutureLimit: integer(row.users_over_future_limit, "users_over_future_limit"),
+    maxCurrentArticles: integer(row.max_current_articles, "max_current_articles"),
+    maxOverage: integer(row.max_overage, "max_overage"),
+    automatedChecksPass: row.automated_checks_pass === true,
+  };
+}
+
+export async function getArticleLibraryQuotaReadiness(
+  client: SupabaseClient,
+): Promise<ArticleLibraryQuotaReadiness> {
+  const { data, error } = await client.rpc("admin_get_article_library_quota_readiness");
+  if (error) throw adminError(error, "記事ライブラリ上限の公開前チェックを取得できませんでした。");
+  return normalizeArticleLibraryQuotaReadiness(data);
+}
+
+export async function setArticleLibraryPlanLimitsEnabled(
+  client: SupabaseClient,
+  enabled: boolean,
+): Promise<ArticleLibraryQuotaReadiness> {
+  const { data, error } = await client.rpc("admin_set_article_library_plan_limits_enabled", {
+    p_enabled: enabled,
+  });
+  if (error) throw adminError(error, enabled
+    ? "プラン別の記事ライブラリ保存上限を発効できませんでした。"
+    : "プラン別の記事ライブラリ保存上限を停止できませんでした。");
+  return normalizeArticleLibraryQuotaReadiness(data);
 }
 
 export async function updateMembershipPlanArticleQuota(
