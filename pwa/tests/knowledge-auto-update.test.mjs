@@ -386,7 +386,7 @@ test("knowledge candidate dashboard distinguishes deterministic results from int
   assert.match(panel, /自動判定済み/);
   assert.match(panel, /自動判定待ち/);
   assert.match(panel, /AI APIは呼び出しません/);
-  assert.match(panel, /adminListKnowledgeAutomationCandidates\(client, "pending", 200\)/);
+  assert.match(panel, /adminListKnowledgeAutomationCandidates\(client, "pending", AUTOMATION_CANDIDATE_LIMIT\)/);
   assert.match(panel, /candidateAnalysisSummary/);
   assert.match(panel, /レビュー待ち/);
   assert.match(panel, /無料判定済み/);
@@ -624,4 +624,35 @@ test("redundant X analytics Help sources stop only when the healthy X Business f
   assert.match(migration, /fallback\.tasks @> source\.tasks/);
   assert.match(migration, /enabled=false/);
   assert.doesNotMatch(migration, /delete from public\.knowledge_automation_sources/);
+});
+
+test("automation review filters and priority sorting preserve approval gates", async () => {
+  const [panel, client, css] = await Promise.all([
+    readKnowledgeRefreshSource(),
+    readPwa("lib/knowledge-auto-update.ts"),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+  assert.match(panel, /AUTOMATION_CANDIDATE_LIMIT = 200/);
+  assert.equal((panel.match(/adminListKnowledgeAutomationCandidates\(client, "pending", AUTOMATION_CANDIDATE_LIMIT\)/g) ?? []).length, 2);
+  assert.match(client, /Math\.min\(200, Math\.trunc\(limit\)\)/);
+  for (const view of ["all", "ready", "recheck", "unanalysed"]) {
+    assert.match(panel, new RegExp(`key: "${view}"`));
+  }
+  assert.match(panel, /visibleAutomationCandidates\.map\(\(candidate\) =>/);
+  assert.match(panel, /automationCandidatePriority\(left\) - automationCandidatePriority\(right\)/);
+  assert.match(panel, /if \(candidate\.analysisStatus === "completed"\) return 1/);
+  assert.match(panel, /candidateView === "ready"/);
+  assert.match(panel, /candidateView === "recheck"/);
+  assert.match(panel, /candidateView === "unanalysed"/);
+  assert.match(panel, /aria-pressed=\{candidateView === view\.key\}/);
+  assert.match(panel, /automationStatus\.pendingCandidates > automationCandidates\.length/);
+  assert.match(panel, /候補はありません。別の絞り込み/);
+  assert.match(panel, /分類・承認だけでは公開されません/);
+  assert.match(panel, /adminPreviewKnowledgeRefreshBundleDiff/);
+  assert.match(panel, /adminPublishKnowledgeRefreshBundle/);
+  assert.match(panel, /candidateAnalysisPresentation/);
+  assert.match(panel, /candidateAnalysisSummary/);
+  assert.match(css, /\.knowledge-ai-mode-status/);
+  assert.match(css, /\.knowledge-candidate-triage/);
+  assert.match(css, /\.knowledge-candidate-triage-filters button\[aria-pressed="true"\]/);
 });
