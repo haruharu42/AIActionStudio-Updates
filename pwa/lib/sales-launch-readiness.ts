@@ -53,6 +53,77 @@ export async function loadSalesLaunchReadiness(
 }
 
 
+export type StripeBillingPlanReadiness = {
+  planCode: "AAS-PWA-7DAY" | "AAS-PWA-MONTHLY";
+  priceConfigured: boolean;
+  priceReachable: boolean;
+  active: boolean;
+  modeMatches: boolean;
+  ready: boolean;
+};
+
+export type StripeBillingReadiness = {
+  mode: "off" | "test" | "live";
+  supabaseConfigured: boolean;
+  stripeSecretConfigured: boolean;
+  webhookSecretConfigured: boolean;
+  sellerReady: boolean;
+  backendReady: boolean;
+  plans: StripeBillingPlanReadiness[];
+};
+
+function parseStripeBillingReadiness(value: unknown): StripeBillingReadiness {
+  const row = singleton(value);
+  const mode = row.mode === "live" || row.mode === "test" ? row.mode : "off";
+  const plans = Array.isArray(row.plans)
+    ? row.plans.flatMap((item): StripeBillingPlanReadiness[] => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+        const plan = item as Record<string, unknown>;
+        const planCode = plan.planCode === "AAS-PWA-7DAY" || plan.planCode === "AAS-PWA-MONTHLY"
+          ? plan.planCode
+          : null;
+        if (!planCode) return [];
+        return [{
+          planCode,
+          priceConfigured: plan.priceConfigured === true,
+          priceReachable: plan.priceReachable === true,
+          active: plan.active === true,
+          modeMatches: plan.modeMatches === true,
+          ready: plan.ready === true,
+        }];
+      })
+    : [];
+
+  return {
+    mode,
+    supabaseConfigured: row.supabaseConfigured === true,
+    stripeSecretConfigured: row.stripeSecretConfigured === true,
+    webhookSecretConfigured: row.webhookSecretConfigured === true,
+    sellerReady: row.sellerReady === true,
+    backendReady: row.backendReady === true,
+    plans,
+  };
+}
+
+export async function loadStripeBillingReadiness(
+  client: SupabaseClient,
+): Promise<StripeBillingReadiness> {
+  const { data, error } = await client.auth.getSession();
+  const token = data.session?.access_token ?? "";
+  if (error || !token) throw new Error("Stripe販売診断には管理者ログインが必要です。");
+
+  const response = await fetch("/api/billing/admin-readiness", {
+    method: "GET",
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: "application/json",
+    },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Stripe販売のWorker設定を確認できませんでした。");
+  return parseStripeBillingReadiness(await response.json());
+}
+
 export type PublicSalesApproval = {
   approved: boolean;
   approvedAt: string | null;
