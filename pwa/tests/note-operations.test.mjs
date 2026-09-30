@@ -742,7 +742,7 @@ test("note membership cockpit covers grounded improvement metrics and article so
   assert.match(cockpit, /buildMembershipImprovePrompt/);
   assert.match(cockpit, /NoteMembershipMetricsPanel/);
   assert.match(cockpit, /metricsEntries/);
-  assert.match(cockpit, /buildMembershipImprovePrompt\(profile, improve, metricsEntries\)/);
+  assert.match(cockpit, /buildMembershipImprovePrompt\(profile, improve, metricsEntries, \{/);
   assert.match(cockpit, /メンバー限定用記事を作る/);
   assert.match(cockpit, /AASの「有料記事の有料エリア」とは別扱い/);
 
@@ -1066,7 +1066,7 @@ test("note account research can round-trip AI design candidates without auto-mut
 
   assert.match(helpers, /NOTE_ACCOUNT_RESPONSE_STORAGE_PREFIX/);
   assert.match(helpers, /aas\.note\.account\.response\.v1/);
-  assert.match(helpers, /noteAccountResponseStorageKey\(userId\)/);
+  assert.match(helpers, /noteAccountResponseStorageKey\(userId: string\)/);
 
   assert.match(page, /const \[accountResponse, setAccountResponse\] = useState\(""\)/);
   assert.match(page, /const \[accountResponseLoaded, setAccountResponseLoaded\] = useState\(false\)/);
