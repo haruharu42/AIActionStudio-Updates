@@ -1078,3 +1078,15 @@ test("note account research can round-trip AI design candidates without auto-mut
   assert.match(page, /保存しているAIのアカウント構成候補をクリアしますか/);
   assert.match(page, /setAccountResponse\(event\.target\.value\.slice\(0, 120000\)\)/);
 });
+
+
+test("note operations uses safe loading shells while access and owner data are loading", async () => {
+  const page = await readPwa("components/note-operations-page.tsx");
+
+  assert.match(page, /import \{ AppLoadingScreen \}/);
+  assert.match(page, /gate\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
+  assert.match(page, /note運営アシスタントの利用権を確認しています/);
+  assert.match(page, /gate\.kind === "ready" && !profile[\s\S]*?<AppLoadingScreen/);
+  assert.match(page, /noteプロフィールと運営データを読み込んでいます/);
+  assert.doesNotMatch(page, /gate\.kind === "loading" \|\| \(gate\.kind === "ready" && !profile\)\) return null/);
+});

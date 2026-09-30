@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { NoteMembershipCockpit } from "@/components/note-operations/note-membership-cockpit";
 import { NoteCalendarTab, NoteStartGuideTab } from "@/components/note-operations/note-operations-static-tabs";
 import { useSharedAccessState } from "@/components/access-state-provider";
@@ -533,7 +534,12 @@ export function NoteOperationsPage() {
     return () => { active = false; };
   }, [gate, targetMonth]);
 
-  if (gate.kind === "loading" || (gate.kind === "ready" && !profile)) return null;
+  if (gate.kind === "loading") {
+    return <AppLoadingScreen message="note運営アシスタントの利用権を確認しています…" />;
+  }
+  if (gate.kind === "ready" && !profile) {
+    return <AppLoadingScreen message="noteプロフィールと運営データを読み込んでいます…" />;
+  }
 
   if (gate.kind !== "ready" || !profile) {
     return (

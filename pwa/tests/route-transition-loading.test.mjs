@@ -212,7 +212,10 @@ test("member and admin route shells keep protected content hidden while safe sha
   assert.match(accountDesign, /note \/ Tips \/ Brain のアカウント設計を読み込んでいます/);
   assert.match(invite, /if \(state\.kind === "loading"\) return null/);
   assert.match(inquiries, /if \(state\.kind === "loading"\) return null/);
-  assert.match(noteOperations, /if \(gate\.kind === "loading" \|\| \(gate\.kind === "ready" && !profile\)\) return null/);
+  assert.match(noteOperations, /gate\.kind === "loading"[\s\S]*?<AppLoadingScreen/);
+  assert.match(noteOperations, /note運営アシスタントの利用権を確認しています/);
+  assert.match(noteOperations, /gate\.kind === "ready" && !profile[\s\S]*?<AppLoadingScreen/);
+  assert.match(noteOperations, /noteプロフィールと運営データを読み込んでいます/);
 });
 
 test("admin authorization stays centralized while admin feature pages avoid page-level profile queries", async () => {
