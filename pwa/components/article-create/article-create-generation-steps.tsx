@@ -1,12 +1,12 @@
 import { useState } from "react";
 
-import { launchAiApp } from "@/lib/ai-app-links";
 import {
   parseTitleCandidates,
   stripLeadingArticleTitle,
   type ArticleCreationDraft,
 } from "@/lib/phase11-create";
 import {
+  CopyAndOpenAiButton,
   CopyButton,
   currentAiLaunchOptions,
   readClipboardText,
@@ -50,7 +50,16 @@ export function TitleStep({
         <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
         <div className="openai-prompt-actions">
           <CopyButton value={titlePrompt} label="タイトルプロンプトをコピー" setMessage={setMessage} />
-          {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>選択中の{app.label}を開く ↗</button>)}
+          {aiLaunchOptions.map((app) => (
+            <CopyAndOpenAiButton
+              key={app.key}
+              value={titlePrompt}
+              appKey={app.key}
+              appLabel={app.label}
+              onBeforeExternalLaunch={onBeforeExternalLaunch}
+              setMessage={setMessage}
+            />
+          ))}
         </div>
         <label className="route-field title-candidate-paste">
           <span>AIが生成した5候補をまとめて貼り付け</span>
@@ -172,7 +181,16 @@ export function BodyStep({
           <label className="route-field"><span>AI用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
           <div className="openai-prompt-actions">
             <CopyButton value={articlePrompt} label="完成記事プロンプトをコピー" setMessage={setMessage} />
-            {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>選択中の{app.label}を開く ↗</button>)}
+            {aiLaunchOptions.map((app) => (
+              <CopyAndOpenAiButton
+                key={app.key}
+                value={articlePrompt}
+                appKey={app.key}
+                appLabel={app.label}
+                onBeforeExternalLaunch={onBeforeExternalLaunch}
+                setMessage={setMessage}
+              />
+            ))}
           </div>
           <p className="beginner-help">生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
         </>}

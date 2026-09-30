@@ -328,3 +328,25 @@ test("restored article work can be explicitly discarded without weakening normal
   assert.match(source, /beforeunload/);
   assert.match(source, /visibilitychange/);
 });
+
+
+test("article external AI handoff copies safely before opening", async () => {
+  const [shared, generation, finish] = await Promise.all([
+    readFile(new URL("../components/article-create/article-create-step-shared.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/article-create/article-create-generation-steps.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/article-create/article-create-finish-steps.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(shared, /export function CopyAndOpenAiButton/);
+  assert.match(shared, /onBeforeExternalLaunch\(\);[\s\S]*?const ok = await copyText\(value, setMessage\)/);
+  assert.match(shared, /if \(!ok\)[\s\S]*?は開いていません/);
+  assert.match(shared, /launchAiApp\(appKey\)/);
+
+  assert.match(generation, /<CopyAndOpenAiButton[\s\S]*?value=\{titlePrompt\}/);
+  assert.match(generation, /<CopyAndOpenAiButton[\s\S]*?value=\{articlePrompt\}/);
+  assert.doesNotMatch(generation, /launchAiApp\(/);
+
+  assert.match(finish, /<CopyAndOpenAiButton[\s\S]*?value=\{combinedImagePrompt\}/);
+  assert.match(finish, /<CopyAndOpenAiButton[\s\S]*?value=\{item\.prompt\}/);
+  assert.doesNotMatch(finish, /launchAiApp\(/);
+});

@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import { launchAiApp } from "@/lib/ai-app-links";
 import {
   publicationBodyForCopy,
   publicationEditorLink,
@@ -11,6 +10,7 @@ import { copyNoteRichText } from "@/lib/note-rich-text";
 import type { ImagePromptItem } from "@/lib/phase13-image-prompts";
 import {
   AI_LAUNCH_OPTIONS,
+  CopyAndOpenAiButton,
   CopyButton,
   type ArticleDraftPatch,
   type MessageSetter,
@@ -51,9 +51,14 @@ export function PreviewStep({
             <div className="openai-prompt-actions">
               <CopyButton value={combinedImagePrompt} label="まとめて画像プロンプトをコピー" setMessage={setMessage} />
               {AI_LAUNCH_OPTIONS.map((app) => (
-                <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>
-                  {app.label}を開く ↗
-                </button>
+                <CopyAndOpenAiButton
+                  key={app.key}
+                  value={combinedImagePrompt}
+                  appKey={app.key}
+                  appLabel={app.label}
+                  onBeforeExternalLaunch={onBeforeExternalLaunch}
+                  setMessage={setMessage}
+                />
               ))}
             </div>
             <div className="creator-image-prompt-meta">
@@ -86,9 +91,14 @@ export function PreviewStep({
                 <div className="openai-prompt-actions">
                   <CopyButton value={item.prompt} label={label + "の個別画像プロンプトをコピー"} setMessage={setMessage} />
                   {AI_LAUNCH_OPTIONS.map((app) => (
-                    <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>
-                      {app.label}を開く ↗
-                    </button>
+                    <CopyAndOpenAiButton
+                      key={app.key}
+                      value={item.prompt}
+                      appKey={app.key}
+                      appLabel={app.label}
+                      onBeforeExternalLaunch={onBeforeExternalLaunch}
+                      setMessage={setMessage}
+                    />
                   ))}
                 </div>
                 <div className="creator-image-prompt-meta">

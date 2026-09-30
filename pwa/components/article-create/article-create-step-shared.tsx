@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { ArticleCreationDraft } from "@/lib/phase11-create";
+import { launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import { getRuntimeWritingProfile } from "@/lib/user-personalization";
 
 export type ArticleDraftPatch = <K extends keyof ArticleCreationDraft>(
@@ -78,6 +79,45 @@ export function CopyButton({
   return (
     <button className={className} type="button" disabled={!value} onClick={() => void handleCopy()}>
       {copied ? "コピーしました ✓" : label}
+    </button>
+  );
+}
+
+
+export function CopyAndOpenAiButton({
+  value,
+  appKey,
+  appLabel,
+  onBeforeExternalLaunch,
+  setMessage,
+  className = "openai-launch-action",
+}: {
+  value: string;
+  appKey: AiAppKey;
+  appLabel: string;
+  onBeforeExternalLaunch: () => void;
+  setMessage: MessageSetter;
+  className?: string;
+}) {
+  const handleCopyAndOpen = async () => {
+    onBeforeExternalLaunch();
+    const ok = await copyText(value, setMessage);
+    if (!ok) {
+      setMessage(`プロンプトをコピーできなかったため${appLabel}は開いていません。手動でコピーしてから開いてください。`);
+      return;
+    }
+    setMessage(`プロンプトをコピーして${appLabel}を開きます。`);
+    launchAiApp(appKey);
+  };
+
+  return (
+    <button
+      className={className}
+      type="button"
+      disabled={!value}
+      onClick={() => void handleCopyAndOpen()}
+    >
+      コピーして{appLabel}を開く ↗
     </button>
   );
 }
