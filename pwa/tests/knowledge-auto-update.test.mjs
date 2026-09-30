@@ -373,6 +373,32 @@ test("AI enrichment can be disabled while zero-cost recheck/retire analysis stil
   assert.match(worker, /analysis_failures:ai\.failed/);
 });
 
+test("knowledge candidate dashboard distinguishes deterministic results from intentionally held AI work", async () => {
+  const [panel, css] = await Promise.all([
+    readKnowledgeRefreshSource(),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(panel, /candidateAnalysisPresentation/);
+  assert.match(panel, /AI OFF・手動確認待ち/);
+  assert.match(panel, /APIキー未設定・保留/);
+  assert.match(panel, /自動判定済み/);
+  assert.match(panel, /自動判定待ち/);
+  assert.match(panel, /AI APIは呼び出しません/);
+  assert.match(panel, /adminListKnowledgeAutomationCandidates\(client, "pending", 200\)/);
+  assert.match(panel, /candidateAnalysisSummary/);
+  assert.match(panel, /レビュー待ち/);
+  assert.match(panel, /無料判定済み/);
+  assert.match(panel, /AI保留/);
+  assert.match(panel, /無料判定待ち/);
+  assert.match(panel, /解析失敗/);
+  assert.match(css, /\.knowledge-ai-mode-status/);
+  assert.match(css, /\.knowledge-candidate-analysis-summary/);
+  assert.match(css, /\.knowledge-ai-analysis\.deterministic/);
+  assert.match(css, /\.knowledge-ai-analysis\.held/);
+  assert.match(css, /\.knowledge-ai-analysis\.automatic/);
+});
+
 test("AI proposal handoff only pre-fills a Fresh review request and does not bypass diff confirmation", async () => {
   const [panel, client] = await Promise.all([
     readKnowledgeRefreshSource(),
