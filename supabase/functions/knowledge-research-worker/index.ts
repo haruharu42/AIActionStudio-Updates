@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
+import { callGeminiFreeJson, GEMINI_FREE_MODEL, GEMINI_FREE_RUN_LIMIT } from "../_shared/knowledge-gemini-free.mjs";
 
 const url = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -334,14 +335,30 @@ async function enrichCandidate(candidate: any, config: any): Promise<{ analyzed:
       return { analyzed:1,failed:0 };
     }
 
-    const raw = await callOpenAiJson(config.api_key,config.model,candidate);
-    const clean = sanitizeAiProposal(candidate,raw);
+    // Gemini Free sees ONLY the public official-source excerpt; never transmit
+    // current_payload, private Knowledge keys, saved prompts, users or admin notes.
+    // Without the private baseline, an UPDATE detection remains human recheck.
+    let raw: Record<string, unknown>;
+    if (config.provider === "gemini") {
+      const publicCandidate = { ...candidate, current_payload:null, existing_item_key:"" };
+      raw = await callGeminiFreeJson(config.api_key,config.model,publicCandidate);
+      if (candidate.candidate_action !== "new" ||
+          !["new","no_change","recheck"].includes(cleanText(raw.decision,32))) {
+        raw = { ...raw, decision:"recheck", proposed_payload:null, item_type:null };
+      }
+    } else {
+      raw = await callOpenAiJson(config.api_key,config.model,candidate);
+    }
+    const clean = sanitizeAiProposal(
+      config.provider === "gemini" ? { ...candidate,current_payload:null,existing_item_key:"" } : candidate,
+      raw,
+    );
     const { error } = await db.from("knowledge_automation_candidates").update({
       analysis_status:"completed",
       analysis_decision:clean.decision,
       proposal_item_type:clean.itemType,
       proposed_payload:clean.proposedPayload,
-      analysis_provider:"openai",
+      analysis_provider:config.provider === "gemini" ? "gemini" : "openai",
       analysis_model:config.model,
       analysis_reason:clean.reason,
       analysis_error:"",
@@ -354,7 +371,7 @@ async function enrichCandidate(candidate: any, config: any): Promise<{ analyzed:
     const message = error instanceof Error ? error.message : String(error);
     await db.from("knowledge_automation_candidates").update({
       analysis_status:"failed",
-      analysis_provider:"openai",
+      analysis_provider:config.provider === "gemini" ? "gemini" : config.provider === "deterministic" ? "deterministic" : "openai",
       analysis_model:config.model ?? "",
       analysis_error:message.slice(0,1800),
       analyzed_at:now
@@ -392,10 +409,15 @@ async function enrichPendingCandidates() {
   if (config.enabled !== true || typeof config.api_key !== "string" || !config.api_key) {
     return { enabled:false,analyzed,failed };
   }
-  if (config.provider !== "openai") throw new Error("Unsupported AI enrichment provider.");
+  if (config.provider !== "openai" && config.provider !== "gemini") {
+    throw new Error("Unsupported AI enrichment provider.");
+  }
   const model = cleanText(config.model,120);
   if (!model) throw new Error("AI enrichment model is not configured.");
-  const limit = Math.max(1,Math.min(20,Number(config.max_candidates_per_run ?? 6) || 6));
+  // No silent paid-model fallback. Gemini is fixed to the verified Free-capable ID.
+  if (config.provider === "gemini" && model !== GEMINI_FREE_MODEL) throw new Error("Unsupported Gemini Free model.");
+  const perRunCeiling = config.provider === "gemini" ? GEMINI_FREE_RUN_LIMIT : 20;
+  const limit = Math.max(1,Math.min(perRunCeiling,Number(config.max_candidates_per_run ?? 6) || 6));
   const pending = await db.from("knowledge_automation_candidates")
     .select(selectFields)
     .eq("status","pending")
@@ -405,11 +427,30 @@ async function enrichPendingCandidates() {
     .limit(limit);
   if (pending.error) throw pending.error;
 
-  const safeConfig = { provider:"openai",model,api_key:config.api_key };
+  const safeConfig = { provider:config.provider,model,api_key:config.api_key };
   for (const item of pending.data ?? []) {
+    if (config.provider === "gemini") {
+      // The reserve function atomically caps outbound calls at 10 per UTC day.
+      // A missing migration fails closed; 429 never changes to a paid model.
+      // Inadequate or restricted source evidence is classified locally at no API cost.
+      if (item.source_http_status !== 200 || String(item.source_excerpt || "").trim().length < 80) {
+        const result = await enrichCandidate(
+          { ...item, source_excerpt:"" },
+          { provider:"deterministic",model:"",api_key:"" },
+        );
+        analyzed += result.analyzed;
+        failed += result.failed;
+        continue;
+      }
+      const reservation = await db.rpc("reserve_knowledge_gemini_free_call");
+      if (reservation.error) throw new Error("Gemini Free daily quota guard unavailable; AI remains paused.");
+      if (reservation.data !== true) break;
+    }
     const result = await enrichCandidate(item,safeConfig);
     analyzed += result.analyzed;
     failed += result.failed;
+    // Avoid rapid retries after external rate-limit rejection.
+    if (config.provider === "gemini" && result.failed > 0) break;
   }
   return { enabled:true,analyzed,failed };
 }

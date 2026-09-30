@@ -397,7 +397,8 @@ test("AI enrichment drafts Knowledge candidates but keeps final publication admi
   assert.match(client, /analysisStatus !== "completed"/);
 
   assert.match(panel, /AI候補JSON自動生成/);
-  assert.match(panel, /APIキー.*Vault設定済み/);
+  assert.match(panel, /APIキー \{\(aiProvider/);
+  assert.match(panel, /"Vault設定済み"/);
   assert.match(panel, /type="password"/);
   assert.match(panel, /Fresh差分へ取り込む/);
   assert.match(panel, /候補状態もまだ確定していません/);
