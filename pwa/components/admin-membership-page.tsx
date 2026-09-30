@@ -6,6 +6,7 @@ import { SelectWithCustom } from "@/components/select-with-custom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  getArticleLibraryQuotaReadiness,
   getArticleLibraryQuotaSettings,
   getMembershipSettings,
   listMembershipAuditActions,
@@ -13,11 +14,13 @@ import {
   listMembershipFeatures,
   listMembershipPlanFeatures,
   listMembershipPlans,
+  setArticleLibraryPlanLimitsEnabled,
   setMembershipPlanFeature,
   updateArticleLibraryFreeLimit,
   updateMembershipPlan,
   updateMembershipPlanArticleQuota,
   updateMembershipSettings,
+  type ArticleLibraryQuotaReadiness,
   type ArticleLibraryQuotaSettings,
   type MembershipAssignment,
   type MembershipAuditAction,
@@ -89,6 +92,8 @@ export function AdminMembershipPage() {
   const [referenceNow, setReferenceNow] = useState(0);
   const [articleLibraryQuota, setArticleLibraryQuota] = useState<ArticleLibraryQuotaSettings | null>(null);
   const [articleLibraryQuotaReady, setArticleLibraryQuotaReady] = useState(true);
+  const [articleLibraryReadiness, setArticleLibraryReadiness] = useState<ArticleLibraryQuotaReadiness | null>(null);
+  const [articleLibraryActivationReady, setArticleLibraryActivationReady] = useState(true);
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -164,6 +169,15 @@ export function AdminMembershipPage() {
     } catch {
       setArticleLibraryQuota(null);
       setArticleLibraryQuotaReady(false);
+    }
+
+    try {
+      const nextReadiness = await getArticleLibraryQuotaReadiness(client);
+      setArticleLibraryReadiness(nextReadiness);
+      setArticleLibraryActivationReady(true);
+    } catch {
+      setArticleLibraryReadiness(null);
+      setArticleLibraryActivationReady(false);
     }
 
     try {
@@ -304,8 +318,14 @@ export function AdminMembershipPage() {
     setBusy(true);
     setMessage("");
     try {
-      await updateArticleLibraryFreeLimit(getSupabaseClient(), limit);
-      setArticleLibraryQuota(await getArticleLibraryQuotaSettings(getSupabaseClient()));
+      const client = getSupabaseClient();
+      await updateArticleLibraryFreeLimit(client, limit);
+      const [nextQuota, nextReadiness] = await Promise.all([
+        getArticleLibraryQuotaSettings(client),
+        getArticleLibraryQuotaReadiness(client),
+      ]);
+      setArticleLibraryQuota(nextQuota);
+      setArticleLibraryReadiness(nextReadiness);
       setMessage(`無料ユーザーの記事ライブラリ保存上限を${limit}件に保存しました。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "無料ユーザーの保存上限を保存できませんでした。");
@@ -330,11 +350,64 @@ export function AdminMembershipPage() {
     setBusy(true);
     setMessage("");
     try {
-      await updateMembershipPlanArticleQuota(getSupabaseClient(), plan);
-      setPlans(await listMembershipPlans(getSupabaseClient()));
+      const client = getSupabaseClient();
+      await updateMembershipPlanArticleQuota(client, plan);
+      const [nextPlans, nextReadiness] = await Promise.all([
+        listMembershipPlans(client),
+        getArticleLibraryQuotaReadiness(client),
+      ]);
+      setPlans(nextPlans);
+      setArticleLibraryReadiness(nextReadiness);
       setMessage(`${plan.displayName}の記事ライブラリ保存上限を保存しました。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "プラン別の保存上限を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const refreshArticleLibraryReadiness = async () => {
+    if (busy) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const next = await getArticleLibraryQuotaReadiness(getSupabaseClient());
+      setArticleLibraryReadiness(next);
+      setArticleLibraryActivationReady(true);
+      setMessage("記事ライブラリ上限の公開前チェックを更新しました。");
+    } catch (error) {
+      setArticleLibraryActivationReady(false);
+      setMessage(error instanceof Error ? error.message : "記事ライブラリ上限の公開前チェックを更新できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setArticleLibraryQuotaEnforcement = async (enabled: boolean) => {
+    if (busy || !articleLibraryReadiness) return;
+    if (enabled && !articleLibraryReadiness.automatedChecksPass) {
+      setMessage("公開前チェックを通過していないため、プラン別保存上限を発効できません。");
+      return;
+    }
+    const warning = enabled
+      ? `プラン別の記事ライブラリ保存上限を一般ユーザーへ発効しますか？\n\nactive一般ユーザー: ${articleLibraryReadiness.activeGeneralUsers}名\n将来上限の超過ユーザー: ${articleLibraryReadiness.usersOverFutureLimit}名\n\n発効には現在の管理者セッションでMFA認証（AAL2）が必要です。`
+      : "プラン別の記事ライブラリ保存上限を停止し、従来の保存上限へ戻しますか？\n\nこれは緊急停止用の操作です。";
+    if (!window.confirm(warning)) return;
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const client = getSupabaseClient();
+      const next = await setArticleLibraryPlanLimitsEnabled(client, enabled);
+      setArticleLibraryReadiness(next);
+      setArticleLibraryQuota((current) => current ? { ...current, planLimitsEnabled: next.planLimitsEnabled } : current);
+      setMessage(enabled
+        ? "プラン別の記事ライブラリ保存上限を発効しました。"
+        : "プラン別保存上限を停止し、従来の保存上限へ戻しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : enabled
+        ? "プラン別保存上限を発効できませんでした。"
+        : "プラン別保存上限を停止できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -640,6 +713,53 @@ export function AdminMembershipPage() {
         ) : articleLibraryQuota && !articleLibraryQuota.planLimitsEnabled ? (
           <div className="route-notice" role="note">
             現在は従来の保存上限が有効です。ここで無料5件・各有料プランの上限を準備しても、一般ユーザーの実上限はまだ切り替わりません。発効は公開前の安全確認後に行います。
+          </div>
+        ) : null}
+
+        {articleLibraryActivationReady && articleLibraryReadiness ? (
+          <div className={"membership-library-readiness " + (articleLibraryReadiness.automatedChecksPass ? "ready" : "blocked")}>
+            <div className="membership-library-readiness-head">
+              <div>
+                <span>ROLLOUT READINESS</span>
+                <strong>{articleLibraryReadiness.automatedChecksPass ? "自動確認 通過" : "発効前の確認事項あり"}</strong>
+              </div>
+              <button type="button" className="secondary-action" disabled={busy} onClick={() => void refreshArticleLibraryReadiness()}>
+                再確認
+              </button>
+            </div>
+            <div className="membership-library-readiness-grid">
+              <article><span>対象プラン</span><strong>{articleLibraryReadiness.activeExpectedPlans} / 3</strong><small>{articleLibraryReadiness.planConfigReady ? "設定正常" : "設定要確認"}</small></article>
+              <article><span>active一般ユーザー</span><strong>{articleLibraryReadiness.activeGeneralUsers}</strong><small>個人情報は表示しません</small></article>
+              <article><span>将来上限の超過</span><strong>{articleLibraryReadiness.usersOverFutureLimit}</strong><small>0名のみ発効可能</small></article>
+              <article><span>現在の最大保存数</span><strong>{articleLibraryReadiness.maxCurrentArticles}</strong><small>一般ユーザー内の最大値</small></article>
+              <article><span>最大超過数</span><strong>{articleLibraryReadiness.maxOverage}</strong><small>現在は0件が安全</small></article>
+            </div>
+            <div className="membership-library-activation-actions">
+              {articleLibraryReadiness.planLimitsEnabled ? (
+                <button
+                  type="button"
+                  className="secondary-action"
+                  disabled={busy}
+                  onClick={() => void setArticleLibraryQuotaEnforcement(false)}
+                >
+                  従来上限へ戻す（緊急停止）
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy || !articleLibraryReadiness.automatedChecksPass}
+                  onClick={() => void setArticleLibraryQuotaEnforcement(true)}
+                >
+                  プラン別上限を発効（MFA必須）
+                </button>
+              )}
+              <Link className="secondary-action" href="/admin/security">管理者MFAを確認</Link>
+              <small>ONはAAL2＋DB側の再チェック必須。OFFは緊急停止としてactive管理者が実行できます。</small>
+            </div>
+          </div>
+        ) : articleLibraryQuotaReady && articleLibraryPlanLimitsReady ? (
+          <div className="route-notice" role="note">
+            発効ガード用のDB migrationが未適用です。保存上限の値は編集できますが、本番発効操作は利用できません。
           </div>
         ) : null}
 
