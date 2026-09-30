@@ -1479,6 +1479,13 @@
   color: #4b63a5;
 }
 
+.knowledge-source-list article > header > span.restricted,
+.knowledge-source-list article > header > span.rate-limited,
+.knowledge-source-list article > header > span.removed {
+  background: #fff0d5;
+  color: #8d5512;
+}
+
 .knowledge-source-list article > header > span.disabled {
   background: #edf1f4;
   color: #687a87;
@@ -1486,7 +1493,7 @@
 
 .knowledge-source-health-stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 7px;
 }
 
@@ -1507,6 +1514,11 @@
 .knowledge-source-health-stats article.backoff {
   border-color: #cbd6f2;
   background: #f6f8ff;
+}
+
+.knowledge-source-health-stats article.restricted {
+  border-color: #edcf9d;
+  background: #fffaf0;
 }
 
 .knowledge-source-health-stats article.disabled {
@@ -1614,6 +1626,13 @@
   background: #f7f9ff;
 }
 
+.knowledge-source-list article.restricted,
+.knowledge-source-list article.rate-limited,
+.knowledge-source-list article.removed {
+  border-color: #ead09e;
+  background: #fffcf4;
+}
+
 .knowledge-source-list article.disabled {
   border-color: #d8e0e5;
   background: #f6f8fa;
@@ -1677,6 +1696,23 @@
   border-color: #acd8c8;
   background: #effaf6;
   color: #257057;
+}
+
+.knowledge-source-actions button.manual-review {
+  border-color: #d9c390;
+  background: #fffaee;
+  color: #72501b;
+}
+
+.knowledge-source-guidance {
+  margin: 0;
+  padding: 8px 9px;
+  border-left: 3px solid #cf9a3d;
+  border-radius: 5px;
+  background: #fff7e8;
+  color: #6e552a;
+  font-size: 8px;
+  line-height: 1.6;
 }
 
 .knowledge-source-actions button:disabled {
