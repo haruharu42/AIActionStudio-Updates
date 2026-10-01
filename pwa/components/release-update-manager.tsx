@@ -252,7 +252,6 @@ export function ReleaseUpdateManager() {
 
   return (
     <>
-      {testerPreviewAvailable && <TesterPreviewBanner />}
       {successVersion && (
         <aside className="release-update-success" role="status" aria-live="polite">
           <span aria-hidden="true">✓</span>
