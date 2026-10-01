@@ -23,7 +23,7 @@ test("release readiness checks are admin gated, read-only and never dispatch", a
   assert.equal((worker.match(/supportsGithubReadiness: true/g) ?? []).length, 2);
 });
 
-test("admin UI never renders diagnostics against unsupported deployed workers", async () => {
+test("Preview admin UI exposes the read-only diagnostic independently of candidate stage", async () => {
   const [client, page] = await Promise.all([
     readRepo("pwa/lib/release-deployment.ts"),
     readRepo("pwa/components/admin-release-page.tsx"),
@@ -32,10 +32,11 @@ test("admin UI never renders diagnostics against unsupported deployed workers", 
   assert.match(client, /export async function checkGithubReleaseReadiness/);
   assert.match(client, /action: "github_readiness"/);
   assert.match(client, /dispatchPermissionTested: false/);
-  assert.match(page, /IS_PREVIEW_DEPLOYMENT && deploymentSnapshot\?\.supportsGithubReadiness/);
+  assert.match(page, /IS_PREVIEW_DEPLOYMENT && \(\s*<section className="release-admin-panel release-github-diagnostic">/);
+  assert.doesNotMatch(page, /IS_PREVIEW_DEPLOYMENT && deploymentSnapshot\?\.supportsGithubReadiness/);
   assert.match(page, /GitHub公開連携を安全に確認/);
   assert.match(page, /公開実行権限: 未検証/);
-  assert.match(page, /if \(busy \|\| !deploymentSnapshot\?\.supportsGithubReadiness\) return;/);
+  assert.match(page, /if \(busy\) return;/);
   assert.match(page, /if \(!publishVerificationReady\)/);
   assert.match(page, /currentSessionAal !== "aal2"/);
 });
