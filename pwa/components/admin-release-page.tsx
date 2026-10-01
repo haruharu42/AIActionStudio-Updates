@@ -419,7 +419,7 @@ export function AdminReleasePage() {
       const next = await adminSetAppReleaseTester(getSupabaseClient(), aasUserId, enabled);
       setSnapshot(next);
       if (enabled) setTesterAasId("");
-      setMessage(enabled ? aasUserId + " を一般ユーザーテスターに設定しました。" : aasUserId + " のテスター指定を解除しました。");
+      setMessage(enabled ? aasUserId + " をProduction Canaryテスターに設定しました。" : aasUserId + " のテスター指定を解除しました。");
     } catch {
       setError("テスター設定を更新できませんでした。activeな一般ユーザーのAAS IDを確認してください。");
     } finally {
