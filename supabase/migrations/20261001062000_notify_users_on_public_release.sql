@@ -1,52 +1,40 @@
--- Create one in-app update notification when a PWA release becomes published.
--- This trigger covers the formal deployment finalizer and the legacy admin publish RPC.
--- source_key makes the notification idempotent per release.
+-- Upgrade the existing public-release notification hook instead of adding
+-- a second trigger. This keeps one notification per release and deep-links
+-- users into the explicit update-confirmation flow.
 
-create or replace function private.notify_published_app_release()
+drop trigger if exists app_release_public_update_notification
+  on public.app_releases;
+
+drop function if exists private.notify_published_app_release();
+
+create or replace function private.notify_app_release_published()
 returns trigger
 language plpgsql
 security definer
 set search_path to ''
 as $function$
 begin
-  if new.channel <> 'pwa'
-     or new.status <> 'published'
-     or old.status = 'published' then
-    return new;
+  if new.status = 'published'
+     and old.status is distinct from 'published' then
+    insert into public.app_notifications (
+      category,
+      title,
+      body,
+      href,
+      audience,
+      source_key
+    )
+    values (
+      'update',
+      left('AAS v' || new.version || ' を公開しました', 160),
+      left(coalesce(nullif(new.notes, ''), new.title), 2000),
+      '/?update=' || new.id::text,
+      'all',
+      'app-release-published:' || new.id::text
+    )
+    on conflict (source_key) do nothing;
   end if;
-
-  insert into public.app_notifications (
-    category,
-    title,
-    body,
-    href,
-    audience,
-    source_key,
-    created_by
-  )
-  values (
-    'update',
-    left('v' || new.version || ' アップデートが利用できます', 160),
-    left(
-      '「' || new.title || '」を公開しました。内容を確認してアップデートしてください。',
-      2000
-    ),
-    '/?update=' || new.id::text,
-    'all',
-    'release-public:' || new.id::text,
-    new.created_by
-  )
-  on conflict (source_key) do nothing;
 
   return new;
 end;
 $function$;
-
-drop trigger if exists app_release_public_update_notification
-  on public.app_releases;
-
-create trigger app_release_public_update_notification
-after update of status on public.app_releases
-for each row
-when (new.status = 'published' and old.status is distinct from new.status)
-execute function private.notify_published_app_release();
