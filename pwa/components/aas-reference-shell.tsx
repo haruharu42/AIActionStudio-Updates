@@ -8,6 +8,7 @@ import { SharedMobileBottomNav } from "@/components/shared-mobile-bottom-nav";
 import { NotificationHeaderButton } from "@/components/notification-header-button";
 import type { MobileNavItemKey } from "@/lib/mobile-nav-preference";
 import { useEffect, useMemo, useState } from "react";
+import { APP_RELEASE_STATE_EVENT, readEffectiveRelease, type AppReleaseState } from "@/lib/app-release";
 
 import {
   DEFAULT_DESKTOP_NAV_ITEMS,
@@ -25,6 +26,32 @@ import {
 export type ReferenceNavKey = "home" | MobileNavItemKey | "";
 
 const AAS_BUILD_SHA = (process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev").slice(0, 7);
+
+function HeaderReleaseVersion() {
+  const [version, setVersion] = useState(() => readEffectiveRelease()?.version ?? "");
+
+  useEffect(() => {
+    const sync = () => setVersion(readEffectiveRelease()?.version ?? "");
+    const onReleaseState = (event: Event) => {
+      const detail = (event as CustomEvent<AppReleaseState>).detail;
+      const release = detail?.effective_release ?? detail?.current_release ?? null;
+      setVersion(release?.version ?? readEffectiveRelease()?.version ?? "");
+    };
+    sync();
+    window.addEventListener(APP_RELEASE_STATE_EVENT, onReleaseState);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(APP_RELEASE_STATE_EVENT, onReleaseState);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  return (
+    <span className="aas-reference-version" aria-label={version ? `AAS version ${version}` : `AAS build ${AAS_BUILD_SHA}`}>
+      {version ? `v${version}` : `build ${AAS_BUILD_SHA}`}
+    </span>
+  );
+}
 
 export function AasReferenceHeader({
   hasUnreadNotifications = false,
@@ -44,9 +71,7 @@ export function AasReferenceHeader({
           <small>AIで副業を、もっと簡単に。</small>
         </span>
       </Link>
-      <span className="aas-reference-build" aria-label={`AAS build ${AAS_BUILD_SHA}`}>
-        build {AAS_BUILD_SHA}
-      </span>
+      <HeaderReleaseVersion />
       <nav className="aas-reference-header-actions" aria-label="クイックメニュー">
         <NotificationHeaderButton />
         <Link href={notificationHref} aria-label={notificationLabel}><span aria-hidden="true">♧</span>{hasUnreadNotifications ? <i aria-hidden="true" /> : null}</Link>
