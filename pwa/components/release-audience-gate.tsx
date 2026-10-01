@@ -15,6 +15,7 @@ import {
 import { getSupabaseClient } from "@/lib/supabase";
 
 const ALWAYS_PUBLIC_PREVIEW_PATHS = ["/auth/callback", "/login", "/logout", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support", "/plans"];
+const PUBLIC_PWA_URL = process.env.NEXT_PUBLIC_AAS_PUBLIC_URL?.trim() || "https://ai-article-studio-pwa.ai-article-studio.workers.dev/";
 
 function alwaysPublicPreviewPath(pathname: string): boolean {
   return ALWAYS_PUBLIC_PREVIEW_PATHS.some((path) => pathname === path || pathname.startsWith(path + "/"));
@@ -32,6 +33,8 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const audience = appDeploymentAudience();
   const [gate, setGate] = useState<GateState>(() => audience === "public" ? { kind: "public" } : { kind: "loading" });
+  const [viewerId, setViewerId] = useState("");
+  const [acceptedTesterReleaseId, setAcceptedTesterReleaseId] = useState("");
 
   useEffect(() => {
     if (audience === "public") return;
@@ -44,9 +47,12 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
         if (!active) return;
         if (sessionError || !session) {
           clearEffectiveRelease();
+          setViewerId("");
+          setAcceptedTesterReleaseId("");
           setGate({ kind: "signed_out" });
           return;
         }
+        setViewerId(session.user.id);
         const next = await loadMyAppReleaseState(client, "preview");
         if (!active) return;
         if (!next.signed_in) {
@@ -54,8 +60,19 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
           return;
         }
         if (next.active === false || next.preview_allowed === false) {
+          setAcceptedTesterReleaseId("");
           setGate({ kind: "denied", state: next });
           return;
+        }
+        if (next.is_tester_preview && next.effective_release) {
+          try {
+            const stored = window.localStorage.getItem("aas.tester-preview.accepted." + session.user.id) ?? "";
+            setAcceptedTesterReleaseId(stored === next.effective_release.id ? stored : "");
+          } catch {
+            setAcceptedTesterReleaseId("");
+          }
+        } else {
+          setAcceptedTesterReleaseId("");
         }
         setGate({ kind: "allowed", state: next });
       } catch {
@@ -68,6 +85,8 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
       if (!active) return;
       if (!session) {
         clearEffectiveRelease();
+        setViewerId("");
+        setAcceptedTesterReleaseId("");
         setGate({ kind: "signed_out" });
         return;
       }
@@ -79,7 +98,43 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
     };
   }, [audience]);
 
-  if (audience === "public" || gate.kind === "public" || alwaysPublicPreviewPath(pathname) || gate.kind === "allowed") return <>{children}</>;
+  if (audience === "public" || gate.kind === "public" || alwaysPublicPreviewPath(pathname)) return <>{children}</>;
+
+  if (gate.kind === "allowed") {
+    const testerRelease = gate.state.is_tester_preview ? gate.state.effective_release : null;
+    if (testerRelease && acceptedTesterReleaseId !== testerRelease.id) {
+      const applyTesterRelease = () => {
+        try {
+          if (viewerId) window.localStorage.setItem("aas.tester-preview.accepted." + viewerId, testerRelease.id);
+        } catch {
+          // Session state still allows the tester to continue when storage is unavailable.
+        }
+        setAcceptedTesterReleaseId(testerRelease.id);
+      };
+
+      return (
+        <main className="standalone-page release-tester-consent-page">
+          <section className="standalone-card release-update-card release-tester-consent-card">
+            <p className="eyebrow">TESTER UPDATE</p>
+            <h1>テスト版を適用しますか？</h1>
+            <div className="release-version-row">
+              <span>現在 v{gate.state.current_release?.version ?? "-"}</span>
+              <b>→</b>
+              <strong>v{testerRelease.version}</strong>
+            </div>
+            <h2>{testerRelease.title}</h2>
+            {testerRelease.notes && <p className="release-notes">{testerRelease.notes}</p>}
+            <p className="release-confirm-note">指定テスター向けの候補版です。適用後、主要導線と通知センターを確認してください。</p>
+            <div className="release-confirm-actions">
+              <button className="primary-action" type="button" onClick={applyTesterRelease}>テスト版を適用</button>
+              <button type="button" onClick={() => { window.location.href = PUBLIC_PWA_URL; }}>あとで確認</button>
+            </div>
+          </section>
+        </main>
+      );
+    }
+    return <>{children}</>;
+  }
 
   if (gate.kind === "signed_out" && pathname === "/") return <>{children}</>;
   if (gate.kind === "loading") return <AppLoadingScreen message="候補版の利用権を確認しています…" />;

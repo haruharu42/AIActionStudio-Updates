@@ -587,3 +587,116 @@
   font-weight: 700;
   line-height: 1.7;
 }
+
+
+.release-confirm-note {
+  border: 1px solid #d6e4f2;
+  border-radius: 10px;
+  background: #f7fbff;
+  color: #536f8f;
+  padding: 10px;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.release-confirm-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.release-confirm-actions button {
+  min-height: 40px;
+  border: 1px solid #cfddeb;
+  border-radius: 10px;
+  background: #fff;
+  color: #4a6787;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.release-confirm-actions .primary-action {
+  border-color: #1478f5;
+  background: #1478f5;
+  color: #fff;
+}
+
+.release-update-success {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top));
+  right: 14px;
+  z-index: 170;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  max-width: min(420px, calc(100% - 28px));
+  border: 1px solid #b9dfc8;
+  border-radius: 14px;
+  background: rgb(248 255 251 / 98%);
+  color: #245c3a;
+  padding: 11px 12px;
+  box-shadow: 0 18px 44px rgb(24 90 52 / 14%);
+}
+
+.release-update-success > span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #daf3e3;
+  font-weight: 950;
+}
+
+.release-update-success strong {
+  font-size: 11px;
+}
+
+.release-update-success button {
+  border: 0;
+  background: transparent;
+  color: #557b65;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.release-tester-consent-page {
+  padding: 24px;
+}
+
+.release-tester-consent-card h1,
+.release-tester-consent-card h2,
+.release-tester-consent-card p {
+  margin: 0;
+}
+
+.release-tester-consent-card h1 {
+  font-size: 24px;
+}
+
+.release-tester-consent-card h2 {
+  font-size: 14px;
+}
+
+@media (max-width: 680px) {
+  .release-confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .release-confirm-actions button {
+    width: 100%;
+  }
+
+  .release-update-success {
+    left: 12px;
+    right: 12px;
+    top: calc(10px + env(safe-area-inset-top));
+    max-width: none;
+  }
+}
