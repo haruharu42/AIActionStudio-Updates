@@ -37,3 +37,15 @@ test("Home header shows the effective release version in the upper-right control
   assert.ok((home.match(/<AasReferenceHeader showVersion/g) ?? []).length >= 4);
   assert.match(css, /\.aas-reference-version/);
 });
+
+
+test("current tester-stage candidate is backfilled exactly once", async () => {
+  const migration = await readRepo("supabase/migrations/20261001053500_backfill_active_release_tester_notification.sql");
+
+  assert.match(migration, /c\.candidate_stage = 'tester'/);
+  assert.match(migration, /r\.status = 'candidate'/);
+  assert.match(migration, /'tester'/);
+  assert.match(migration, /release-tester-backfill:/);
+  assert.match(migration, /on conflict \(source_key\) do nothing/);
+  assert.doesNotMatch(migration, /app_release_deployments/);
+});
