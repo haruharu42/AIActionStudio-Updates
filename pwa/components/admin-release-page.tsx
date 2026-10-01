@@ -8,7 +8,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   adminCreateAppRelease,
   adminListAppReleases,
-  adminPromoteAppReleaseToTesters,
   adminRollbackAppRelease,
   adminSetAppReleaseTester,
   type AdminAppRelease,
@@ -16,9 +15,12 @@ import {
 } from "@/lib/app-release";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
+  AAS_CANARY_PWA_URL,
   AAS_PREVIEW_RELEASE_BRANCH,
   checkGithubReleaseReadiness,
+  confirmCanaryDeployment,
   loadPublicPwaDeployments,
+  requestCanaryPwaDeployment,
   requestPublicPwaDeployment,
   type PublicDeployment,
   type PublicDeploymentSnapshot,
@@ -72,11 +74,11 @@ const EMPTY_FORM: FormState = {
 };
 
 const PUBLISH_VERIFICATION_ITEMS = [
-  { key: "preview-ci", label: "最新PreviewとCIを確認", detail: "公開対象と同じ候補版でTypecheck / Lint / 回帰テスト / Preview反映が成功している。" },
-  { key: "tester-core", label: "指定テスターで主要導線を確認", detail: "AAS-000002等の一般ユーザーテスターでログイン・記事作成・保存・設定など主要導線を確認した。" },
-  { key: "iphone-pwa", label: "iPhone実機PWAを確認", detail: "ホーム画面追加、起動、主要画面、復帰、キャッシュ更新を実機で確認した。" },
-  { key: "second-device", label: "別端末・別ブラウザを確認", detail: "PCまたは別対応ブラウザでも主要導線に致命的な崩れ・runtime errorがない。" },
-  { key: "tester-notifications", label: "Tester通知を確認", detail: "Tester段階の通知センター・必要な端末通知が想定どおり動作する。" },
+  { key: "preview-ci", label: "Production CanaryのbuildとCIを確認", detail: "Canaryへ出したsource SHAでTypecheck / Lint / 回帰テストが成功し、Canaryデプロイも成功している。" },
+  { key: "tester-core", label: "公開テスターで主要導線を確認", detail: "AAS-000002等の指定テスターでProduction Canaryへ入り、ログイン・記事作成・保存・設定など主要導線を確認した。" },
+  { key: "iphone-pwa", label: "iPhone実機Canaryを確認", detail: "Production Canaryをホーム画面または対応ブラウザで起動し、主要画面・復帰・キャッシュ更新を確認した。" },
+  { key: "second-device", label: "別端末・別ブラウザのCanaryを確認", detail: "PCまたは別対応ブラウザでもProduction Canaryの主要導線に致命的な崩れ・runtime errorがない。" },
+  { key: "tester-notifications", label: "Production Canary通知を確認", detail: "公開PWA側のテスター案内、Canary遷移、通知センターが想定どおり動作する。" },
   { key: "rollback", label: "停止・ロールバック経路を確認", detail: "Feature Controlのメンテナンス停止と、直前公開版へ戻す手順を確認した。" },
   { key: "operations", label: "重大な未解決障害がないことを確認", detail: "Security & Operationsで公開を止めるべきcritical/errorが残っていない。" },
 ] as const;
