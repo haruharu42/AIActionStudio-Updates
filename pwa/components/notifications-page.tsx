@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+const PREVIEW_PWA_URL = process.env.NEXT_PUBLIC_AAS_PREVIEW_URL?.trim() || "https://aas-preview-ai-article-studio-pwa-preview.ai-article-studio.workers.dev/";
+
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import {
@@ -64,7 +66,11 @@ export function NotificationsPage() {
     } catch {
       // Navigation is still allowed if read-state persistence fails.
     } finally {
-      window.location.href = notification.href;
+      const isTesterReleaseNotification =
+        notification.audience === "tester" && notification.category === "update";
+      window.location.href = isTesterReleaseNotification
+        ? PREVIEW_PWA_URL
+        : notification.href;
     }
   };
 
