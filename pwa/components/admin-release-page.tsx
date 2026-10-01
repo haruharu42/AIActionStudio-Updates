@@ -181,34 +181,71 @@ export function AdminReleasePage() {
   }, [candidate]);
 
   const publishVerificationReady = PUBLISH_VERIFICATION_ITEMS.every((item) => publishVerification.includes(item.key));
-  const candidateDeployment = useMemo(
+  const candidateCanaryDeployment = useMemo(
     () => candidate
-      ? deploymentSnapshot?.deployments.find((deployment) => deployment.release_id === candidate.id) ?? null
+      ? deploymentSnapshot?.deployments.find(
+          (deployment) => deployment.release_id === candidate.id && deployment.deployment_kind === "canary",
+        ) ?? null
       : null,
     [candidate, deploymentSnapshot],
   );
-  const deploymentInProgress = candidateDeployment
-    ? ["requested", "dispatched", "running"].includes(candidateDeployment.status)
-    : false;
+  const candidatePublicDeployment = useMemo(
+    () => candidate
+      ? deploymentSnapshot?.deployments.find(
+          (deployment) => deployment.release_id === candidate.id && deployment.deployment_kind === "public",
+        ) ?? null
+      : null,
+    [candidate, deploymentSnapshot],
+  );
+  const activeDeployment = useMemo(
+    () => [candidatePublicDeployment, candidateCanaryDeployment].find(
+      (deployment) => deployment && ["requested", "dispatched", "running"].includes(deployment.status),
+    ) ?? null,
+    [candidateCanaryDeployment, candidatePublicDeployment],
+  );
+  const canaryDeploymentInProgress = Boolean(
+    candidateCanaryDeployment && ["requested", "dispatched", "running"].includes(candidateCanaryDeployment.status),
+  );
+  const publicDeploymentInProgress = Boolean(
+    candidatePublicDeployment && ["requested", "dispatched", "running"].includes(candidatePublicDeployment.status),
+  );
+  const canaryVerified = Boolean(
+    candidateCanaryDeployment?.status === "succeeded" && candidateCanaryDeployment.verified_at,
+  );
   const candidateMatchesPreview = releaseMatchesPreviewBuild(candidate);
+  const canaryMatchesCandidate = Boolean(
+    candidate
+      && candidateCanaryDeployment
+      && candidateCanaryDeployment.status === "succeeded"
+      && candidate.build_key.endsWith("-" + candidateCanaryDeployment.source_sha.slice(0, 12)),
+  );
 
   useEffect(() => {
-    if (!candidateDeployment || !["requested", "dispatched", "running"].includes(candidateDeployment.status)) return;
+    if (!activeDeployment) return;
     let active = true;
     const client = getSupabaseClient();
     const timer = window.setInterval(() => {
-      void loadPublicPwaDeployments(client, candidateDeployment.id)
+      void loadPublicPwaDeployments(client, activeDeployment.id)
         .then(async (next) => {
           if (!active) return;
           setDeploymentSnapshot(next);
-          const refreshed = next.deployments.find((deployment) => deployment.id === candidateDeployment.id);
+          const refreshed = next.deployments.find((deployment) => deployment.id === activeDeployment.id);
           if (refreshed?.status === "succeeded") {
             const releases = await adminListAppReleases(client);
             if (!active) return;
             setSnapshot(releases);
-            setMessage("一般公開PWAへの反映が完了しました。");
+            setMessage(
+              refreshed.deployment_kind === "canary"
+                ? "Production Canaryへの反映が完了しました。指定テスターで確認してください。"
+                : "一般公開PWAへの反映が完了しました。",
+            );
           } else if (refreshed?.status === "failed") {
-            setError(refreshed.error_message || "一般公開PWAへの反映に失敗しました。内容を確認して再実行してください。");
+            setError(
+              refreshed.error_message
+                || (refreshed.deployment_kind === "canary"
+                  ? "Production Canaryへの反映に失敗しました。内容を確認して再実行してください。"
+                  : "一般公開PWAへの反映に失敗しました。内容を確認して再実行してください。"),
+            );
           }
         })
         .catch(() => {
@@ -219,7 +256,7 @@ export function AdminReleasePage() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [candidateDeployment]);
+  }, [activeDeployment]);
 
   const togglePublishVerification = (key: PublishVerificationKey) => {
     if (!candidate) return;
