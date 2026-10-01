@@ -8,7 +8,7 @@ const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 test("Production Canary audit constraint allows all emitted lifecycle actions", async () => {
   const migration = await readFile(
-    path.join(repoRoot, "supabase/migrations/20261001120500_extend_release_audit_actions_for_canary.sql"),
+    path.join(repoRoot, "supabase/migrations/20261001121430_extend_release_audit_actions_for_canary.sql"),
     "utf8",
   );
 
