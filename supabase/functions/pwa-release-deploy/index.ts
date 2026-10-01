@@ -3,12 +3,15 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 type JsonRecord = Record<string, unknown>;
 
 const REPO = "haruharu42/AIActionStudio-Updates";
-const WORKFLOW = "pwa-admin-public-release.yml";
+const CANARY_WORKFLOW = "pwa-admin-canary-release.yml";
+const PUBLIC_WORKFLOW = "pwa-admin-public-release.yml";
 const DEFAULT_PREVIEW_BRANCH = "main";
 const ALLOWED_PREVIEW_BRANCHES = new Set(["main", "preview/current"]);
+const CANARY_URL = "https://ai-article-studio-pwa-canary.ai-article-studio.workers.dev/";
 const PUBLIC_URL = "https://ai-article-studio-pwa.ai-article-studio.workers.dev/";
 const ALLOWED_ORIGINS = new Set([
   "https://aas-preview-ai-article-studio-pwa-preview.ai-article-studio.workers.dev",
+  "https://ai-article-studio-pwa-canary.ai-article-studio.workers.dev",
   "https://ai-article-studio-pwa.ai-article-studio.workers.dev",
   "http://localhost:4173",
   "http://127.0.0.1:8765",
@@ -16,6 +19,10 @@ const ALLOWED_ORIGINS = new Set([
 
 function clean(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function deploymentKind(value: unknown): "canary" | "public" {
+  return clean(value) === "canary" ? "canary" : "public";
 }
 
 function corsHeaders(request: Request): Record<string, string> {
@@ -104,6 +111,7 @@ async function serviceRpc(functionName: string, body: JsonRecord): Promise<void>
       apikey: key,
       authorization: `Bearer ${key}`,
       "content-type": "application/json",
+      accept: "application/json",
     },
     body: JSON.stringify(body),
   });
@@ -134,13 +142,19 @@ async function listDeployments(request: Request): Promise<JsonRecord[]> {
   return Array.isArray(payload) ? payload.filter((item): item is JsonRecord => asRecord(item) !== null) : [];
 }
 
+function workflowForDeployment(deployment: JsonRecord): string {
+  return deploymentKind(deployment.deployment_kind) === "canary" ? CANARY_WORKFLOW : PUBLIC_WORKFLOW;
+}
+
 async function refreshRequestFromGithub(request: Request, deployment: JsonRecord): Promise<void> {
   const requestId = clean(deployment.id);
-  const sourceSha = clean(deployment.source_sha);
+  const sourceSha = clean(deployment.source_sha).toLowerCase();
   const currentStatus = clean(deployment.status);
+  const kind = deploymentKind(deployment.deployment_kind);
   if (!requestId || !/^[0-9a-f]{40}$/.test(sourceSha) || ["succeeded", "failed", "cancelled"].includes(currentStatus)) return;
 
-  const response = await github(`/actions/workflows/${WORKFLOW}/runs?event=workflow_dispatch&per_page=50`);
+  const workflow = workflowForDeployment(deployment);
+  const response = await github(`/actions/workflows/${workflow}/runs?event=workflow_dispatch&per_page=50`);
   if (!response.ok) throw new Error("github_run_lookup_failed");
   const payload = asRecord(await safeJson(response));
   const runs = Array.isArray(payload?.workflow_runs) ? payload.workflow_runs : [];
@@ -185,42 +199,26 @@ async function refreshRequestFromGithub(request: Request, deployment: JsonRecord
   }
 
   if (status === "completed" && conclusion === "success") {
-    const [sourceCommitResponse, mainBranchResponse] = await Promise.all([
-      github(`/commits/${sourceSha}`),
-      github("/branches/main"),
-    ]);
-    if (!sourceCommitResponse.ok || !mainBranchResponse.ok) {
-      throw new Error("github_release_commit_lookup_failed");
-    }
+    const sourceCommitResponse = await github(`/commits/${sourceSha}`);
+    if (!sourceCommitResponse.ok) throw new Error("github_release_commit_lookup_failed");
 
-    const sourceCommit = asRecord(await safeJson(sourceCommitResponse));
-    const mainBranch = asRecord(await safeJson(mainBranchResponse));
-    const mainCommitRef = asRecord(mainBranch?.commit);
-    const targetSha = clean(mainCommitRef?.sha).toLowerCase();
-    if (!/^[0-9a-f]{40}$/.test(targetSha)) {
-      throw new Error("invalid_public_target_sha");
+    if (kind === "canary") {
+      await serviceRpc("service_finalize_app_release_canary_deployment", {
+        p_request_id: requestId,
+        p_github_run_id: runId,
+        p_github_run_url: runUrl,
+        p_target_sha: sourceSha,
+        p_deployment_url: CANARY_URL,
+      });
+    } else {
+      await serviceRpc("service_finalize_app_release_deployment", {
+        p_request_id: requestId,
+        p_github_run_id: runId,
+        p_github_run_url: runUrl,
+        p_target_sha: sourceSha,
+        p_deployment_url: PUBLIC_URL,
+      });
     }
-
-    const targetCommitResponse = await github(`/commits/${targetSha}`);
-    if (!targetCommitResponse.ok) {
-      throw new Error("github_public_commit_lookup_failed");
-    }
-    const targetCommit = asRecord(await safeJson(targetCommitResponse));
-    const sourceTree = asRecord(asRecord(sourceCommit?.commit)?.tree);
-    const targetTree = asRecord(asRecord(targetCommit?.commit)?.tree);
-    const sourceTreeSha = clean(sourceTree?.sha);
-    const targetTreeSha = clean(targetTree?.sha);
-    if (!sourceTreeSha || sourceTreeSha !== targetTreeSha) {
-      throw new Error("public_tree_does_not_match_approved_preview");
-    }
-
-    await serviceRpc("service_finalize_app_release_deployment", {
-      p_request_id: requestId,
-      p_github_run_id: runId,
-      p_github_run_url: runUrl,
-      p_target_sha: targetSha,
-      p_deployment_url: PUBLIC_URL,
-    });
     return;
   }
 
@@ -233,6 +231,85 @@ async function refreshRequestFromGithub(request: Request, deployment: JsonRecord
       p_error_message: `GitHub Actions finished with conclusion: ${conclusion || "unknown"}`,
     });
   }
+}
+
+async function dispatchWorkflow(
+  request: Request,
+  workflow: string,
+  rpcName: string,
+  releaseId: string,
+  sourceBranch: string,
+  sourceSha: string,
+): Promise<Response> {
+  const createdPayload = await userRpc(request, rpcName, {
+    p_release_id: releaseId,
+    p_source_branch: sourceBranch,
+    p_source_sha: sourceSha,
+  });
+  const created = asRecord(createdPayload);
+  const requestId = clean(created?.id);
+  if (!requestId) throw new Error("deployment_request_create_failed");
+
+  const inputs: Record<string, string> = {
+    request_id: requestId,
+    release_id: releaseId,
+    source_branch: sourceBranch,
+    source_sha: sourceSha,
+  };
+
+  if (workflow === PUBLIC_WORKFLOW) {
+    const canaryRunId = Number(created?.canary_run_id);
+    if (!Number.isSafeInteger(canaryRunId) || canaryRunId <= 0) {
+      await serviceRpc("service_mark_app_release_deployment", {
+        p_request_id: requestId,
+        p_status: "failed",
+        p_github_run_id: null,
+        p_github_run_url: null,
+        p_error_message: "verified Canary run ID is unavailable",
+      });
+      throw new Error("verified_canary_run_id_missing");
+    }
+    inputs.canary_run_id = String(canaryRunId);
+  }
+
+  const dispatch = await github(`/actions/workflows/${workflow}/dispatches`, {
+    method: "POST",
+    body: JSON.stringify({
+      ref: "main",
+      inputs,
+    }),
+  });
+
+  if (dispatch.status !== 204) {
+    const detail = asRecord(await safeJson(dispatch));
+    const message = clean(detail?.message) || `GitHub dispatch failed with HTTP ${dispatch.status}`;
+    await serviceRpc("service_mark_app_release_deployment", {
+      p_request_id: requestId,
+      p_status: "failed",
+      p_github_run_id: null,
+      p_github_run_url: null,
+      p_error_message: message,
+    });
+    return json(request, { error: "github_dispatch_failed", message }, 502);
+  }
+
+  await serviceRpc("service_mark_app_release_deployment", {
+    p_request_id: requestId,
+    p_status: "dispatched",
+    p_github_run_id: null,
+    p_github_run_url: null,
+    p_error_message: null,
+  });
+
+  return json(request, {
+    ok: true,
+    configured: true,
+    requestId,
+    status: "dispatched",
+    deploymentKind: workflow === CANARY_WORKFLOW ? "canary" : "public",
+    sourceBranch,
+    sourceSha,
+  }, 202);
 }
 
 Deno.serve(async (request: Request) => {
@@ -260,6 +337,7 @@ Deno.serve(async (request: Request) => {
         configured: tokenConfigured,
         supportsGithubReadiness: true,
         previewBranch: DEFAULT_PREVIEW_BRANCH,
+        canaryUrl: CANARY_URL,
         publicUrl: PUBLIC_URL,
         deployments: refreshed,
       });
@@ -278,29 +356,35 @@ Deno.serve(async (request: Request) => {
 
     const action = clean(body.action) || "start";
     if (action === "github_readiness") {
-      // The caller must pass the same admin-only RPC gate as the status endpoint.
-      // No deployment rows, repository payloads, token values, or error bodies are returned.
       await listDeployments(request);
       const configured = Boolean(githubToken());
       if (!configured) {
         return json(request, {
-          supported: true, configured: false, repositoryReadable: false,
-          workflowReadable: false, dispatchPermissionTested: false,
+          supported: true,
+          configured: false,
+          repositoryReadable: false,
+          canaryWorkflowReadable: false,
+          publicWorkflowReadable: false,
+          workflowReadable: false,
+          dispatchPermissionTested: false,
         });
       }
-      const [repositoryResponse, workflowResponse] = await Promise.all([
+      const [repositoryResponse, canaryWorkflowResponse, publicWorkflowResponse] = await Promise.all([
         github(""),
-        github(`/actions/workflows/${WORKFLOW}`),
+        github(`/actions/workflows/${CANARY_WORKFLOW}`),
+        github(`/actions/workflows/${PUBLIC_WORKFLOW}`),
       ]);
       return json(request, {
         supported: true,
         configured: true,
         repositoryReadable: repositoryResponse.ok,
-        workflowReadable: workflowResponse.ok,
-        // Read-only GitHub checks CANNOT prove Actions:write or dispatch success.
+        canaryWorkflowReadable: canaryWorkflowResponse.ok,
+        publicWorkflowReadable: publicWorkflowResponse.ok,
+        workflowReadable: canaryWorkflowResponse.ok && publicWorkflowResponse.ok,
         dispatchPermissionTested: false,
       });
     }
+
     if (action === "status") {
       const deployments = await listDeployments(request);
       const tokenConfigured = Boolean(githubToken());
@@ -316,12 +400,13 @@ Deno.serve(async (request: Request) => {
         configured: tokenConfigured,
         supportsGithubReadiness: true,
         previewBranch: DEFAULT_PREVIEW_BRANCH,
+        canaryUrl: CANARY_URL,
         publicUrl: PUBLIC_URL,
         deployments: refreshed,
       });
     }
 
-    if (action !== "start") {
+    if (action !== "start" && action !== "start_canary") {
       return json(request, { error: "invalid_action" }, 400);
     }
 
@@ -343,57 +428,25 @@ Deno.serve(async (request: Request) => {
       return json(request, { error: "invalid_preview_source" }, 400);
     }
 
-    const createdPayload = await userRpc(request, "admin_request_app_release_deploy", {
-      p_release_id: releaseId,
-      p_source_branch: sourceBranch,
-      p_source_sha: sourceSha,
-    });
-    const created = asRecord(createdPayload);
-    const requestId = clean(created?.id);
-    if (!requestId) throw new Error("deployment_request_create_failed");
-
-    const dispatch = await github(`/actions/workflows/${WORKFLOW}/dispatches`, {
-      method: "POST",
-      body: JSON.stringify({
-        ref: "main",
-        inputs: {
-          request_id: requestId,
-          release_id: releaseId,
-          source_branch: sourceBranch,
-          source_sha: sourceSha,
-        },
-      }),
-    });
-
-    if (dispatch.status !== 204) {
-      const detail = asRecord(await safeJson(dispatch));
-      const message = clean(detail?.message) || `GitHub dispatch failed with HTTP ${dispatch.status}`;
-      await serviceRpc("service_mark_app_release_deployment", {
-        p_request_id: requestId,
-        p_status: "failed",
-        p_github_run_id: null,
-        p_github_run_url: null,
-        p_error_message: message,
-      });
-      return json(request, { error: "github_dispatch_failed", message }, 502);
+    if (action === "start_canary") {
+      return dispatchWorkflow(
+        request,
+        CANARY_WORKFLOW,
+        "admin_request_app_release_canary_deploy",
+        releaseId,
+        sourceBranch,
+        sourceSha,
+      );
     }
 
-    await serviceRpc("service_mark_app_release_deployment", {
-      p_request_id: requestId,
-      p_status: "dispatched",
-      p_github_run_id: null,
-      p_github_run_url: null,
-      p_error_message: null,
-    });
-
-    return json(request, {
-      ok: true,
-      configured: true,
-      requestId,
-      status: "dispatched",
+    return dispatchWorkflow(
+      request,
+      PUBLIC_WORKFLOW,
+      "admin_request_app_release_deploy",
+      releaseId,
       sourceBranch,
       sourceSha,
-    }, 202);
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown_error";
     const status =
