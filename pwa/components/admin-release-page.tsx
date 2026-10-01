@@ -221,6 +221,26 @@ export function AdminReleasePage() {
       && candidate.build_key.endsWith("-" + candidateCanaryDeployment.source_sha.slice(0, 12)),
   );
 
+  const canaryStage2Blocker = snapshot?.channel.candidate_stage === "tester"
+    ? ""
+    : busy
+      ? "処理中です。完了するまでお待ちください。"
+      : canaryDeploymentInProgress
+        ? "Production Canaryへの反映処理が進行中です。"
+        : !(snapshot?.testers ?? []).some((tester) => tester.enabled)
+          ? "Production Canaryテスターが設定されていません。"
+          : aalCheckFailed
+            ? "現在の管理者セッションのMFA認証レベルを確認できません。管理者MFA画面で再認証してください。"
+            : currentSessionAal === null
+              ? "管理者セッションのMFA認証レベルを確認しています。"
+              : currentSessionAal !== "aal2"
+                ? "現在の管理者セッションはAAL2未認証です。管理者MFAで現在のセッションを認証してください。"
+                : !IS_PREVIEW_DEPLOYMENT
+                  ? "Production Canaryへの反映はPreview PWAの管理者画面でのみ実行できます。"
+                  : !candidateMatchesPreview
+                    ? "候補版buildと現在のPreview Buildが一致していません。"
+                    : "";
+
   useEffect(() => {
     if (!activeDeployment) return;
     let active = true;
@@ -657,21 +677,25 @@ export function AdminReleasePage() {
             </span>
 
             {snapshot?.channel.candidate_stage !== "tester" && (
-              <button
-                className="primary-action"
-                type="button"
-                disabled={
-                  busy
-                  || canaryDeploymentInProgress
-                  || !(snapshot?.testers ?? []).some((tester) => tester.enabled)
-                  || currentSessionAal !== "aal2"
-                  || !IS_PREVIEW_DEPLOYMENT
-                  || !candidateMatchesPreview
-                }
-                onClick={() => void deployCanary(candidate)}
-              >
-                {canaryDeploymentInProgress ? "Production Canaryへ反映中…" : "第2段階：Production Canaryへ反映"}
-              </button>
+              <>
+                <button
+                  className="primary-action"
+                  type="button"
+                  disabled={Boolean(canaryStage2Blocker)}
+                  title={canaryStage2Blocker || "Production Canaryへ反映できます"}
+                  onClick={() => void deployCanary(candidate)}
+                >
+                  {canaryDeploymentInProgress ? "Production Canaryへ反映中…" : "第2段階：Production Canaryへ反映"}
+                </button>
+                {canaryStage2Blocker && (
+                  <p className="route-notice error">
+                    {canaryStage2Blocker}
+                    {(currentSessionAal !== "aal2" || aalCheckFailed) && (
+                      <> <Link href="/admin/security">管理者MFAで再認証 →</Link></>
+                    )}
+                  </p>
+                )}
+              </>
             )}
 
             {snapshot?.channel.candidate_stage === "tester" && !canaryVerified && (
