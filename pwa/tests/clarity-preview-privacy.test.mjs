@@ -22,8 +22,8 @@ test("Clarity analytics stays opt-in and non-production only", () => {
 });
 
 test("Clarity starts with analytics and ad consent denied", () => {
-  assert.match(clarity, /analytics_storage: "denied"/);
-  assert.match(clarity, /ad_storage: "denied"/);
+  assert.match(clarity, /analytics_Storage: "denied"/);
+  assert.match(clarity, /ad_Storage: "denied"/);
 });
 
 test("Sensitive AAS routes are explicitly masked from Clarity", () => {
