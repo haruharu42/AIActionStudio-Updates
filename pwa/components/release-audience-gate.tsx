@@ -7,8 +7,8 @@ import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { useEffect, useState, type ReactNode } from "react";
 
 import {
-  appDeploymentAudience,
   appDeploymentTier,
+  type AppDeploymentTier,
   clearEffectiveRelease,
   loadMyAppReleaseState,
   type AppReleaseState,
@@ -32,15 +32,27 @@ type GateState =
 
 export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const audience = appDeploymentAudience();
-  const deploymentTier = appDeploymentTier();
+  const compiledPreview = process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview";
+  const [deploymentTier, setDeploymentTier] = useState<AppDeploymentTier | null>(
+    () => compiledPreview ? "preview" : null,
+  );
+  const audience = deploymentTier === null ? null : deploymentTier === "public" ? "public" : "preview";
   const isCanary = deploymentTier === "canary";
-  const [gate, setGate] = useState<GateState>(() => audience === "public" ? { kind: "public" } : { kind: "loading" });
+  const [gate, setGate] = useState<GateState>({ kind: "loading" });
   const [viewerId, setViewerId] = useState("");
   const [acceptedTesterReleaseId, setAcceptedTesterReleaseId] = useState("");
 
   useEffect(() => {
-    if (audience === "public") return;
+    if (compiledPreview) return;
+    queueMicrotask(() => setDeploymentTier(appDeploymentTier()));
+  }, [compiledPreview]);
+
+  useEffect(() => {
+    if (audience === null) return;
+    if (audience === "public") {
+      queueMicrotask(() => setGate({ kind: "public" }));
+      return;
+    }
     let active = true;
     const client = getSupabaseClient();
 
@@ -124,6 +136,7 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
     };
   }, [audience, deploymentTier]);
 
+  if (audience === null) return <AppLoadingScreen message="公開環境を確認しています…" />;
   if (audience === "public" || gate.kind === "public" || alwaysPublicPreviewPath(pathname)) return <>{children}</>;
 
   if (gate.kind === "allowed") {
