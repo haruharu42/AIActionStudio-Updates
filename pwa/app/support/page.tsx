@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function SupportPage() {
-  return <SupportRequestPage />;
+  return <div data-clarity-mask="true"><SupportRequestPage /></div>;
 }

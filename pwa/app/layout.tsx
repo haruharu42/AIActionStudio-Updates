@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AccessStateProvider } from "@/components/access-state-provider";
 import { AdminHomeTopbar } from "@/components/admin-home-topbar";
 import { AppErrorReporter } from "@/components/app-error-reporter";
+import { ClarityPreviewAnalytics } from "@/components/clarity-preview-analytics";
 import { FreeTrialBanner } from "@/components/free-trial-banner";
 import { FeatureAccessGate } from "@/components/feature-access-gate";
 import { WorkspacePresetProvider } from "@/features/presets/workspace-preset-provider";
@@ -91,6 +92,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <FeatureAccessGate>
             <WorkspacePresetProvider>
               <AppErrorReporter />
+              <ClarityPreviewAnalytics />
               <Suspense fallback={null}><RouteScrollToTop /></Suspense>
               <KnowledgeRuntimeBootstrap />
               <AdminHomeTopbar />

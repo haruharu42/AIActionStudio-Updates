@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function BillingPage() {
-  return <BillingAccountPage />;
+  return <div data-clarity-mask="true"><BillingAccountPage /></div>;
 }
