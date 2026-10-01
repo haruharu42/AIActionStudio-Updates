@@ -48,6 +48,18 @@ const PREVIEW_BUILD_SHA = (process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "").trim();
 const IS_PREVIEW_DEPLOYMENT = process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview";
 const PREVIEW_BUILD_SHORT = /^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA) ? PREVIEW_BUILD_SHA.slice(0, 12) : "";
 
+async function loadLivePreviewBuildSha(): Promise<string> {
+  const response = await fetch("/?aas-build-check=" + Date.now(), {
+    cache: "no-store",
+    headers: { Accept: "text/html" },
+  });
+  if (!response.ok) throw new Error("preview build metadata request failed");
+  const html = await response.text();
+  const document = new DOMParser().parseFromString(html, "text/html");
+  const value = document.querySelector('meta[name="aas-build-sha"]')?.getAttribute("content")?.trim() ?? "";
+  return /^[0-9a-f]{40}$/.test(value) ? value : "";
+}
+
 function releaseMatchesPreviewBuild(release: AdminAppRelease | null): boolean {
   return Boolean(release && PREVIEW_BUILD_SHORT && release.build_key.endsWith("-" + PREVIEW_BUILD_SHORT));
 }
@@ -256,6 +268,20 @@ export function AdminReleasePage() {
     setError("");
     setMessage("");
     try {
+      const liveBuildSha = await loadLivePreviewBuildSha();
+      if (!liveBuildSha) {
+        setError("現在配信中のPreview Buildを確認できませんでした。通信状態を確認して再読み込みしてください。");
+        return;
+      }
+      if (liveBuildSha !== PREVIEW_BUILD_SHA) {
+        setError(
+          "この画面は古いPreview Buildです。最新Previewへ更新してから候補版を登録してください。"
+          + " 現在の画面: " + PREVIEW_BUILD_SHA.slice(0, 12)
+          + " / 最新: " + liveBuildSha.slice(0, 12),
+        );
+        return;
+      }
+
       const next = await adminCreateAppRelease(getSupabaseClient(), {
         version,
         title,
