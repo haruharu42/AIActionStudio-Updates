@@ -338,18 +338,72 @@ export function AdminReleasePage() {
     }
   };
 
-  const promoteToTesters = async (release: AdminAppRelease) => {
-    if (busy) return;
-    if (!window.confirm("v" + release.version + " を指定した一般ユーザーテスターへ反映しますか？\n他の一般ユーザーにはまだ公開されません。")) return;
+  const deployCanary = async (release: AdminAppRelease) => {
+    if (busy || canaryDeploymentInProgress) return;
+    if (!IS_PREVIEW_DEPLOYMENT) {
+      setError("Production Canaryへの反映はPreview PWAの管理者画面から実行してください。");
+      return;
+    }
+    if (currentSessionAal !== "aal2") {
+      setError("Production Canaryへの反映には管理者MFA（AAL2）での再認証が必要です。");
+      return;
+    }
+    if (!/^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA) || !releaseMatchesPreviewBuild(release)) {
+      setError("候補版と現在のPreview Buildが一致しません。最新Previewで候補版を登録し直してください。");
+      return;
+    }
+    if (!window.confirm(
+      "v" + release.version + " をProduction Canaryへ反映しますか？\n\n"
+      + "指定テスターだけがCanaryを利用できます。一般公開PWAは変更しません。\n"
+      + "Build: " + PREVIEW_BUILD_SHA.slice(0, 12),
+    )) return;
+
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const next = await adminPromoteAppReleaseToTesters(getSupabaseClient(), release.id);
-      setSnapshot(next);
-      setMessage("第2段階へ進めました。指定テスターだけが候補版を確認できます。");
-    } catch {
-      setError("テスター確認段階へ進められませんでした。テスター設定と候補版の状態を確認してください。");
+      const client = getSupabaseClient();
+      const request = await requestCanaryPwaDeployment(client, release.id, PREVIEW_BUILD_SHA);
+      const deployments = await loadPublicPwaDeployments(client, request.requestId);
+      setDeploymentSnapshot(deployments);
+      setMessage("Production Canaryへの反映を開始しました。完了後、指定テスターだけがCanaryを確認できます。");
+    } catch (canaryError) {
+      setError(canaryError instanceof Error ? canaryError.message : "Production Canaryへの反映を開始できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmCanary = async () => {
+    if (busy || !candidateCanaryDeployment || candidateCanaryDeployment.status !== "succeeded" || canaryVerified) return;
+    if (!publishVerificationReady) {
+      setError("Production Canary確認チェックをすべて完了してください。");
+      return;
+    }
+    if (currentSessionAal !== "aal2") {
+      setError("Production Canary確認の確定には管理者MFA（AAL2）での再認証が必要です。");
+      return;
+    }
+    if (!canaryMatchesCandidate) {
+      setError("Production Canaryと現在の候補版が一致しません。Canaryを作り直してください。");
+      return;
+    }
+    if (!window.confirm(
+      "AAS-000002等の指定テスターでProduction Canaryの確認が完了しましたか？\n\n"
+      + "確認済みにすると、このCanaryでテストした同一artifactだけが一般公開へ昇格できます。",
+    )) return;
+
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const client = getSupabaseClient();
+      await confirmCanaryDeployment(client, candidateCanaryDeployment.id);
+      const deployments = await loadPublicPwaDeployments(client);
+      setDeploymentSnapshot(deployments);
+      setMessage("Production Canaryを確認済みにしました。同一artifactを一般公開へ昇格できます。");
+    } catch (confirmError) {
+      setError(confirmError instanceof Error ? confirmError.message : "Production Canaryを確認済みにできませんでした。");
     } finally {
       setBusy(false);
     }
