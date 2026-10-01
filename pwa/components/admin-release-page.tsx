@@ -95,13 +95,14 @@ function formatDate(value: string | null): string {
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ja-JP");
 }
 
-function deploymentStatusLabel(status: PublicDeployment["status"]): string {
-  if (status === "requested") return "公開要求を受付";
-  if (status === "dispatched") return "GitHubへ送信済み";
-  if (status === "running") return "テスト・一般公開処理中";
-  if (status === "succeeded") return "一般公開PWAへ反映済み";
-  if (status === "failed") return "一般公開に失敗";
-  return "公開処理をキャンセル";
+function deploymentStatusLabel(deployment: PublicDeployment): string {
+  const target = deployment.deployment_kind === "canary" ? "Production Canary" : "一般公開PWA";
+  if (deployment.status === "requested") return target + "要求を受付";
+  if (deployment.status === "dispatched") return target + "をGitHubへ送信済み";
+  if (deployment.status === "running") return target + "へ反映中";
+  if (deployment.status === "succeeded") return target + "へ反映済み";
+  if (deployment.status === "failed") return target + "への反映に失敗";
+  return target + "処理をキャンセル";
 }
 
 function statusLabel(status: AdminAppRelease["status"]): string {
