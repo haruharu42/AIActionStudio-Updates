@@ -158,7 +158,15 @@ export function ReleaseUpdateManager() {
   }
 
   const available = state.available_release;
-  if (!available || dismissedReleaseId === available.id) return null;
+  if (!available || dismissedReleaseId === available.id) {
+    return successVersion ? (
+      <aside className="release-update-success" role="status" aria-live="polite">
+        <span aria-hidden="true">✓</span>
+        <strong>v{successVersion} へアップデートしました</strong>
+        <button type="button" onClick={() => setSuccessVersion("")} aria-label="閉じる">×</button>
+      </aside>
+    ) : null;
+  }
 
   if (state.update_required) {
     return (
