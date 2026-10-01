@@ -7,31 +7,40 @@ import { fileURLToPath } from "node:url";
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
-test("release Worker targets the renamed GitHub repository and retains existing public URL", async () => {
+test("release Worker targets the renamed GitHub repository and retains Canary/public URLs", async () => {
   const worker = await readRepo("supabase/functions/pwa-release-deploy/index.ts");
   assert.ok(worker.includes('const REPO = "haruharu42/AIActionStudio-Updates";'));
   assert.ok(!worker.includes('const REPO = "haruharu42/AIArticleStudio-Updates";'));
-  assert.ok(worker.includes('const WORKFLOW = "pwa-admin-public-release.yml";'));
+  assert.ok(worker.includes('const CANARY_WORKFLOW = "pwa-admin-canary-release.yml";'));
+  assert.ok(worker.includes('const PUBLIC_WORKFLOW = "pwa-admin-public-release.yml";'));
   assert.ok(worker.includes("AAS_GITHUB_RELEASE_TOKEN"));
+  assert.ok(worker.includes('const CANARY_URL = "https://ai-article-studio-pwa-canary.ai-article-studio.workers.dev/";'));
   assert.ok(worker.includes('const PUBLIC_URL = "https://ai-article-studio-pwa.ai-article-studio.workers.dev/";'));
   assert.ok(worker.includes('const DEFAULT_PREVIEW_BRANCH = "main";'));
   assert.ok(worker.includes('"preview/current"'));
 });
 
-test("renamed release target retains approved workflow-dispatch safety checks", async () => {
-  const [worker, workflow] = await Promise.all([
+test("renamed release target retains guarded Canary/public workflow dispatch safety checks", async () => {
+  const [worker, canaryWorkflow, publicWorkflow] = await Promise.all([
     readRepo("supabase/functions/pwa-release-deploy/index.ts"),
+    readRepo(".github/workflows/pwa-admin-canary-release.yml"),
     readRepo(".github/workflows/pwa-admin-public-release.yml"),
   ]);
-  assert.ok(worker.includes('github(`/actions/workflows/${WORKFLOW}/dispatches`'));
+  assert.ok(worker.includes('github(`/actions/workflows/${workflow}/dispatches`'));
   assert.ok(worker.includes("if (dispatch.status !== 204)"));
-  assert.ok(workflow.includes("workflow_dispatch:"));
-  for (const input of ["request_id", "release_id", "source_branch", "source_sha"]) {
-    assert.ok(workflow.includes("      " + input + ":"), "missing dispatch input: " + input);
+  for (const workflow of [canaryWorkflow, publicWorkflow]) {
+    assert.ok(workflow.includes("workflow_dispatch:"));
+    for (const input of ["request_id", "release_id", "source_branch", "source_sha"]) {
+      assert.ok(workflow.includes("      " + input + ":"), "missing dispatch input: " + input);
+    }
   }
-  assert.ok(workflow.includes("Only main or preview/current may be promoted"));
-  assert.ok(workflow.includes("git merge-base --is-ancestor"));
-  assert.ok(workflow.includes("Admin public release Cloudflare contract: PASS"));
+  assert.ok(canaryWorkflow.includes("Only main or preview/current may be used for Production Canary"));
+  assert.ok(canaryWorkflow.includes("branch_head"));
+  assert.ok(canaryWorkflow.includes("Public-build and Canary config contract: PASS"));
+  assert.ok(publicWorkflow.includes("canary_run_id:"));
+  assert.ok(publicWorkflow.includes("Download exact Canary-tested release bundle"));
+  assert.ok(publicWorkflow.includes("No rebuild was performed during public promotion"));
+  assert.ok(!publicWorkflow.includes("git push origin"));
 });
 
 test("README links to the renamed repository's existing Preview workflow", async () => {
