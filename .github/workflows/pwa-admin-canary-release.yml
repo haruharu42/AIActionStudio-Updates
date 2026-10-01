@@ -167,8 +167,6 @@ jobs:
       - name: Verify public-build contract and create Canary config
         id: configs
         shell: bash
-        env:
-          CONFIG_PATH: ${{ steps.wrangler-config.outputs.config }}
         run: |
           set -euo pipefail
           node - <<'NODE'
