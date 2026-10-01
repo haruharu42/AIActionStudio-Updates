@@ -58,6 +58,9 @@ test("Stripe Checkout is gated server-side and billing portal remains available"
   assert.match(salesWorker, /runtime\.stripeRouteReady[\s\S]*?stripeWorkerConfigReady\(env, row\)/);
   assert.match(salesWorker, /publicSalesApproved/);
   assert.match(salesWorker, /販売受付設定を確認できないため、新規決済を停止しています/);
+  assert.match(salesWorker, /Public discovery must fail closed without surfacing an operational 503/);
+  assert.match(salesWorker, /externalSalesEnabled: false/);
+  assert.match(salesWorker, /publicSalesApproved: false/);
   assert.match(salesWorker, /Stripeでの新規購入受付は停止しています/);
   assert.doesNotMatch(salesWorker, /\/api\/billing\/portal/);
   assert.doesNotMatch(salesWorker, /AAS-WIN-MONTHLY/);
