@@ -78,7 +78,14 @@ export function ReleaseUpdateManager() {
       return () => { mounted.current = false; };
     }
 
-    const refresh = async () => {
+    let refreshing = false;
+    let lastRefreshAt = 0;
+    const refresh = async (force = false) => {
+      if (refreshing) return;
+      const now = Date.now();
+      if (!force && now - lastRefreshAt < 30_000) return;
+      refreshing = true;
+      lastRefreshAt = now;
       try {
         const next = await loadMyAppReleaseState(client);
         if (mounted.current) {
@@ -87,6 +94,8 @@ export function ReleaseUpdateManager() {
         }
       } catch {
         if (mounted.current) setState(null);
+      } finally {
+        refreshing = false;
       }
     };
 
@@ -98,11 +107,24 @@ export function ReleaseUpdateManager() {
     if (document.readyState === "complete") registerWorker();
     else window.addEventListener("load", registerWorker, { once: true });
 
-    void refresh();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "hidden") return;
+      void refresh();
+    };
+    const interval = window.setInterval(refreshWhenVisible, 5 * 60_000);
+
+    void refresh(true);
+    window.addEventListener("focus", refreshWhenVisible);
+    window.addEventListener("online", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       mounted.current = false;
+      window.clearInterval(interval);
       window.removeEventListener("load", registerWorker);
+      window.removeEventListener("focus", refreshWhenVisible);
+      window.removeEventListener("online", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [accessUserId, client, pathname]);
 
