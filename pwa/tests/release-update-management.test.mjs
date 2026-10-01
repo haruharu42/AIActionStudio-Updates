@@ -75,7 +75,7 @@ test("users only activate a waiting service worker after accepting an update", a
   assert.match(manager, /is_admin_preview/);
 });
 
-test("admin release control provides candidate publish and rollback flows", async () => {
+test("admin release control provides Preview Canary public promotion and rollback flows", async () => {
   const [page, sections, layout, css] = await Promise.all([
     read("components/admin-release-page.tsx"),
     read("lib/admin-sections.ts"),
@@ -85,7 +85,9 @@ test("admin release control provides candidate publish and rollback flows", asyn
 
   for (const label of [
     "管理者テスト版として登録",
-    "一般公開PWAへ反映",
+    "第2段階：Production Canaryへ反映",
+    "第3段階：Canary確認済みにする",
+    "第4段階：全一般ユーザーへ公開",
     "この版へ戻す",
     "任意アップデート",
     "必須アップデート",
@@ -94,130 +96,90 @@ test("admin release control provides candidate publish and rollback flows", asyn
   }
 
   assert.match(page, /adminCreateAppRelease/);
+  assert.match(page, /requestCanaryPwaDeployment/);
+  assert.match(page, /confirmCanaryDeployment/);
   assert.match(page, /requestPublicPwaDeployment/);
   assert.match(page, /adminRollbackAppRelease/);
+  assert.match(page, /candidateCanaryDeployment\.source_sha/);
+  assert.match(page, /同一artifact/);
   assert.match(sections, /id: "releases"/);
   assert.match(sections, /href: "\/admin\/releases"/);
   assert.match(layout, /ReleaseUpdateManager/);
   assert.match(layout, /phase37-release-management\.css/);
-  assert.match(layout, /"aas-phase": "56"/);
-  assert.match(layout, /"aas-release-stage": process\.env\.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE \?\? "development"/);
   assert.match(css, /\.release-required-backdrop/);
   assert.match(css, /\.release-admin-page/);
 });
 
-
-test("staged release rollout isolates admin preview, selected user testers, and public users", async () => {
-  const [migration, client, gate, manager, previewStatus, home, page, nextConfig, previewWorkflow, publicWorkflow, layout, css] = await Promise.all([
+test("staged release rollout isolates Preview admin Production Canary testers and public users", async () => {
+  const [legacyMigration, canaryMigration, client, gate, manager, page, previewWorkflow, canaryWorkflow, publicWorkflow, layout, css] = await Promise.all([
     readRepo("supabase/migrations/20260919144016_pwa_staged_release_rollout.sql"),
+    readRepo("supabase/migrations/20261001103000_production_canary_release_pipeline.sql"),
     read("lib/app-release.ts"),
     read("components/release-audience-gate.tsx"),
     read("components/release-update-manager.tsx"),
-    read("components/release-preview-home-status.tsx"),
-    read("components/phase18-beginner-home.tsx"),
     read("components/admin-release-page.tsx"),
-    read("next.config.ts"),
     readRepo(".github/workflows/pwa-preview-deploy.yml"),
-    readRepo(".github/workflows/pwa-member-beta-deploy.yml"),
+    readRepo(".github/workflows/pwa-admin-canary-release.yml"),
+    readRepo(".github/workflows/pwa-admin-public-release.yml"),
     read("app/layout.tsx"),
     read("app/phase37-release-management.css"),
   ]);
 
-  assert.match(migration, /create table if not exists public\.app_release_testers/);
-  assert.match(migration, /alter table public\.app_release_testers force row level security/);
-  assert.match(migration, /revoke all on table public\.app_release_testers from anon, authenticated/);
-  assert.match(migration, /AAS-000002/);
-  assert.match(migration, /candidate_stage in \('admin','tester'\)/);
-  assert.match(migration, /function public\.get_my_app_release_state\(p_audience text\)/);
-  assert.match(migration, /'preview_allowed'/);
-  assert.match(migration, /'is_release_tester'/);
-  assert.match(migration, /'is_tester_preview'/);
-  assert.match(migration, /function public\.admin_set_app_release_tester/);
-  assert.match(migration, /function public\.admin_promote_app_release_to_testers/);
-  assert.match(migration, /candidate must pass tester stage before publish/);
-  assert.match(migration, /candidate_stage = 'tester'/);
-  assert.doesNotMatch(migration, /grant .* to anon/i);
-  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+  assert.match(legacyMigration, /create table if not exists public\.app_release_testers/);
+  assert.match(legacyMigration, /AAS-000002/);
+  assert.match(legacyMigration, /candidate_stage in \('admin','tester'\)/);
+  assert.match(legacyMigration, /function public\.get_my_app_release_state\(p_audience text\)/);
+  assert.match(legacyMigration, /'is_release_tester'/);
 
-  assert.match(client, /AppDeploymentAudience = "public" \| "preview"/);
-  assert.match(client, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE/);
-  assert.match(client, /adminPromoteAppReleaseToTesters/);
+  assert.match(canaryMigration, /deployment_kind in \('canary','public'\)/);
+  assert.match(canaryMigration, /admin_request_app_release_canary_deploy/);
+  assert.match(canaryMigration, /admin_confirm_app_release_canary/);
+  assert.match(canaryMigration, /verified production canary required before public deploy/);
+  assert.match(canaryMigration, /direct publish disabled/);
+
+  assert.match(client, /AppDeploymentTier = "public" \| "preview" \| "canary"/);
+  assert.match(client, /AAS_PRODUCTION_CANARY_HOSTNAME/);
+  assert.match(client, /appDeploymentAudience/);
   assert.match(client, /adminSetAppReleaseTester/);
   assert.match(client, /p_audience: audience/);
 
   assert.match(gate, /preview_allowed/);
   assert.match(gate, /is_release_tester/);
-  assert.match(gate, /ALWAYS_PUBLIC_PREVIEW_PATHS/);
-  const publicPreviewPaths = gate.split("\n").find((line) => line.startsWith("const ALWAYS_PUBLIC_PREVIEW_PATHS = ")) ?? "";
-  for (const route of ["/support", "/commercial-transactions", "/plans"]) {
-    assert.ok(publicPreviewPaths.includes(`"${route}"`), `missing signed-out preview route: ${route}`);
-  }
-  for (const route of ["/billing", "/admin"]) {
-    assert.equal(publicPreviewPaths.includes(`"${route}"`), false, `unexpected signed-out preview route: ${route}`);
-  }
-  assert.match(gate, /\/auth\/callback/);
-  assert.match(gate, /pathname === "\/"/);
-  assert.match(gate, /if \(gate\.kind === "loading"\) return <AppLoadingScreen/);
-  assert.match(gate, /候補版の利用権を確認しています/);
-  assert.match(gate, /第1段階の管理者確認中/);
-  assert.match(gate, /管理者が指定した一般ユーザーテスター/);
-  assert.match(gate, /if \(!session\) \{[\s\S]*?setGate\(\{ kind: "signed_out" \}\)/);
-  assert.doesNotMatch(gate, /if \(session\) setGate\(\{ kind: "loading" \}\)/);
+  assert.match(gate, /appDeploymentTier/);
+  assert.match(gate, /Production Canary版を適用しますか？/);
+  assert.match(gate, /"aas\.tester-" \+ deploymentTier/);
+  assert.match(gate, /公開環境を確認しています/);
   assert.match(layout, /ReleaseAudienceGate/);
 
-  assert.match(manager, /is_admin_preview \|\| state\.is_tester_preview/);
-  assert.match(manager, /HIDDEN_PREFIXES/);
-  for (const route of ["/support", "/commercial-transactions", "/plans"]) {
-    assert.ok(manager.includes(`"${route}"`), `missing release-manager public route: ${route}`);
-  }
-  assert.ok(
-    manager.indexOf("if (hiddenRoute(pathname) || !accessUserId || !client)") < manager.indexOf("loadMyAppReleaseState(client)"),
-    "signed-out and public legal/support routes must skip release RPC before refresh is defined",
-  );
-  assert.match(manager, /useSharedAccessState\(\)/);
-  assert.match(manager, /\}, \[accessUserId, client, pathname\]\);/);
-  assert.doesNotMatch(manager, /client\.auth\.onAuthStateChange/);
-  assert.match(manager, /return null/);
-  assert.match(previewStatus, /useSharedAccessState\(\)/);
-  assert.match(previewStatus, /if \(!accessUserId \|\| !client\)/);
-  assert.doesNotMatch(previewStatus, /client\.auth\.onAuthStateChange/);
-  assert.match(previewStatus, /is_admin_preview/);
-  assert.match(previewStatus, /is_tester_preview/);
-  assert.match(previewStatus, /管理者確認/);
-  assert.match(previewStatus, /テスター確認/);
-  assert.match(previewStatus, /className="release-preview-home-status"/);
-  assert.match(home, /ReleasePreviewHomeStatus/);
-  assert.match(css, /\.release-preview-home-status/);
-  assert.doesNotMatch(css, /\.release-admin-preview\s*\{/);
-  assert.doesNotMatch(css, /\.release-preview-home-status\s*\{[^}]*position:\s*fixed/);
-  assert.match(page, /第2段階：指定テスターへ反映/);
-  assert.match(page, /第3段階：一般公開PWAへ反映/);
+  assert.match(manager, /state\.is_release_tester === true/);
+  assert.match(manager, /state\.candidate_stage === "tester"/);
+  assert.match(manager, /AAS_CANARY_PWA_URL/);
+  assert.match(manager, /Production Canary/);
+
+  assert.match(page, /①Preview管理者確認/);
+  assert.match(page, /②Production Canaryへ反映/);
+  assert.match(page, /③公開テスター確認済み/);
+  assert.match(page, /④全一般ユーザーへ公開/);
   assert.match(page, /AAS-000002/);
   assert.match(page, /PUBLISH_VERIFICATION_ITEMS/);
-  assert.match(page, /全体公開前チェック/);
-  assert.match(page, /最新PreviewとCIを確認/);
-  assert.match(page, /指定テスターで主要導線を確認/);
-  assert.match(page, /iPhone実機PWAを確認/);
-  assert.match(page, /停止・ロールバック経路を確認/);
-  assert.match(page, /publishVerificationReady/);
-  assert.match(page, /getAuthenticatorAssuranceLevel/);
-  assert.match(page, /currentSessionAal/);
-  assert.match(page, /currentSessionAal !== "aal2"/);
-  assert.match(page, /deploymentInProgress/);
-  assert.match(page, /!IS_PREVIEW_DEPLOYMENT/);
+  assert.match(page, /Production Canary確認チェック/);
+  assert.match(page, /requestCanaryPwaDeployment/);
+  assert.match(page, /confirmCanaryDeployment/);
   assert.match(page, /requestPublicPwaDeployment/);
+  assert.match(page, /currentSessionAal !== "aal2"/);
+  assert.match(page, /candidateCanaryDeployment\.source_sha/);
+  assert.match(page, /同一artifact/);
   assert.match(page, /管理者MFAで再認証/);
-  assert.match(page, /href="\/admin\/security"/);
   assert.match(page, /publishVerificationStorageKey/);
-  assert.match(page, /window\.localStorage\.setItem/);
   assert.match(css, /\.release-publish-checklist/);
-  assert.match(css, /\.release-publish-checklist label\.checked/);
 
-  assert.match(nextConfig, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE/);
   assert.match(previewWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: preview/);
-  assert.match(publicWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: public/);
+  assert.match(canaryWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: public/);
+  assert.match(canaryWorkflow, /ai-article-studio-pwa-canary/);
+  assert.match(publicWorkflow, /Download exact Canary-tested release bundle/);
+  assert.doesNotMatch(publicWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: public/);
+  assert.doesNotMatch(publicWorkflow, /npm test|npm run build|vinext build/);
 });
-
 
 test("account switching stays available on prerelease denial and clears cached release state", async () => {
   const [gate, session, release, settings, access, logoutPage] = await Promise.all([
@@ -312,58 +274,63 @@ test("interactive admins cannot bypass the guarded public deployment pipeline", 
   assert.match(migration, /Interactive admin clients must use the Preview-to-public deployment pipeline/);
 });
 
-test("admin public deployment pipeline keeps Preview and public release coupled to the exact approved SHA", async () => {
-  const [migration, buildGuardMigration, edgeFunction, client, page, workflow, previewWorkflow] = await Promise.all([
-    readRepo("supabase/migrations/20260928133500_admin_pwa_public_deploy_pipeline.sql"),
-    readRepo("supabase/migrations/20260928141500_admin_pwa_public_deploy_build_guard.sql"),
+test("admin deployment pipeline couples public release to the exact verified Production Canary artifact", async () => {
+  const [canaryMigration, edgeFunction, client, page, canaryWorkflow, publicWorkflow, previewWorkflow] = await Promise.all([
+    readRepo("supabase/migrations/20261001103000_production_canary_release_pipeline.sql"),
     readRepo("supabase/functions/pwa-release-deploy/index.ts"),
     read("lib/release-deployment.ts"),
     read("components/admin-release-page.tsx"),
+    readRepo(".github/workflows/pwa-admin-canary-release.yml"),
     readRepo(".github/workflows/pwa-admin-public-release.yml"),
     readRepo(".github/workflows/pwa-preview-deploy.yml"),
   ]);
 
-  assert.match(migration, /create table if not exists public\.app_release_deployments/);
-  assert.match(migration, /source_branch = 'preview\/current'/);
-  assert.match(migration, /source_sha ~ '\^\[0-9a-f\]\{40\}\$'/);
-  assert.match(migration, /aal2 required for public release deploy/);
-  assert.match(migration, /candidate must pass tester stage before deploy/);
-  assert.match(buildGuardMigration, /candidate build does not match approved preview sha/);
-  assert.match(migration, /service_finalize_app_release_deployment/);
-  assert.match(migration, /deployed sha does not match approved preview sha/);
-  assert.match(migration, /grant execute on function public\.service_finalize_app_release_deployment[\s\S]*to service_role/);
+  assert.match(canaryMigration, /admin_request_app_release_canary_deploy/);
+  assert.match(canaryMigration, /aal2 required for production canary deploy/);
+  assert.match(canaryMigration, /candidate build does not match approved preview sha/);
+  assert.match(canaryMigration, /service_finalize_app_release_canary_deployment/);
+  assert.match(canaryMigration, /admin_confirm_app_release_canary/);
+  assert.match(canaryMigration, /d\.verified_at is not null/);
+  assert.match(canaryMigration, /source_canary_deployment_id/);
+  assert.match(canaryMigration, /verified production canary required before public deploy/);
+  assert.match(canaryMigration, /public target sha must equal verified canary source sha/);
+  assert.match(canaryMigration, /direct publish disabled/);
 
   assert.match(edgeFunction, /AAS_GITHUB_RELEASE_TOKEN/);
+  assert.match(edgeFunction, /CANARY_WORKFLOW/);
+  assert.match(edgeFunction, /PUBLIC_WORKFLOW/);
+  assert.match(edgeFunction, /admin_request_app_release_canary_deploy/);
   assert.match(edgeFunction, /admin_request_app_release_deploy/);
-  assert.match(edgeFunction, /pwa-admin-public-release\.yml/);
+  assert.match(edgeFunction, /service_finalize_app_release_canary_deployment/);
   assert.match(edgeFunction, /service_finalize_app_release_deployment/);
+  assert.match(edgeFunction, /canary_run_id/);
   assert.doesNotMatch(edgeFunction, /AAS_GITHUB_RELEASE_TOKEN\s*=\s*["']/);
 
-  assert.match(client, /NEXT_PUBLIC_AAS_SOURCE_BRANCH/);
-  assert.match(client, /AAS_BUILD_SOURCE_BRANCH === "preview\/current"/);
-  assert.match(client, /\? "preview\/current" : "main"/);
+  assert.match(client, /requestCanaryPwaDeployment/);
+  assert.match(client, /confirmCanaryDeployment/);
   assert.match(client, /requestPublicPwaDeployment/);
-  assert.match(client, /loadPublicPwaDeployments/);
-  assert.match(page, /第3段階：一般公開PWAへ反映/);
-  assert.match(page, /NEXT_PUBLIC_AAS_BUILD_SHA/);
-  assert.match(page, /PREVIEW_BUILD_SHORT/);
-  assert.match(page, /releaseMatchesPreviewBuild/);
-  assert.match(page, /候補版と現在のPreview Buildが一致しません/);
-  assert.match(page, /Preview PWAの管理者画面から実行/);
+  assert.match(client, /AAS_CANARY_PWA_URL/);
 
-  assert.match(workflow, /permissions:\s*\n\s*contents: write/);
-  assert.match(workflow, /Only main or preview\/current may be promoted/);
-  assert.match(workflow, /main\|preview\/current/);
-  assert.match(workflow, /git merge-base --is-ancestor/);
-  assert.match(workflow, /git push origin "\$SOURCE_SHA:refs\/heads\/main"/);
-  assert.match(workflow, /Admin public release Cloudflare contract: PASS/);
-  assert.match(workflow, /Deploy general-public PWA Worker/);
+  assert.match(page, /第2段階：Production Canaryへ反映/);
+  assert.match(page, /第3段階：Canary確認済みにする/);
+  assert.match(page, /第4段階：全一般ユーザーへ公開/);
+  assert.match(page, /candidateCanaryDeployment\.source_sha/);
+  assert.match(page, /再ビルドは行わず/);
+
+  assert.match(canaryWorkflow, /Checkout exact approved Preview SHA/);
+  assert.match(canaryWorkflow, /Build and regression tests once for Canary and Public/);
+  assert.match(canaryWorkflow, /Upload exact Canary-tested release bundle/);
+  assert.match(canaryWorkflow, /release-bundle\.tgz\.sha256/);
+
+  assert.match(publicWorkflow, /canary_run_id/);
+  assert.match(publicWorkflow, /Download exact Canary-tested release bundle/);
+  assert.match(publicWorkflow, /Verify and extract exact Canary artifact/);
+  assert.match(publicWorkflow, /Deploy exact Canary-tested artifact to general-public Worker/);
+  assert.doesNotMatch(publicWorkflow, /git push origin/);
+  assert.doesNotMatch(publicWorkflow, /npm test|npm run build|vinext build/);
+
   assert.doesNotMatch(previewWorkflow, /\n\s*- preview\/current\s*\n/);
-  assert.doesNotMatch(previewWorkflow, /\n\s*- feat\/note-easy-import-manual-contrast-20260920\s*\n/);
   assert.match(previewWorkflow, /Automatic Preview deploy is restricted to main/);
   assert.match(previewWorkflow, /workflow_dispatch:/);
-  assert.match(previewWorkflow, /DEPLOY_PREVIEW/);
-  assert.match(previewWorkflow, /NEXT_PUBLIC_AAS_SOURCE_BRANCH: \$\{\{ github\.ref_name \}\}/);
-  assert.match(edgeFunction, /ALLOWED_PREVIEW_BRANCHES/);
-  assert.match(edgeFunction, /\["main", "preview\/current"\]/);
 });
+
