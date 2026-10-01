@@ -771,3 +771,15 @@ begin
     using errcode = '55000';
 end;
 $function$;
+
+
+revoke all on function public.admin_request_app_release_canary_deploy(uuid, text, text) from public, anon;
+grant execute on function public.admin_request_app_release_canary_deploy(uuid, text, text) to authenticated;
+
+revoke all on function public.admin_confirm_app_release_canary(uuid) from public, anon;
+grant execute on function public.admin_confirm_app_release_canary(uuid) to authenticated;
+
+revoke all on function public.service_finalize_app_release_canary_deployment(uuid, bigint, text, text, text)
+  from public, anon, authenticated;
+grant execute on function public.service_finalize_app_release_canary_deployment(uuid, bigint, text, text, text)
+  to service_role;
