@@ -613,6 +613,8 @@ Production前はさらに、
 
 # Preview deployment
 
+Preview workflow: [🚀 Previewへデプロイ](https://github.com/haruharu42/AIActionStudio-Updates/actions/workflows/pwa-preview-deploy.yml)
+
 通常の確認はmain merge後のPreview自動反映、または専用GitHub Actionsを使用します。
 
 手動Previewを行う場合:
