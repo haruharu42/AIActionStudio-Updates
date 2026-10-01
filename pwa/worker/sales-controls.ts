@@ -154,7 +154,20 @@ export async function handleSalesControlRequest(
 
   if (url.pathname === "/api/sales/settings" && request.method === "GET") {
     const settings = await loadEffectiveSalesSettings(env);
-    if (!settings) return jsonResponse({ error: "販売受付設定を確認できませんでした。" }, 503);
+    // Public discovery must fail closed without surfacing an operational 503.
+    // Checkout keeps the stricter 503 gate below, so an unavailable backend can
+    // never accidentally enable a purchase path.
+    if (!settings) {
+      return jsonResponse({
+        externalSalesEnabled: false,
+        accessCodeEnabled: false,
+        externalSalesUrl: "",
+        stripeCheckoutEnabled: false,
+        pwa7DayEnabled: false,
+        pwaMonthlyEnabled: false,
+        publicSalesApproved: false,
+      });
+    }
     return jsonResponse(settings);
   }
 
