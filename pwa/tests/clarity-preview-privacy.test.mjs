@@ -17,6 +17,7 @@ const maskedRoutes = [
 test("Clarity analytics stays opt-in and non-production only", () => {
   assert.match(clarity, /NEXT_PUBLIC_AAS_CLARITY_ENABLED === "true"/);
   assert.match(clarity, /NEXT_PUBLIC_AAS_CLARITY_PROJECT_ID/);
+  assert.match(clarity, /\^\[a-zA-Z0-9\]\+\$/);
   assert.match(clarity, /audience !== "production" && audience !== "public"/);
   assert.doesNotMatch(clarity, /identify/);
   assert.doesNotMatch(clarity, /window\.clarity\("set"/);
