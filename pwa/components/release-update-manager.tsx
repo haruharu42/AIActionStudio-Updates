@@ -6,14 +6,39 @@ import { useEffect, useRef, useState } from "react";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import {
   acceptAppRelease,
+  appDeploymentAudience,
   loadMyAppReleaseState,
   type AppReleaseState,
 } from "@/lib/app-release";
 
 const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support", "/plans"];
 
+const PREVIEW_PWA_URL = process.env.NEXT_PUBLIC_AAS_PREVIEW_URL?.trim()
+  || "https://aas-preview-ai-article-studio-pwa-preview.ai-article-studio.workers.dev/";
+
 function hiddenRoute(pathname: string): boolean {
   return HIDDEN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
+}
+
+function TesterPreviewBanner() {
+  return (
+    <aside className="release-update-banner tester-preview-banner" aria-live="polite">
+      <div>
+        <span className="release-update-badge">TESTER</span>
+        <strong>テスト版があります</strong>
+        <small>指定テスター向けPreviewで最新候補版を確認できます。</small>
+      </div>
+      <div className="release-update-actions">
+        <button
+          type="button"
+          className="primary-action"
+          onClick={() => { window.location.href = PREVIEW_PWA_URL; }}
+        >
+          テスト版を確認
+        </button>
+      </div>
+    </aside>
+  );
 }
 
 async function activateWaitingWorker(): Promise<void> {
@@ -179,15 +204,25 @@ export function ReleaseUpdateManager() {
     return null;
   }
 
+  const testerPreviewAvailable =
+    appDeploymentAudience() === "public"
+    && state.is_release_tester === true
+    && state.candidate_stage === "tester";
+
   const available = state.available_release;
   if (!available || dismissedReleaseId === available.id) {
-    return successVersion ? (
-      <aside className="release-update-success" role="status" aria-live="polite">
-        <span aria-hidden="true">✓</span>
-        <strong>v{successVersion} へアップデートしました</strong>
-        <button type="button" onClick={() => setSuccessVersion("")} aria-label="閉じる">×</button>
-      </aside>
-    ) : null;
+    return (
+      <>
+        {successVersion && (
+          <aside className="release-update-success" role="status" aria-live="polite">
+            <span aria-hidden="true">✓</span>
+            <strong>v{successVersion} へアップデートしました</strong>
+            <button type="button" onClick={() => setSuccessVersion("")} aria-label="閉じる">×</button>
+          </aside>
+        )}
+        {testerPreviewAvailable && <TesterPreviewBanner />}
+      </>
+    );
   }
 
   if (state.update_required) {
