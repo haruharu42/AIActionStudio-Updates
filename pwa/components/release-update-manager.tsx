@@ -51,9 +51,23 @@ export function ReleaseUpdateManager() {
   const accessUserId = accessState.kind === "ready" ? accessState.profile.id : "";
   const [state, setState] = useState<AppReleaseState | null>(null);
   const [dismissedReleaseId, setDismissedReleaseId] = useState("");
+  const [confirmingReleaseId, setConfirmingReleaseId] = useState("");
+  const [successVersion, setSuccessVersion] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const mounted = useRef(true);
+
+  useEffect(() => {
+    try {
+      const success = window.sessionStorage.getItem("aas.release.update-success");
+      if (success) {
+        setSuccessVersion(success);
+        window.sessionStorage.removeItem("aas.release.update-success");
+      }
+    } catch {
+      // Completion feedback is best-effort only.
+    }
+  }, []);
 
   useEffect(() => {
     mounted.current = true;
@@ -92,6 +106,18 @@ export function ReleaseUpdateManager() {
     };
   }, [accessUserId, client, pathname]);
 
+  useEffect(() => {
+    const available = state?.available_release;
+    if (!available) return;
+    const params = new URLSearchParams(window.location.search);
+    const requestedReleaseId = params.get("update");
+    if (requestedReleaseId !== available.id) return;
+    setConfirmingReleaseId(available.id);
+    params.delete("update");
+    const query = params.toString();
+    window.history.replaceState(null, "", window.location.pathname + (query ? "?" + query : "") + window.location.hash);
+  }, [state?.available_release]);
+
   const applyUpdate = async () => {
     const release = state?.available_release;
     if (!release || busy || !client) return;
@@ -102,6 +128,11 @@ export function ReleaseUpdateManager() {
       const next = await acceptAppRelease(client, release.id);
       if (mounted.current) setState(next);
       await activateWaitingWorker();
+      try {
+        window.sessionStorage.setItem("aas.release.update-success", release.version);
+      } catch {
+        // Reload still applies the release when completion feedback cannot be stored.
+      }
       window.location.reload();
     } catch {
       if (mounted.current) {
@@ -111,7 +142,15 @@ export function ReleaseUpdateManager() {
     }
   };
 
-  if (hiddenRoute(pathname) || !state?.signed_in || state.active === false) return null;
+  if (hiddenRoute(pathname) || !state?.signed_in || state.active === false) {
+    return successVersion ? (
+      <aside className="release-update-success" role="status" aria-live="polite">
+        <span aria-hidden="true">✓</span>
+        <strong>v{successVersion} へアップデートしました</strong>
+        <button type="button" onClick={() => setSuccessVersion("")} aria-label="閉じる">×</button>
+      </aside>
+    ) : null;
+  }
 
   if ((state.is_admin_preview || state.is_tester_preview) && state.effective_release) {
     // Preview identity is shown only inside the home screen so it never covers feature pages.
@@ -144,20 +183,56 @@ export function ReleaseUpdateManager() {
     );
   }
 
+  const confirmationOpen = confirmingReleaseId === available.id;
+
   return (
-    <aside className="release-update-banner" aria-live="polite">
-      <div>
-        <span className="release-update-badge">UPDATE</span>
-        <strong>v{available.version} が利用できます</strong>
-        <small>{available.title}</small>
-      </div>
-      <div className="release-update-actions">
-        <button type="button" className="primary-action" disabled={busy} onClick={() => void applyUpdate()}>
-          {busy ? "更新中…" : "アップデートする"}
-        </button>
-        <button type="button" disabled={busy} onClick={() => setDismissedReleaseId(available.id)}>あとで</button>
-      </div>
-      {message && <p className="route-notice error">{message}</p>}
-    </aside>
+    <>
+      {successVersion && (
+        <aside className="release-update-success" role="status" aria-live="polite">
+          <span aria-hidden="true">✓</span>
+          <strong>v{successVersion} へアップデートしました</strong>
+          <button type="button" onClick={() => setSuccessVersion("")} aria-label="閉じる">×</button>
+        </aside>
+      )}
+
+      {confirmationOpen && (
+        <div className="release-required-backdrop" role="dialog" aria-modal="true" aria-labelledby="release-confirm-title">
+          <section className="release-update-card">
+            <p className="eyebrow">UPDATE CONFIRMATION</p>
+            <h2 id="release-confirm-title">アップデートしますか？</h2>
+            <div className="release-version-row">
+              <span>現在 v{state.current_release?.version ?? "-"}</span>
+              <b>→</b>
+              <strong>v{available.version}</strong>
+            </div>
+            <h3>{available.title}</h3>
+            {available.notes && <p className="release-notes">{available.notes}</p>}
+            <p className="release-confirm-note">更新後に画面を再読み込みし、最新のPWAへ切り替えます。</p>
+            {message && <p className="route-notice error">{message}</p>}
+            <div className="release-confirm-actions">
+              <button className="primary-action" type="button" disabled={busy} onClick={() => void applyUpdate()}>
+                {busy ? "アップデートしています…" : "アップデートする"}
+              </button>
+              <button type="button" disabled={busy} onClick={() => setConfirmingReleaseId("")}>あとで</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      <aside className="release-update-banner" aria-live="polite">
+        <div>
+          <span className="release-update-badge">UPDATE</span>
+          <strong>v{available.version} が利用できます</strong>
+          <small>{available.title}</small>
+        </div>
+        <div className="release-update-actions">
+          <button type="button" className="primary-action" disabled={busy} onClick={() => setConfirmingReleaseId(available.id)}>
+            {busy ? "更新中…" : "アップデートする"}
+          </button>
+          <button type="button" disabled={busy} onClick={() => setDismissedReleaseId(available.id)}>あとで</button>
+        </div>
+        {message && <p className="route-notice error">{message}</p>}
+      </aside>
+    </>
   );
 }
