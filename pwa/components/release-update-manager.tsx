@@ -32,7 +32,7 @@ function TesterCanaryBanner() {
           className="primary-action"
           onClick={() => { window.location.href = AAS_CANARY_PWA_URL; }}
         >
-          テスト版を確認
+          Production Canaryを確認
         </button>
       </div>
     </aside>
