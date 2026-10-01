@@ -41,7 +41,14 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
     let active = true;
     const client = getSupabaseClient();
 
-    const refresh = async () => {
+    let refreshing = false;
+    let lastRefreshAt = 0;
+    const refresh = async (force = false) => {
+      if (refreshing) return;
+      const now = Date.now();
+      if (!force && now - lastRefreshAt < 30_000) return;
+      refreshing = true;
+      lastRefreshAt = now;
       try {
         const { data: { session }, error: sessionError } = await client.auth.getSession();
         if (!active) return;
@@ -77,10 +84,22 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
         setGate({ kind: "allowed", state: next });
       } catch {
         if (active) setGate({ kind: "error" });
+      } finally {
+        refreshing = false;
       }
     };
 
-    void refresh();
+    const refreshWhenVisible = () => {
+      if (!active || document.visibilityState === "hidden") return;
+      void refresh();
+    };
+    const interval = window.setInterval(refreshWhenVisible, 5 * 60_000);
+
+    void refresh(true);
+    window.addEventListener("focus", refreshWhenVisible);
+    window.addEventListener("online", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
     const { data } = client.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
       if (!session) {
@@ -90,11 +109,15 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
         setGate({ kind: "signed_out" });
         return;
       }
-      window.setTimeout(() => { if (active) void refresh(); }, 0);
+      window.setTimeout(() => { if (active) void refresh(true); }, 0);
     });
     return () => {
       active = false;
+      window.clearInterval(interval);
       data.subscription.unsubscribe();
+      window.removeEventListener("focus", refreshWhenVisible);
+      window.removeEventListener("online", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [audience]);
 
