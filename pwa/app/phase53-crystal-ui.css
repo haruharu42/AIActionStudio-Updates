@@ -1513,7 +1513,8 @@ body.aas-crystal-theme .auth-card.auth-crystal-card .switch-copy {
 }
 
 body.aas-crystal-theme .auth-build-stamp,
-body.aas-crystal-theme .aas-reference-build {
+body.aas-crystal-theme .aas-reference-build,
+body.aas-crystal-theme .aas-reference-version {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1534,7 +1535,8 @@ body.aas-crystal-theme .auth-build-stamp {
   padding: 5px 8px;
 }
 
-body.aas-crystal-theme .aas-reference-build {
+body.aas-crystal-theme .aas-reference-build,
+body.aas-crystal-theme .aas-reference-version {
   margin-left: auto;
   padding: 5px 8px;
 }
