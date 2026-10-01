@@ -14,10 +14,13 @@ test("release readiness checks are admin gated, read-only and never dispatch", a
   assert.ok(start > 0 && end > start);
   const diagnostic = worker.slice(start, end);
   assert.ok(diagnostic.indexOf("await listDeployments(request)") < diagnostic.indexOf('github("")'));
-  assert.match(diagnostic, /github\(""\)/);
-  assert.match(diagnostic, /github\(`\/actions\/workflows\/\$\{WORKFLOW\}`\)/);
+  assert.match(diagnostic, /github\(""/);
+  assert.match(diagnostic, /github\(`\/actions\/workflows\/\$\{CANARY_WORKFLOW\}`\)/);
+  assert.match(diagnostic, /github\(`\/actions\/workflows\/\$\{PUBLIC_WORKFLOW\}`\)/);
   assert.match(diagnostic, /repositoryReadable: repositoryResponse\.ok/);
-  assert.match(diagnostic, /workflowReadable: workflowResponse\.ok/);
+  assert.match(diagnostic, /canaryWorkflowReadable: canaryWorkflowResponse\.ok/);
+  assert.match(diagnostic, /publicWorkflowReadable: publicWorkflowResponse\.ok/);
+  assert.match(diagnostic, /workflowReadable: canaryWorkflowResponse\.ok && publicWorkflowResponse\.ok/);
   assert.match(diagnostic, /dispatchPermissionTested: false/);
   assert.doesNotMatch(diagnostic, /dispatches|serviceRpc|admin_request_app_release_deploy|method:\s*["']POST/);
   assert.equal((worker.match(/supportsGithubReadiness: true/g) ?? []).length, 2);
@@ -35,8 +38,9 @@ test("Preview admin UI exposes the read-only diagnostic independently of candida
   assert.match(page, /IS_PREVIEW_DEPLOYMENT && \(\s*<section className="release-admin-panel release-github-diagnostic">/);
   assert.doesNotMatch(page, /IS_PREVIEW_DEPLOYMENT && deploymentSnapshot\?\.supportsGithubReadiness/);
   assert.match(page, /GitHub公開連携を安全に確認/);
-  assert.match(page, /公開実行権限: 未検証/);
+  assert.match(page, /Production Canaryワークフロー/);
+  assert.match(page, /一般公開ワークフロー/);
+  assert.match(page, /dispatch権限: 未検証/);
   assert.match(page, /if \(busy\) return;/);
-  assert.match(page, /if \(!publishVerificationReady\)/);
   assert.match(page, /currentSessionAal !== "aal2"/);
 });
