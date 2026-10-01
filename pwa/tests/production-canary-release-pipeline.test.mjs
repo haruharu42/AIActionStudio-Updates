@@ -72,6 +72,10 @@ test("Canary workflow builds once and stores the exact release bundle", async ()
   assert.match(workflow, /sha256sum -c release-bundle\.tgz\.sha256/);
   assert.match(workflow, /actions\/upload-artifact@/);
   assert.match(workflow, /aas-release-bundle-/);
+  assert.match(workflow, /tmp_bundle="\$RUNNER_TEMP\/aas-release-bundle-\$SOURCE_SHA\.tgz"/);
+  assert.match(workflow, /-czf "\$tmp_bundle" \./);
+  assert.match(workflow, /cp "\$tmp_bundle" release-bundle\.tgz/);
+  assert.doesNotMatch(workflow, /-czf release-bundle\.tgz \./);
 });
 
 test("public workflow promotes the Canary artifact without rebuilding", async () => {
