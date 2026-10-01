@@ -4,9 +4,10 @@ const AAS_BUILD_SOURCE_BRANCH = (process.env.NEXT_PUBLIC_AAS_SOURCE_BRANCH ?? ""
 
 export const AAS_PREVIEW_RELEASE_BRANCH =
   AAS_BUILD_SOURCE_BRANCH === "preview/current" ? "preview/current" : "main";
+export const AAS_CANARY_PWA_URL = "https://ai-article-studio-pwa-canary.ai-article-studio.workers.dev/";
 export const AAS_PUBLIC_PWA_URL = "https://ai-article-studio-pwa.ai-article-studio.workers.dev/";
 
-export type PublicDeploymentStatus =
+export type ReleaseDeploymentStatus =
   | "requested"
   | "dispatched"
   | "running"
@@ -14,16 +15,22 @@ export type PublicDeploymentStatus =
   | "failed"
   | "cancelled";
 
+export type ReleaseDeploymentKind = "canary" | "public";
+
 export type PublicDeployment = {
   id: string;
   release_id: string;
+  deployment_kind: ReleaseDeploymentKind;
+  source_canary_deployment_id: string | null;
   source_branch: string;
   source_sha: string;
-  status: PublicDeploymentStatus;
+  status: ReleaseDeploymentStatus;
   github_run_id: number | null;
   github_run_url: string | null;
   target_sha: string | null;
   deployment_url: string | null;
+  verified_at: string | null;
+  verified_by: string | null;
   error_message: string | null;
   requested_at: string;
   dispatched_at: string | null;
@@ -36,6 +43,7 @@ export type PublicDeploymentSnapshot = {
   configured: boolean;
   supportsGithubReadiness: boolean;
   previewBranch: string;
+  canaryUrl: string;
   publicUrl: string;
   deployments: PublicDeployment[];
 };
@@ -50,10 +58,14 @@ function nullableText(value: unknown): string | null {
   return typeof value === "string" && value ? value : null;
 }
 
-function deploymentStatus(value: unknown): PublicDeploymentStatus | null {
+function deploymentStatus(value: unknown): ReleaseDeploymentStatus | null {
   return ["requested", "dispatched", "running", "succeeded", "failed", "cancelled"].includes(String(value))
-    ? value as PublicDeploymentStatus
+    ? value as ReleaseDeploymentStatus
     : null;
+}
+
+function deploymentKind(value: unknown): ReleaseDeploymentKind {
+  return value === "canary" ? "canary" : "public";
 }
 
 function parseDeployment(value: unknown): PublicDeployment | null {
@@ -68,6 +80,8 @@ function parseDeployment(value: unknown): PublicDeployment | null {
   return {
     id: text(row.id),
     release_id: text(row.release_id),
+    deployment_kind: deploymentKind(row.deployment_kind),
+    source_canary_deployment_id: nullableText(row.source_canary_deployment_id),
     source_branch: text(row.source_branch),
     source_sha: text(row.source_sha),
     status,
@@ -75,6 +89,8 @@ function parseDeployment(value: unknown): PublicDeployment | null {
     github_run_url: nullableText(row.github_run_url),
     target_sha: nullableText(row.target_sha),
     deployment_url: nullableText(row.deployment_url),
+    verified_at: nullableText(row.verified_at),
+    verified_by: nullableText(row.verified_by),
     error_message: nullableText(row.error_message),
     requested_at: text(row.requested_at),
     dispatched_at: nullableText(row.dispatched_at),
@@ -107,13 +123,19 @@ async function parseResponse(response: Response): Promise<Row> {
     if (message.includes("AAS_GITHUB_RELEASE_TOKEN") || text(row.error) === "github_release_token_missing") {
       throw new Error("GitHub公開連携が未設定です。初回セットアップでAAS_GITHUB_RELEASE_TOKENを設定してください。");
     }
+    if (message.includes("production canary")) {
+      throw new Error("Production Canaryへの反映には管理者MFA（AAL2）と最新候補版が必要です。");
+    }
+    if (message.includes("verified production canary") || message.includes("verified Canary")) {
+      throw new Error("一般公開前にProduction Canaryを指定テスターで確認し、管理画面で確認済みにしてください。");
+    }
     if (message.includes("aal2 required")) {
-      throw new Error("一般公開PWAへの反映には管理者MFA（AAL2）での再認証が必要です。");
+      throw new Error("このリリース操作には管理者MFA（AAL2）での再認証が必要です。");
     }
     if (message.includes("already in progress")) {
-      throw new Error("この候補版はすでに一般公開処理中です。進捗を更新してください。");
+      throw new Error("この候補版はすでにデプロイ処理中です。進捗を更新してください。");
     }
-    throw new Error(message || "一般公開PWAのデプロイ処理に失敗しました。");
+    throw new Error(message || "PWAのデプロイ処理に失敗しました。");
   }
   return row;
 }
@@ -133,19 +155,20 @@ async function invokeReleaseDeploy(
     if (context instanceof Response) {
       return parseResponse(context);
     }
-    throw new Error(error.message || "一般公開PWAのデプロイ処理に失敗しました。");
+    throw new Error(error.message || "PWAのデプロイ処理に失敗しました。");
   }
   return data && typeof data === "object" && !Array.isArray(data) ? data as Row : {};
 }
 
-export async function requestPublicPwaDeployment(
+async function requestDeployment(
   client: SupabaseClient,
+  action: "start_canary" | "start",
   releaseId: string,
   sourceSha: string,
 ): Promise<{ requestId: string; status: string }> {
   await accessToken(client);
   const row = await invokeReleaseDeploy(client, {
-    action: "start",
+    action,
     releaseId,
     sourceBranch: AAS_PREVIEW_RELEASE_BRANCH,
     sourceSha,
@@ -154,6 +177,38 @@ export async function requestPublicPwaDeployment(
     requestId: text(row.requestId),
     status: text(row.status),
   };
+}
+
+export async function requestCanaryPwaDeployment(
+  client: SupabaseClient,
+  releaseId: string,
+  sourceSha: string,
+): Promise<{ requestId: string; status: string }> {
+  return requestDeployment(client, "start_canary", releaseId, sourceSha);
+}
+
+export async function requestPublicPwaDeployment(
+  client: SupabaseClient,
+  releaseId: string,
+  sourceSha: string,
+): Promise<{ requestId: string; status: string }> {
+  return requestDeployment(client, "start", releaseId, sourceSha);
+}
+
+export async function confirmCanaryDeployment(
+  client: SupabaseClient,
+  deploymentId: string,
+): Promise<void> {
+  const { error } = await client.rpc("admin_confirm_app_release_canary", {
+    p_deployment_id: deploymentId,
+  });
+  if (error) {
+    const message = String(error.message ?? "");
+    if (message.toLowerCase().includes("aal2 required")) {
+      throw new Error("Production Canaryの確認確定には管理者MFA（AAL2）での再認証が必要です。");
+    }
+    throw error;
+  }
 }
 
 export async function loadPublicPwaDeployments(
@@ -175,6 +230,7 @@ export async function loadPublicPwaDeployments(
     configured: row.configured === true,
     supportsGithubReadiness: row.supportsGithubReadiness === true,
     previewBranch: text(row.previewBranch) || AAS_PREVIEW_RELEASE_BRANCH,
+    canaryUrl: text(row.canaryUrl) || AAS_CANARY_PWA_URL,
     publicUrl: text(row.publicUrl) || AAS_PUBLIC_PWA_URL,
     deployments,
   };
@@ -188,6 +244,8 @@ export type GithubReleaseReadiness = {
   supported: boolean;
   configured: boolean;
   repositoryReadable: boolean;
+  canaryWorkflowReadable: boolean;
+  publicWorkflowReadable: boolean;
   workflowReadable: boolean;
   dispatchPermissionTested: false;
 };
@@ -201,6 +259,8 @@ export async function checkGithubReleaseReadiness(
     supported: row.supported === true,
     configured: row.configured === true,
     repositoryReadable: row.repositoryReadable === true,
+    canaryWorkflowReadable: row.canaryWorkflowReadable === true,
+    publicWorkflowReadable: row.publicWorkflowReadable === true,
     workflowReadable: row.workflowReadable === true,
     dispatchPermissionTested: false,
   };
