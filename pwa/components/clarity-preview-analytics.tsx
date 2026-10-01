@@ -15,6 +15,9 @@ export function ClarityPreviewAnalytics() {
     const enabled = process.env.NEXT_PUBLIC_AAS_CLARITY_ENABLED === "true";
 
     if (!enabled || !projectId || !isNonProductionAudience()) return;
+    // Clarity project IDs are alphanumeric. Reject unexpected characters before
+    // interpolating the public ID into an inline bootstrap script.
+    if (!/^[a-zA-Z0-9]+$/.test(projectId)) return;
     if (document.getElementById(CLARITY_SCRIPT_ID)) return;
 
     // Privacy-first default: Clarity is only loaded on non-production builds.
