@@ -531,3 +531,59 @@
     text-align: left;
   }
 }
+
+
+/* Improve readability on the release-management screen without changing its
+   information hierarchy or release controls. */
+.release-admin-page :where(
+  .release-admin-head > div > p:last-child,
+  .release-admin-summary span,
+  .release-admin-summary small,
+  .trial-admin-note,
+  .editor-field > span,
+  .release-admin-panel small,
+  .release-admin-panel p,
+  .release-history-list article small,
+  .release-history-list article p
+) {
+  color: #405b78;
+}
+
+.release-admin-page .eyebrow {
+  color: #2f6fae;
+  opacity: 1;
+}
+
+.release-admin-page :where(input, select, textarea) {
+  border-color: #b8cce1;
+  color: #183a5c;
+  background: #fff;
+}
+
+.release-admin-page :where(input, textarea)::placeholder {
+  color: #64788f;
+  opacity: 1;
+}
+
+.release-admin-page .admin-safety-confirm {
+  color: #304f70;
+}
+
+.release-admin-page .admin-safety-confirm p {
+  color: #405b78;
+}
+
+.release-github-diagnostic .admin-panel-heading p {
+  color: #405b78;
+}
+
+.release-github-readiness-result {
+  margin-top: 10px;
+  border: 1px solid #c9dced;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 10px 12px;
+  color: #274a6d !important;
+  font-weight: 700;
+  line-height: 1.7;
+}

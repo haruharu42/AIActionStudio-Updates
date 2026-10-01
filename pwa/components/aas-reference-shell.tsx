@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { SharedMobileBottomNav } from "@/components/shared-mobile-bottom-nav";
@@ -178,7 +179,11 @@ export function AasReferenceBottomNav({
   onLibrary?: () => void;
 }) {
   const { state } = useSharedAccessState();
+  const pathname = usePathname();
   const userId = state.kind === "ready" ? state.profile.id : "";
+  const desktopNavClassName = pathname === "/"
+    ? "aas-reference-desktop-nav"
+    : "aas-reference-desktop-nav side";
   const [desktopItems, setDesktopItems] = useState<DesktopNavItemKey[]>([...DEFAULT_DESKTOP_NAV_ITEMS]);
   const [customizing, setCustomizing] = useState(false);
 
@@ -214,7 +219,7 @@ export function AasReferenceBottomNav({
         className="aas-reference-mobile-main-nav"
       />
 
-      <nav className="aas-reference-desktop-nav" aria-label="PCメインナビゲーション">
+      <nav className={desktopNavClassName} aria-label="PCメインナビゲーション">
         <NavItem active={active === "home"} href="/" icon="⌂" label="ホーム" onClick={onHome} />
         {desktopItems.map((key) => {
           const item = desktopNavItemFor(key);

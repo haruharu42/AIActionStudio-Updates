@@ -221,7 +221,7 @@ export function AdminReleasePage() {
   };
 
   const diagnoseGithub = async () => {
-    if (busy || !deploymentSnapshot?.supportsGithubReadiness) return;
+    if (busy) return;
     setBusy(true);
     setError("");
     setGithubReadiness(null);
@@ -533,6 +533,37 @@ export function AdminReleasePage() {
         </section>
       )}
 
+      {IS_PREVIEW_DEPLOYMENT && (
+        <section className="release-admin-panel release-github-diagnostic">
+          <div className="admin-panel-heading">
+            <div>
+              <p className="eyebrow">GITHUB RELEASE CONNECTION</p>
+              <h2>GitHub公開連携の読み取り診断</h2>
+              <p>管理者確認中・指定テスター確認中のどちらでも実行できます。公開処理やDB変更は開始しません。</p>
+            </div>
+          </div>
+          <div className="admin-safety-confirm">
+            <p>対象リポジトリと公開ワークフローへ、サーバー側の設定済みトークンでGET要求するだけの安全な診断です。</p>
+            {deploymentSnapshot && !deploymentSnapshot.supportsGithubReadiness && (
+              <p className="route-notice error">
+                Workerの互換情報を確認できませんでした。現在のPreviewから読み取り診断を直接試せます。
+              </p>
+            )}
+            <button type="button" disabled={busy} onClick={() => void diagnoseGithub()}>
+              {busy ? "確認中…" : "GitHub公開連携を安全に確認"}
+            </button>
+            {githubReadiness && (
+              <p role="status" className="release-github-readiness-result">
+                トークン設定: {githubReadiness.configured ? "あり" : "なし"}<br />
+                新リポジトリ読み取り: {githubReadiness.repositoryReadable ? "成功" : "未確認・失敗"}<br />
+                公開ワークフロー読み取り: {githubReadiness.workflowReadable ? "成功" : "未確認・失敗"}<br />
+                公開実行権限: 未検証（この診断ではdispatchしません）
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
       {candidate && snapshot?.channel.candidate_stage === "tester" && (
         <section className="release-admin-panel release-publish-verification">
           <div className="admin-panel-heading">
@@ -586,23 +617,6 @@ export function AdminReleasePage() {
             <p className="route-notice error">
               管理画面からの一般公開連携は初回設定待ちです。Supabase Edge Function secret「AAS_GITHUB_RELEASE_TOKEN」を設定すると有効になります。
             </p>
-          )}
-          {IS_PREVIEW_DEPLOYMENT && deploymentSnapshot?.supportsGithubReadiness && (
-            <div className="admin-safety-confirm">
-              <strong>GitHub公開連携の読み取り診断</strong>
-              <p>対象リポジトリとワークフローへ、サーバー側の設定済みトークンでGET要求するだけです。公開やDB変更は行いません。</p>
-              <button type="button" disabled={busy} onClick={() => void diagnoseGithub()}>
-                GitHub公開連携を安全に確認
-              </button>
-              {githubReadiness && (
-                <p role="status">
-                  トークン設定: {githubReadiness.configured ? "あり" : "なし"}<br />
-                  新リポジトリ読み取り: {githubReadiness.repositoryReadable ? "成功" : "未確認・失敗"}<br />
-                  公開ワークフロー読み取り: {githubReadiness.workflowReadable ? "成功" : "未確認・失敗"}<br />
-                  公開実行権限: 未検証（この診断ではdispatchしません）
-                </p>
-              )}
-            </div>
           )}
           {!IS_PREVIEW_DEPLOYMENT && (
             <p className="route-notice error">一般公開PWAへの反映操作はPreview PWAでのみ有効です。</p>
