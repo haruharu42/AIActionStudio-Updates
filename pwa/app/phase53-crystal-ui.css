@@ -1129,7 +1129,6 @@ body.aas-crystal-theme :where(.pwa-shell .side-nav a, .pwa-shell .side-nav butto
     bottom: 18px;
   }
 }
-}
 
 @media (max-width: 620px) {
   body.aas-crystal-theme main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
