@@ -165,6 +165,10 @@ jobs:
         working-directory: release-workdir
         run: npm ci --ignore-scripts --no-audit --no-fund
 
+      - name: Dependency audit
+        working-directory: release-workdir
+        run: npm audit --audit-level=moderate
+
       - name: Verify Cloudflare authentication
         working-directory: release-workdir
         run: npx wrangler whoami --json >/dev/null
