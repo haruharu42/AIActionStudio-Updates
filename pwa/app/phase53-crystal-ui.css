@@ -1070,7 +1070,8 @@ body.aas-crystal-theme :where(.pwa-shell .side-nav a, .pwa-shell .side-nav butto
     right: auto;
     left: 214px;
     bottom: 18px;
-  
+  }
+
   body.aas-crystal-theme .aas-reference-desktop-nav.side {
     inset: 88px auto 18px 16px;
     left: 16px;
