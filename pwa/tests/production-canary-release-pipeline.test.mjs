@@ -23,7 +23,7 @@ test("Preview and Production Canary tester consent are stored separately", async
   assert.match(gate, /PRODUCTION CANARY/);
   assert.match(gate, /Production Canary版を適用しますか？/);
   assert.match(gate, /Canary版を適用/);
-  assert.match(gate, /公開環境と同じProduction設定/);
+  assert.match(gate, /公開PWAと同じProduction設定/);
   assert.match(gate, /audience === null/);
 });
 
