@@ -29,8 +29,8 @@ export function ClarityPreviewAnalytics() {
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
       })(window, document, "clarity", "script", "${projectId}");
       window.clarity("consentv2", {
-        analytics_storage: "denied",
-        ad_storage: "denied"
+        analytics_Storage: "denied",
+        ad_Storage: "denied"
       });
     `;
     document.head.appendChild(script);
