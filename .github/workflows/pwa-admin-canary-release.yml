@@ -1,0 +1,258 @@
+name: "🚀 Production Canaryへ反映"
+run-name: "Production Canary • ${{ inputs.request_id }} • ${{ inputs.source_sha }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: "Supabase Canary deployment request UUID"
+        required: true
+        type: string
+      release_id:
+        description: "AAS app release UUID"
+        required: true
+        type: string
+      source_branch:
+        description: "Approved Preview source branch"
+        required: true
+        type: string
+      source_sha:
+        description: "Approved 40-character Preview SHA"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: aas-admin-production-canary
+  cancel-in-progress: false
+
+jobs:
+  deploy-canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: pwa
+    env:
+      # Use the exact same backend/public build configuration as the general-public PWA.
+      NEXT_PUBLIC_AAS_SUPABASE_URL: ${{ secrets.AAS_PREVIEW_SUPABASE_URL }}
+      NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.AAS_PREVIEW_SUPABASE_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_AAS_TERMS_URL: /terms
+      NEXT_PUBLIC_AAS_PRIVACY_URL: /privacy
+      NEXT_PUBLIC_AAS_AI_TERMS_URL: /ai-terms
+      NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: public
+      NEXT_PUBLIC_AAS_SOURCE_BRANCH: ${{ inputs.source_branch }}
+      AAS_CLOUDFLARE_WORKER_NAME: ai-article-studio-pwa
+      AAS_CLOUDFLARE_PUBLIC_WORKERS_DEV: "true"
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_WRITE_LOGS: "false"
+
+    steps:
+      - name: Validate Canary release request
+        id: target
+        shell: bash
+        working-directory: .
+        env:
+          REQUEST_ID: ${{ inputs.request_id }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          SOURCE_BRANCH: ${{ inputs.source_branch }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$REQUEST_ID" | grep -Eqi '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+            echo 'Invalid Canary deployment request UUID.' >&2
+            exit 1
+          fi
+          if ! printf '%s' "$RELEASE_ID" | grep -Eqi '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+            echo 'Invalid release UUID.' >&2
+            exit 1
+          fi
+          case "$SOURCE_BRANCH" in
+            main|preview/current) ;;
+            *) echo 'Only main or preview/current may be used for Production Canary.' >&2; exit 1 ;;
+          esac
+          if ! printf '%s' "$SOURCE_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo 'Preview SHA must be an exact lowercase 40-character Git commit SHA.' >&2
+            exit 1
+          fi
+          echo "sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Validate required deployment secrets
+        shell: bash
+        working-directory: .
+        run: |
+          set -euo pipefail
+          for name in             NEXT_PUBLIC_AAS_SUPABASE_URL             NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY             CLOUDFLARE_API_TOKEN             CLOUDFLARE_ACCOUNT_ID
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "Required Actions secret is unavailable: $name" >&2
+              exit 1
+            fi
+          done
+          if ! printf '%s' "$NEXT_PUBLIC_AAS_SUPABASE_URL" | grep -Eq '^https://[^[:space:]]+$'; then
+            echo 'Supabase URL must be HTTPS.' >&2
+            exit 1
+          fi
+          if printf '%s' "$NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY" | grep -Eqi 'sb_secret_|service[_-]?role'; then
+            echo 'Forbidden Supabase secret/service-role material detected.' >&2
+            exit 1
+          fi
+
+      - name: Checkout exact approved Preview SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.target.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify approved Preview branch still contains the selected SHA
+        shell: bash
+        working-directory: .
+        env:
+          SOURCE_BRANCH: ${{ inputs.source_branch }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/heads/$SOURCE_BRANCH:refs/remotes/origin/$SOURCE_BRANCH"
+          branch_head="$(git rev-parse "refs/remotes/origin/$SOURCE_BRANCH")"
+          if [ "$branch_head" != "$SOURCE_SHA" ]; then
+            echo 'Preview branch moved after candidate registration. Register a fresh candidate from the latest Preview.' >&2
+            echo "Candidate: $SOURCE_SHA" >&2
+            echo "Current:   $branch_head" >&2
+            exit 1
+          fi
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.13.0"
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build and regression tests once for Canary and Public
+        env:
+          NEXT_PUBLIC_AAS_BUILD_SHA: ${{ inputs.source_sha }}
+        run: npm test
+
+      - name: Dependency audit
+        run: npm audit --audit-level=moderate
+
+      - name: Locate generated public Wrangler config
+        id: wrangler-config
+        shell: bash
+        run: |
+          set -euo pipefail
+          config="$(find . -path './node_modules' -prune -o -path './.wrangler' -prune -o -name wrangler.json -type f -print | head -n 1)"
+          if [ -z "$config" ]; then
+            echo 'Generated wrangler.json was not found after build.' >&2
+            exit 1
+          fi
+          echo "config=$config" >> "$GITHUB_OUTPUT"
+
+      - name: Verify public-build contract and create Canary config
+        id: configs
+        shell: bash
+        env:
+          CONFIG_PATH: ${{ steps.wrangler-config.outputs.config }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const configPath = process.env.CONFIG_PATH;
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+          if (config.name !== 'ai-article-studio-pwa') throw new Error('Unexpected public Worker name');
+          if (config.workers_dev !== true) throw new Error('workers_dev must be true');
+          if (config.preview_urls !== false) throw new Error('preview_urls must be false');
+          if (config.route || (Array.isArray(config.routes) && config.routes.length > 0)) throw new Error('Custom routes must remain absent');
+          const serialized = JSON.stringify(config);
+          if (/sb_secret_|service[_-]?role/i.test(serialized)) throw new Error('Forbidden secret marker in Worker config');
+          const canary = { ...config, name: 'ai-article-studio-pwa-canary' };
+          const canaryPath = path.join(path.dirname(configPath), 'wrangler.canary.json');
+          fs.writeFileSync(canaryPath, JSON.stringify(canary, null, 2) + '\n');
+          fs.writeFileSync('.release-bundle-manifest.json', JSON.stringify({
+            source_sha: process.env.SOURCE_SHA,
+            public_config: configPath,
+            canary_config: canaryPath,
+            canary_url: 'https://ai-article-studio-pwa-canary.ai-article-studio.workers.dev/',
+            public_url: 'https://ai-article-studio-pwa.ai-article-studio.workers.dev/'
+          }, null, 2) + '\n');
+          console.log('Public-build and Canary config contract: PASS');
+          NODE
+          echo "canary_config=$(node -p "require('./.release-bundle-manifest.json').canary_config")" >> "$GITHUB_OUTPUT"
+        env:
+          CONFIG_PATH: ${{ steps.wrangler-config.outputs.config }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+
+      - name: Verify Cloudflare authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler whoami --json >/dev/null
+
+      - name: Canary deployment dry-run
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .canary-dry-run
+          npx wrangler deploy             --dry-run             --config "${{ steps.configs.outputs.canary_config }}"             --outdir .canary-dry-run
+          test -d .canary-dry-run
+
+      - name: Deploy Production Canary Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler deploy             --config "${{ steps.configs.outputs.canary_config }}"             --keep-vars             --message "AAS Production Canary ${{ inputs.request_id }} ${{ inputs.source_sha }}"
+          echo 'Production Canary URL: https://ai-article-studio-pwa-canary.ai-article-studio.workers.dev/'
+
+      - name: Package exact tested release bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f release-bundle.tgz release-bundle.tgz.sha256
+          tar             --exclude='./node_modules'             --exclude='./.wrangler'             --exclude='./.canary-dry-run'             --exclude='./release-bundle.tgz'             --exclude='./release-bundle.tgz.sha256'             -czf release-bundle.tgz .
+          sha256sum release-bundle.tgz > release-bundle.tgz.sha256
+          sha256sum -c release-bundle.tgz.sha256
+
+      - name: Upload exact Canary-tested release bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: aas-release-bundle-${{ inputs.source_sha }}
+          path: |
+            pwa/release-bundle.tgz
+            pwa/release-bundle.tgz.sha256
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Write Canary deployment summary
+        if: ${{ success() }}
+        shell: bash
+        working-directory: .
+        run: |
+          set -euo pipefail
+          {
+            echo '## AAS Production Canary'
+            echo
+            echo '- Request: ${{ inputs.request_id }}'
+            echo '- Release: ${{ inputs.release_id }}'
+            echo '- Source SHA: ${{ inputs.source_sha }}'
+            echo '- Canary: https://ai-article-studio-pwa-canary.ai-article-studio.workers.dev/'
+            echo '- General-public Worker: unchanged'
+            echo '- Exact release bundle stored as GitHub Actions artifact'
+          } >> "$GITHUB_STEP_SUMMARY"
