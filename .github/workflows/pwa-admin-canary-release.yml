@@ -220,11 +220,27 @@ jobs:
 
       - name: Package exact tested release bundle
         shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
-          rm -f release-bundle.tgz release-bundle.tgz.sha256
-          tar             --exclude='./node_modules'             --exclude='./.wrangler'             --exclude='./.canary-dry-run'             --exclude='./release-bundle.tgz'             --exclude='./release-bundle.tgz.sha256'             -czf release-bundle.tgz .
-          sha256sum release-bundle.tgz > release-bundle.tgz.sha256
+          tmp_bundle="$RUNNER_TEMP/aas-release-bundle-$SOURCE_SHA.tgz"
+          tmp_checksum="$RUNNER_TEMP/aas-release-bundle-$SOURCE_SHA.tgz.sha256"
+          rm -f release-bundle.tgz release-bundle.tgz.sha256 "$tmp_bundle" "$tmp_checksum"
+          tar \
+            --exclude='./node_modules' \
+            --exclude='./.wrangler' \
+            --exclude='./.canary-dry-run' \
+            --exclude='./release-bundle.tgz' \
+            --exclude='./release-bundle.tgz.sha256' \
+            -czf "$tmp_bundle" .
+          (
+            cd "$RUNNER_TEMP"
+            sha256sum "aas-release-bundle-$SOURCE_SHA.tgz" > "aas-release-bundle-$SOURCE_SHA.tgz.sha256"
+            sha256sum -c "aas-release-bundle-$SOURCE_SHA.tgz.sha256"
+          )
+          cp "$tmp_bundle" release-bundle.tgz
+          cp "$tmp_checksum" release-bundle.tgz.sha256
           sha256sum -c release-bundle.tgz.sha256
 
       - name: Upload exact Canary-tested release bundle
