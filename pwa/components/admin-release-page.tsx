@@ -705,11 +705,11 @@ export function AdminReleasePage() {
             <div>
               <p className="eyebrow">GITHUB RELEASE CONNECTION</p>
               <h2>GitHub公開連携の読み取り診断</h2>
-              <p>管理者確認中・指定テスター確認中のどちらでも実行できます。公開処理やDB変更は開始しません。</p>
+              <p>Preview管理者確認中・Production Canary確認中のどちらでも実行できます。デプロイやDB変更は開始しません。</p>
             </div>
           </div>
           <div className="admin-safety-confirm">
-            <p>対象リポジトリと公開ワークフローへ、サーバー側の設定済みトークンでGET要求するだけの安全な診断です。</p>
+            <p>対象リポジトリ、Production Canaryワークフロー、一般公開ワークフローへGET要求するだけの安全な診断です。</p>
             {deploymentSnapshot && !deploymentSnapshot.supportsGithubReadiness && (
               <p className="route-notice error">
                 Workerの互換情報を確認できませんでした。現在のPreviewから読み取り診断を直接試せます。
@@ -722,70 +722,90 @@ export function AdminReleasePage() {
               <p role="status" className="release-github-readiness-result">
                 トークン設定: {githubReadiness.configured ? "あり" : "なし"}<br />
                 新リポジトリ読み取り: {githubReadiness.repositoryReadable ? "成功" : "未確認・失敗"}<br />
-                公開ワークフロー読み取り: {githubReadiness.workflowReadable ? "成功" : "未確認・失敗"}<br />
-                公開実行権限: 未検証（この診断ではdispatchしません）
+                Production Canaryワークフロー: {githubReadiness.canaryWorkflowReadable ? "成功" : "未確認・失敗"}<br />
+                一般公開ワークフロー: {githubReadiness.publicWorkflowReadable ? "成功" : "未確認・失敗"}<br />
+                dispatch権限: 未検証（この診断では実行しません）
               </p>
             )}
           </div>
         </section>
       )}
 
-      {candidate && snapshot?.channel.candidate_stage === "tester" && (
+      {candidate && snapshot?.channel.candidate_stage === "tester" && candidateCanaryDeployment?.status === "succeeded" && (
         <section className="release-admin-panel release-publish-verification">
           <div className="admin-panel-heading">
             <div>
-              <p className="eyebrow">PUBLIC RELEASE VERIFICATION</p>
-              <h2>全体公開前チェック</h2>
-              <p>v{candidate.version} を全一般ユーザーへ公開する前に、現在の候補版そのものを確認してください。</p>
+              <p className="eyebrow">PRODUCTION CANARY VERIFICATION</p>
+              <h2>{canaryVerified ? "Production Canary確認済み" : "Production Canary確認チェック"}</h2>
+              <p>v{candidate.version} をAAS-000002等の指定テスターで本番相当確認し、同一artifactを一般公開へ昇格できる状態にします。</p>
             </div>
             <strong>{publishVerification.length} / {PUBLISH_VERIFICATION_ITEMS.length}</strong>
           </div>
-          <p className="trial-admin-note">
-            候補版登録: {formatDate(candidate.created_at)} / build: {candidate.build_key}。候補版が長期間残っている場合は、現在のPreview・最新HEADと同一内容か必ず再確認してください。
-          </p>
-          <div className="release-publish-checklist">
-            {PUBLISH_VERIFICATION_ITEMS.map((item) => (
-              <label key={item.key} className={publishVerification.includes(item.key) ? "checked" : ""}>
-                <input
-                  type="checkbox"
-                  checked={publishVerification.includes(item.key)}
-                  onChange={() => togglePublishVerification(item.key)}
-                />
-                <span><strong>{item.label}</strong><small>{item.detail}</small></span>
-              </label>
-            ))}
-          </div>
-          <p className={publishVerificationReady ? "route-notice" : "route-notice error"}>
-            {publishVerificationReady
-              ? "全項目を確認しました。候補版の内容を再確認してから全体公開承認へ進めます。"
-              : "未確認項目があります。全項目を確認するまで全体公開ボタンは有効になりません。"}
-          </p>
+
           <div className="admin-safety-confirm">
-            <strong>一般公開PWAへの反映</strong><br />
-            Preview branch: {AAS_PREVIEW_RELEASE_BRANCH}<br />
-            Preview Build: {/^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA) ? PREVIEW_BUILD_SHA.slice(0, 12) : "取得できません"}
-            {candidateDeployment && (
-              <>
-                <br />状態: {deploymentStatusLabel(candidateDeployment.status)}
-                {candidateDeployment.github_run_url && (
-                  <> ・ <a href={candidateDeployment.github_run_url} target="_blank" rel="noopener noreferrer">GitHub Actionsを確認 ↗</a></>
-                )}
-                {candidateDeployment.error_message && <><br />エラー: {candidateDeployment.error_message}</>}
-              </>
+            <strong>Production Canary</strong><br />
+            URL: <a href={AAS_CANARY_PWA_URL} target="_blank" rel="noopener noreferrer">{AAS_CANARY_PWA_URL}</a><br />
+            Source SHA: {candidateCanaryDeployment.source_sha.slice(0, 12)}<br />
+            状態: {deploymentStatusLabel(candidateCanaryDeployment)}
+            {candidateCanaryDeployment.github_run_url && (
+              <> ・ <a href={candidateCanaryDeployment.github_run_url} target="_blank" rel="noopener noreferrer">GitHub Actions ↗</a></>
+            )}
+            {candidateCanaryDeployment.verified_at && (
+              <><br />確認済み: {formatDate(candidateCanaryDeployment.verified_at)}</>
             )}
           </div>
-          {!candidateMatchesPreview && (
+
+          {!canaryVerified && (
+            <>
+              <div className="release-publish-checklist">
+                {PUBLISH_VERIFICATION_ITEMS.map((item) => (
+                  <label key={item.key} className={publishVerification.includes(item.key) ? "checked" : ""}>
+                    <input
+                      type="checkbox"
+                      checked={publishVerification.includes(item.key)}
+                      onChange={() => togglePublishVerification(item.key)}
+                    />
+                    <span><strong>{item.label}</strong><small>{item.detail}</small></span>
+                  </label>
+                ))}
+              </div>
+              <p className={publishVerificationReady ? "route-notice" : "route-notice error"}>
+                {publishVerificationReady
+                  ? "Canary確認項目が揃いました。第3段階で確認済みにすると、このartifactが一般公開用として固定されます。"
+                  : "未確認項目があります。全項目を確認するまでCanary確認済みにはできません。"}
+              </p>
+            </>
+          )}
+
+          {canaryVerified && (
+            <p className="route-notice">
+              0002で確認したCanary artifactを固定済みです。以後main/Previewが進んでも、このsource SHAのartifactだけを第4段階で一般公開します。
+            </p>
+          )}
+
+          {candidatePublicDeployment && (
+            <div className="admin-safety-confirm">
+              <strong>一般公開昇格</strong><br />
+              状態: {deploymentStatusLabel(candidatePublicDeployment)}
+              {candidatePublicDeployment.github_run_url && (
+                <> ・ <a href={candidatePublicDeployment.github_run_url} target="_blank" rel="noopener noreferrer">GitHub Actions ↗</a></>
+              )}
+              {candidatePublicDeployment.error_message && <><br />エラー: {candidatePublicDeployment.error_message}</>}
+            </div>
+          )}
+
+          {!canaryMatchesCandidate && (
             <p className="route-notice error">
-              候補版のBuildと現在のPreview Buildが一致していません。最新Previewで新しい管理者テスト版を登録し直すと公開ボタンが有効になります。
+              Production Canaryのsource SHAと候補版buildが一致していません。一般公開はブロックされています。
             </p>
           )}
           {deploymentSnapshot && !deploymentSnapshot.configured && (
             <p className="route-notice error">
-              管理画面からの一般公開連携は初回設定待ちです。Supabase Edge Function secret「AAS_GITHUB_RELEASE_TOKEN」を設定すると有効になります。
+              GitHub連携が未設定です。Supabase Edge Function secret「AAS_GITHUB_RELEASE_TOKEN」を設定するとCanary/Publicデプロイを実行できます。
             </p>
           )}
           {!IS_PREVIEW_DEPLOYMENT && (
-            <p className="route-notice error">一般公開PWAへの反映操作はPreview PWAでのみ有効です。</p>
+            <p className="route-notice error">Canary確認確定と一般公開操作はPreview PWAの管理者画面でのみ有効です。</p>
           )}
           {currentSessionAal !== "aal2" && (
             <p className="route-notice error">
