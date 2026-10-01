@@ -8,6 +8,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import {
   appDeploymentAudience,
+  appDeploymentTier,
   clearEffectiveRelease,
   loadMyAppReleaseState,
   type AppReleaseState,
@@ -32,6 +33,8 @@ type GateState =
 export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const audience = appDeploymentAudience();
+  const deploymentTier = appDeploymentTier();
+  const isCanary = deploymentTier === "canary";
   const [gate, setGate] = useState<GateState>(() => audience === "public" ? { kind: "public" } : { kind: "loading" });
   const [viewerId, setViewerId] = useState("");
   const [acceptedTesterReleaseId, setAcceptedTesterReleaseId] = useState("");
@@ -73,7 +76,7 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
         }
         if (next.is_tester_preview && next.effective_release) {
           try {
-            const stored = window.localStorage.getItem("aas.tester-preview.accepted." + session.user.id) ?? "";
+            const stored = window.localStorage.getItem("aas.tester-" + deploymentTier + ".accepted." + session.user.id) ?? "";
             setAcceptedTesterReleaseId(stored === next.effective_release.id ? stored : "");
           } catch {
             setAcceptedTesterReleaseId("");
@@ -119,7 +122,7 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
       window.removeEventListener("online", refreshWhenVisible);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, [audience]);
+  }, [audience, deploymentTier]);
 
   if (audience === "public" || gate.kind === "public" || alwaysPublicPreviewPath(pathname)) return <>{children}</>;
 
@@ -128,7 +131,7 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
     if (testerRelease && acceptedTesterReleaseId !== testerRelease.id) {
       const applyTesterRelease = () => {
         try {
-          if (viewerId) window.localStorage.setItem("aas.tester-preview.accepted." + viewerId, testerRelease.id);
+          if (viewerId) window.localStorage.setItem("aas.tester-" + deploymentTier + ".accepted." + viewerId, testerRelease.id);
         } catch {
           // Session state still allows the tester to continue when storage is unavailable.
         }
@@ -138,8 +141,8 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
       return (
         <main className="standalone-page release-tester-consent-page">
           <section className="standalone-card release-update-card release-tester-consent-card">
-            <p className="eyebrow">TESTER UPDATE</p>
-            <h1>テスト版を適用しますか？</h1>
+            <p className="eyebrow">{isCanary ? "PRODUCTION CANARY" : "TESTER UPDATE"}</p>
+            <h1>{isCanary ? "Production Canary版を適用しますか？" : "テスト版を適用しますか？"}</h1>
             <div className="release-version-row">
               <span>現在 v{gate.state.current_release?.version ?? "-"}</span>
               <b>→</b>
@@ -147,9 +150,13 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
             </div>
             <h2>{testerRelease.title}</h2>
             {testerRelease.notes && <p className="release-notes">{testerRelease.notes}</p>}
-            <p className="release-confirm-note">指定テスター向けの候補版です。適用後、主要導線と通知センターを確認してください。</p>
+            <p className="release-confirm-note">
+              {isCanary
+                ? "一般公開前のProduction Canaryです。公開PWAと同じProduction設定で主要導線・通知・PWA更新を確認してください。"
+                : "指定テスター向けの候補版です。適用後、主要導線と通知センターを確認してください。"}
+            </p>
             <div className="release-confirm-actions">
-              <button className="primary-action" type="button" onClick={applyTesterRelease}>テスト版を適用</button>
+              <button className="primary-action" type="button" onClick={applyTesterRelease}>{isCanary ? "Canary版を適用" : "テスト版を適用"}</button>
               <button type="button" onClick={() => { window.location.href = PUBLIC_PWA_URL; }}>あとで確認</button>
             </div>
           </section>
@@ -160,19 +167,23 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
   }
 
   if (gate.kind === "signed_out" && pathname === "/") return <>{children}</>;
-  if (gate.kind === "loading") return <AppLoadingScreen message="候補版の利用権を確認しています…" />;
+  if (gate.kind === "loading") return <AppLoadingScreen message={isCanary ? "Production Canaryの利用権を確認しています…" : "候補版の利用権を確認しています…"} />;
 
   const message = gate.kind === "denied" && gate.state?.is_release_tester
-    ? "現在は第1段階の管理者確認中です。管理者が第2段階へ進めると、この一般ユーザーテストアカウントで候補版を確認できます。"
+    ? (isCanary
+        ? "Production Canaryはまだ指定テスターへ反映されていません。管理者がCanaryデプロイを完了すると確認できます。"
+        : "現在は第1段階の管理者確認中です。管理者が次の段階へ進めると、このテストアカウントで候補版を確認できます。")
     : gate.kind === "denied"
-      ? "この候補版は管理者と、管理者が指定した一般ユーザーテスターだけが利用できます。"
+      ? (isCanary
+          ? "Production Canaryは管理者と指定された一般ユーザーテスターだけが利用できます。"
+          : "この候補版は管理者と、管理者が指定した一般ユーザーテスターだけが利用できます。")
       : "候補版の利用権を確認できませんでした。";
 
   return (
     <main className="standalone-page">
       <section className="standalone-card">
-        <p className="eyebrow">PRE-RELEASE ACCESS</p>
-        <h1>アップデート確認専用</h1>
+        <p className="eyebrow">{isCanary ? "PRODUCTION CANARY ACCESS" : "PRE-RELEASE ACCESS"}</p>
+        <h1>{isCanary ? "Production Canary確認専用" : "アップデート確認専用"}</h1>
         <p className={gate.kind === "error" ? "route-notice error" : "route-notice"}>{message}</p>
         {gate.kind === "signed_out" ? (
           <Link className="primary-action" href="/">ログイン画面へ</Link>
