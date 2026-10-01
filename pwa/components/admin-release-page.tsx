@@ -497,7 +497,7 @@ export function AdminReleasePage() {
         <div>
           <p className="eyebrow">RELEASE CONTROL</p>
           <h1>アップデート管理</h1>
-          <p>コード配布は①管理者確認 → ②指定テスター確認 → ③全体公開で進め、機能単位の公開・メンテナンスは全機能管理センターで制御します。</p>
+          <p>コード配布は①Preview管理者確認 → ②Production Canaryへ反映 → ③公開テスター確認済み → ④全一般ユーザーへ公開で進めます。</p>
         </div>
         <nav>
           <Link href="/admin/features">全機能管理センター</Link>
@@ -529,7 +529,11 @@ export function AdminReleasePage() {
         <article>
           <span>候補版の確認段階</span>
           <strong>{candidate ? "v" + candidate.version : "なし"}</strong>
-          <small>{candidate ? (snapshot?.channel.candidate_stage === "tester" ? "第2段階：指定テスター確認中" : "第1段階：管理者確認中") : "候補版を登録すると管理者だけで確認できます。"}</small>
+          <small>{candidate
+            ? (snapshot?.channel.candidate_stage === "tester"
+              ? (canaryVerified ? "第3段階：Production Canary確認済み" : "第2段階：Production Canary確認中")
+              : "第1段階：Preview管理者確認中")
+            : "候補版を登録するとPreview管理者だけで確認できます。"}</small>
         </article>
         <article>
           <span>更新方式</span>
@@ -546,9 +550,9 @@ export function AdminReleasePage() {
           </div>
         </div>
         <p className="trial-admin-note">
-          登録した時点では一般ユーザーへは反映されません。まず管理者だけで確認し、問題がなければ第2段階として指定テスターへ反映します。第2段階を通過するまで全体公開はDB側でも禁止します。
+          登録した時点では公開環境へは反映されません。Preview管理者で確認後、Production Canaryへ同じbuildを出し、指定テスターの確認済み操作を通過したartifactだけを一般公開できます。
         </p>
-        <div className="admin-safety-confirm">入力順：①バージョン → ②更新名を選択 → ③ユーザー向け変更内容 → ④任意/必須を選択。登録後も、テスター確認と全体公開は別操作です。</div>
+        <div className="admin-safety-confirm">入力順：①バージョン → ②更新名 → ③ユーザー向け変更内容 → ④任意/必須。登録後はCanary作成・Canary確認済み・一般公開がすべて別操作です。</div>
 
         <div className="release-admin-form">
           <label className="editor-field">
@@ -598,10 +602,10 @@ export function AdminReleasePage() {
         <div className="admin-panel-heading">
           <div>
             <p className="eyebrow">TEST USERS</p>
-            <h2>一般ユーザーテスター</h2>
+            <h2>Production Canaryテスター</h2>
           </div>
         </div>
-        <p className="trial-admin-note">管理者権限へ変更せず、一般ユーザーのまま候補版を確認するアカウントです。現在の既定テスターは AAS-000002 です。</p>
+        <p className="trial-admin-note">管理者権限へ変更せず、一般ユーザーのままProduction Canaryを確認するアカウントです。現在の既定テスターは AAS-000002 です。</p>
         <div className="release-admin-form">
           <label className="editor-field">
             <span>AASユーザーID</span>
@@ -613,7 +617,7 @@ export function AdminReleasePage() {
           {(snapshot?.testers ?? []).filter((tester) => tester.enabled).map((tester) => (
             <article key={tester.aas_user_id}>
               <div className="release-history-version"><strong>{tester.aas_user_id}</strong><span>一般ユーザー</span></div>
-              <div><strong>候補版テスター</strong><small>指定更新: {formatDate(tester.updated_at)}</small></div>
+              <div><strong>Production Canaryテスター</strong><small>指定更新: {formatDate(tester.updated_at)}</small></div>
               <div className="release-history-actions"><button type="button" disabled={busy} onClick={() => void setTester(tester.aas_user_id, false)}>指定解除</button></div>
             </article>
           ))}
@@ -623,31 +627,72 @@ export function AdminReleasePage() {
       {candidate && (
         <section className="release-admin-panel candidate">
           <div>
-            <p className="eyebrow">{snapshot?.channel.candidate_stage === "tester" ? "USER TEST PREVIEW" : "ADMIN PREVIEW"}</p>
+            <p className="eyebrow">
+              {snapshot?.channel.candidate_stage === "tester"
+                ? (canaryVerified ? "CANARY VERIFIED" : "PRODUCTION CANARY")
+                : "ADMIN PREVIEW"}
+            </p>
             <h2>
               {snapshot?.channel.candidate_stage === "tester"
-                ? `v${candidate.version} を指定テスター確認中`
-                : `v${candidate.version} を管理者確認中`}
+                ? (canaryVerified
+                  ? `v${candidate.version} のProduction Canary確認済み`
+                  : `v${candidate.version} をProduction Canary確認中`)
+                : `v${candidate.version} をPreview管理者確認中`}
             </h2>
             <p>{candidate.title}</p>
             {candidate.notes && <pre>{candidate.notes}</pre>}
+            {candidateCanaryDeployment?.status === "succeeded" && (
+              <p className="trial-admin-note">
+                Canary Build: {candidateCanaryDeployment.source_sha.slice(0, 12)} ・
+                {" "}<a href={AAS_CANARY_PWA_URL} target="_blank" rel="noopener noreferrer">Production Canaryを開く ↗</a>
+                {candidateCanaryDeployment.github_run_url && (
+                  <> ・ <a href={candidateCanaryDeployment.github_run_url} target="_blank" rel="noopener noreferrer">GitHub Actions ↗</a></>
+                )}
+              </p>
+            )}
           </div>
           <div className="release-admin-publish">
             <span className={candidate.update_kind === "required" ? "required" : ""}>
               {candidate.update_kind === "required" ? "必須アップデート" : "任意アップデート"}
             </span>
-            {snapshot?.channel.candidate_stage === "tester" ? (
+
+            {snapshot?.channel.candidate_stage !== "tester" && (
               <button
                 className="primary-action"
                 type="button"
-                disabled={busy || deploymentInProgress || !publishVerificationReady || currentSessionAal !== "aal2" || !IS_PREVIEW_DEPLOYMENT || !candidateMatchesPreview}
+                disabled={
+                  busy
+                  || canaryDeploymentInProgress
+                  || !(snapshot?.testers ?? []).some((tester) => tester.enabled)
+                  || currentSessionAal !== "aal2"
+                  || !IS_PREVIEW_DEPLOYMENT
+                  || !candidateMatchesPreview
+                }
+                onClick={() => void deployCanary(candidate)}
+              >
+                {canaryDeploymentInProgress ? "Production Canaryへ反映中…" : "第2段階：Production Canaryへ反映"}
+              </button>
+            )}
+
+            {snapshot?.channel.candidate_stage === "tester" && !canaryVerified && (
+              <button
+                className="primary-action"
+                type="button"
+                disabled={busy || !publishVerificationReady || currentSessionAal !== "aal2" || !canaryMatchesCandidate}
+                onClick={() => void confirmCanary()}
+              >
+                第3段階：Canary確認済みにする
+              </button>
+            )}
+
+            {snapshot?.channel.candidate_stage === "tester" && canaryVerified && (
+              <button
+                className="primary-action"
+                type="button"
+                disabled={busy || publicDeploymentInProgress || currentSessionAal !== "aal2" || !canaryMatchesCandidate}
                 onClick={() => void publish(candidate)}
               >
-                {deploymentInProgress ? "一般公開PWAへ反映中…" : "第3段階：一般公開PWAへ反映"}
-              </button>
-            ) : (
-              <button className="primary-action" type="button" disabled={busy || !(snapshot?.testers ?? []).some((tester) => tester.enabled)} onClick={() => void promoteToTesters(candidate)}>
-                第2段階：指定テスターへ反映
+                {publicDeploymentInProgress ? "一般公開PWAへ昇格中…" : "第4段階：全一般ユーザーへ公開"}
               </button>
             )}
           </div>
