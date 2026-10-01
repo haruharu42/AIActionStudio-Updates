@@ -240,7 +240,7 @@ jobs:
             sha256sum -c "aas-release-bundle-$SOURCE_SHA.tgz.sha256"
           )
           cp "$tmp_bundle" release-bundle.tgz
-          cp "$tmp_checksum" release-bundle.tgz.sha256
+          sha256sum release-bundle.tgz > release-bundle.tgz.sha256
           sha256sum -c release-bundle.tgz.sha256
 
       - name: Upload exact Canary-tested release bundle
