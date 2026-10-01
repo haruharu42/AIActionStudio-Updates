@@ -1011,8 +1011,8 @@ body.aas-crystal-theme :where(.pwa-shell .side-nav a, .pwa-shell .side-nav butto
   color: #4d638f !important;
 }
 
-/* Match the approved PC preview only on the home screen.
-   Other routes keep the stable desktop dock placement. */
+/* Keep the approved left-rail navigation on desktop.
+   Inner routes use the same geometry and visual treatment as Home. */
 @media (min-width: 1100px) {
   body.aas-crystal-theme .reference-home > .aas-reference-desktop-nav {
     inset: 88px auto 18px 16px;
@@ -1067,6 +1067,63 @@ body.aas-crystal-theme :where(.pwa-shell .side-nav a, .pwa-shell .side-nav butto
   }
 
   body.aas-crystal-theme .reference-home > .aas-desktop-nav-customizer {
+    right: auto;
+    left: 214px;
+    bottom: 18px;
+  }
+
+  body.aas-crystal-theme .aas-reference-desktop-nav.side {
+    inset: 88px auto 18px 16px;
+    left: 16px;
+    right: auto;
+    bottom: 18px;
+    width: 188px;
+    max-height: calc(100dvh - 106px);
+    transform: none;
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-columns: unset;
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 5px;
+    overflow-y: auto;
+    border-radius: 20px;
+    padding: 10px;
+  }
+
+  body.aas-crystal-theme .aas-reference-desktop-nav.side a,
+  body.aas-crystal-theme .aas-reference-desktop-nav.side button {
+    width: 100%;
+    min-height: 45px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    grid-auto-flow: column;
+    justify-content: start;
+    place-items: center start;
+    gap: 8px;
+    text-align: left;
+  }
+
+  body.aas-crystal-theme .aas-reference-desktop-nav.side .active {
+    background: linear-gradient(110deg, #66d8ff, #627df0 58%, #9e72ed);
+    color: #fff;
+    box-shadow: 0 8px 22px rgb(85 104 211 / 22%);
+  }
+
+  body.aas-crystal-theme .aas-reference-desktop-nav.side .active span {
+    background: rgb(255 255 255 / 20%);
+    color: #fff;
+  }
+
+  body.aas-crystal-theme .aas-reference-desktop-nav.side .customize {
+    margin-top: auto;
+  }
+
+  body.aas-crystal-theme:has(.aas-reference-desktop-nav.side) {
+    box-sizing: border-box;
+    padding-left: 216px;
+  }
+
+  body.aas-crystal-theme .aas-reference-desktop-nav.side ~ .aas-desktop-nav-customizer {
     right: auto;
     left: 214px;
     bottom: 18px;
