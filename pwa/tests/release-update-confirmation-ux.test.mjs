@@ -38,13 +38,14 @@ test("successful public update shows one-time completion feedback after reload",
   assert.match(manager, /へアップデートしました/);
 });
 
-test("tester Preview requires explicit consent for each candidate release", async () => {
+test("Preview and Production Canary require separate explicit tester consent for each candidate", async () => {
   const gate = await readRepo("pwa/components/release-audience-gate.tsx");
 
   assert.match(gate, /テスト版を適用しますか？/);
-  assert.match(gate, /aas\.tester-preview\.accepted\./);
+  assert.match(gate, /Production Canary版を適用しますか？/);
+  assert.match(gate, /"aas\.tester-" \+ deploymentTier \+ "\.accepted\."/);
   assert.match(gate, /acceptedTesterReleaseId !== testerRelease\.id/);
-  assert.match(gate, /テスト版を適用/);
+  assert.match(gate, /Canary版を適用/);
   assert.match(gate, /あとで確認/);
 });
 

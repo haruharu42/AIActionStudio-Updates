@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       request_id:
-        description: "Supabase deployment request UUID"
+        description: "Supabase public deployment request UUID"
         required: true
         type: string
       release_id:
@@ -13,16 +13,21 @@ on:
         required: true
         type: string
       source_branch:
-        description: "Approved Preview source branch (main or preview/current)"
+        description: "Approved source branch"
         required: true
         type: string
       source_sha:
-        description: "Approved 40-character Preview SHA"
+        description: "Verified Production Canary source SHA"
+        required: true
+        type: string
+      canary_run_id:
+        description: "GitHub Actions run ID that produced the verified Canary artifact"
         required: true
         type: string
 
 permissions:
-  contents: write
+  contents: read
+  actions: read
 
 concurrency:
   group: aas-admin-public-release
@@ -32,40 +37,23 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    defaults:
-      run:
-        working-directory: pwa
     env:
-      NEXT_PUBLIC_AAS_SUPABASE_URL: ${{ secrets.AAS_PREVIEW_SUPABASE_URL }}
-      NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.AAS_PREVIEW_SUPABASE_PUBLISHABLE_KEY }}
-      NEXT_PUBLIC_AAS_TERMS_URL: /terms
-      NEXT_PUBLIC_AAS_PRIVACY_URL: /privacy
-      NEXT_PUBLIC_AAS_AI_TERMS_URL: /ai-terms
-      NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: public
-      AAS_CLOUDFLARE_WORKER_NAME: ai-article-studio-pwa
-      AAS_CLOUDFLARE_PUBLIC_WORKERS_DEV: "true"
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       WRANGLER_WRITE_LOGS: "false"
 
     steps:
-      - name: Validate admin release request
+      - name: Validate verified Canary release request
         id: target
         shell: bash
-        working-directory: .
         env:
-          EVENT_REF: ${{ github.ref }}
-          EVENT_SHA: ${{ github.sha }}
           REQUEST_ID: ${{ inputs.request_id }}
           RELEASE_ID: ${{ inputs.release_id }}
           SOURCE_BRANCH: ${{ inputs.source_branch }}
           SOURCE_SHA: ${{ inputs.source_sha }}
+          CANARY_RUN_ID: ${{ inputs.canary_run_id }}
         run: |
           set -euo pipefail
-          if [ "$EVENT_REF" != "refs/heads/main" ]; then
-            echo 'Admin public release workflow may only be dispatched from main.' >&2
-            exit 1
-          fi
           if ! printf '%s' "$REQUEST_ID" | grep -Eqi '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
             echo 'Invalid deployment request UUID.' >&2
             exit 1
@@ -76,247 +64,158 @@ jobs:
           fi
           case "$SOURCE_BRANCH" in
             main|preview/current) ;;
-            *)
-              echo 'Only main or preview/current may be promoted to the public PWA.' >&2
-              exit 1
-              ;;
+            *) echo 'Invalid approved source branch.' >&2; exit 1 ;;
           esac
           if ! printf '%s' "$SOURCE_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
-            echo 'Preview SHA must be an exact lowercase 40-character commit SHA.' >&2
+            echo 'Verified Canary SHA must be an exact lowercase 40-character Git commit SHA.' >&2
             exit 1
           fi
-          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
-          echo "event_sha=$EVENT_SHA" >> "$GITHUB_OUTPUT"
+          if ! printf '%s' "$CANARY_RUN_ID" | grep -Eq '^[0-9]+$'; then
+            echo 'Invalid Canary GitHub Actions run ID.' >&2
+            exit 1
+          fi
 
-      - name: Validate required deployment secrets
+      - name: Validate Cloudflare credentials are configured
         shell: bash
-        working-directory: .
         run: |
           set -euo pipefail
-          for name in \
-            NEXT_PUBLIC_AAS_SUPABASE_URL \
-            NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY \
-            CLOUDFLARE_API_TOKEN \
-            CLOUDFLARE_ACCOUNT_ID
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
           do
             if [ -z "${!name:-}" ]; then
               echo "Required Actions secret is unavailable: $name" >&2
               exit 1
             fi
           done
-          if ! printf '%s' "$NEXT_PUBLIC_AAS_SUPABASE_URL" | grep -Eq '^https://[^[:space:]]+$'; then
-            echo 'Supabase URL must be HTTPS.' >&2
-            exit 1
-          fi
-          if printf '%s' "$NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY" | grep -Eqi 'sb_secret_|service[_-]?role'; then
-            echo 'Forbidden Supabase secret/service-role material detected.' >&2
-            exit 1
-          fi
 
-      - name: Checkout main with full history
+      - name: Checkout repository for source verification only
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
-      - name: Verify approved Preview is fast-forwardable
+      - name: Verify Canary source commit still exists
         shell: bash
-        working-directory: .
-        env:
-          SOURCE_BRANCH: ${{ inputs.source_branch }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
-          EVENT_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin "refs/heads/$SOURCE_BRANCH:refs/remotes/origin/$SOURCE_BRANCH"
-          preview_head="$(git rev-parse "refs/remotes/origin/$SOURCE_BRANCH")"
-          if [ "$preview_head" != "$SOURCE_SHA" ]; then
-            echo 'Preview branch moved after admin approval. Reconfirm the latest Preview before publishing.' >&2
-            echo "Approved: $SOURCE_SHA" >&2
-            echo "Current:  $preview_head" >&2
-            exit 1
-          fi
-
-          remote_main="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-          if [ "$remote_main" = "$SOURCE_SHA" ]; then
-            echo 'main already points at the approved Preview SHA; treating this as a safe deployment retry.'
-          else
-            if [ "$remote_main" != "$EVENT_SHA" ]; then
-              echo 'main moved after this workflow was dispatched. Start the publish action again from the admin screen.' >&2
-              echo "Dispatch main: $EVENT_SHA" >&2
-              echo "Current main:  $remote_main" >&2
-              exit 1
-            fi
-            if ! git merge-base --is-ancestor "$remote_main" "$SOURCE_SHA"; then
-              echo 'Approved Preview is not a fast-forward descendant of current main. Automatic public release is blocked.' >&2
-              exit 1
-            fi
-          fi
-
-      - name: Checkout exact approved Preview SHA
-        shell: bash
-        working-directory: .
         env:
           SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
-          git checkout --detach "$SOURCE_SHA"
-          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          test -z "$(git status --porcelain)"
+          git fetch --no-tags origin "$SOURCE_SHA"
+          git cat-file -e "$SOURCE_SHA^{commit}"
+          echo "Verified Canary source commit: $SOURCE_SHA"
 
-      - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Download exact Canary-tested release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          node-version: "22.13.0"
-          cache: npm
-          cache-dependency-path: pwa/package-lock.json
+          name: aas-release-bundle-${{ inputs.source_sha }}
+          path: release-artifact
+          run-id: ${{ inputs.canary_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build and regression tests
-        env:
-          NEXT_PUBLIC_AAS_BUILD_SHA: ${{ inputs.source_sha }}
-        run: npm test
-
-      - name: Dependency audit
-        run: npm audit --audit-level=moderate
-
-      - name: Validate legal and PWA assets
+      - name: Verify and extract exact Canary artifact
         shell: bash
         run: |
           set -euo pipefail
-          test -f public/manifest.webmanifest
-          test -f public/icon-192.png
-          test -f public/icon-512.png
-          test -f public/sw.js
-          test -f app/terms/page.tsx
-          test -f app/privacy/page.tsx
-          test -f app/ai-terms/page.tsx
-          test -f app/commercial-transactions/page.tsx
-          test -f app/support/page.tsx
-          grep -Fq '/auth/callback' public/sw.js
-          grep -Fq '/api/' public/sw.js
-          grep -Fq 'access_token' public/sw.js
-          grep -Fq 'refresh_token' public/sw.js
+          test -f release-artifact/release-bundle.tgz
+          test -f release-artifact/release-bundle.tgz.sha256
+          (
+            cd release-artifact
+            sha256sum -c release-bundle.tgz.sha256
+          )
+          rm -rf release-workdir
+          mkdir -p release-workdir
+          tar -xzf release-artifact/release-bundle.tgz -C release-workdir
+          test -f release-workdir/.release-bundle-manifest.json
+          test -f release-workdir/package-lock.json
 
-      - name: Locate generated Wrangler deployment config
-        id: wrangler-config
-        shell: bash
-        run: |
-          set -euo pipefail
-          config="$(find . -path './node_modules' -prune -o -path './.wrangler' -prune -o -name wrangler.json -type f -print | head -n 1)"
-          if [ -z "$config" ]; then
-            echo 'Generated wrangler.json was not found after build.' >&2
-            exit 1
-          fi
-          echo "config=$config" >> "$GITHUB_OUTPUT"
-
-      - name: Verify public Worker contract
+      - name: Validate release bundle manifest
+        id: bundle
         shell: bash
         env:
-          CONFIG_PATH: ${{ steps.wrangler-config.outputs.config }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
           node - <<'NODE'
           const fs = require('fs');
-          const config = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH, 'utf8'));
+          const path = require('path');
+          const manifestPath = 'release-workdir/.release-bundle-manifest.json';
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          if (manifest.source_sha !== process.env.SOURCE_SHA) throw new Error('Artifact source SHA mismatch');
+          if (manifest.public_url !== 'https://ai-article-studio-pwa.ai-article-studio.workers.dev/') throw new Error('Unexpected public URL');
+          if (manifest.canary_url !== 'https://ai-article-studio-pwa-canary.ai-article-studio.workers.dev/') throw new Error('Unexpected Canary URL');
+          const configPath = path.join('release-workdir', manifest.public_config);
+          if (!fs.existsSync(configPath)) throw new Error('Public Wrangler config missing from artifact');
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
           if (config.name !== 'ai-article-studio-pwa') throw new Error('Unexpected production Worker name');
-          if (!config.compatibility_date) throw new Error('compatibility_date missing');
-          if (config.workers_dev !== true) throw new Error('workers_dev must be true for the public PWA');
-          if (config.preview_urls !== false) throw new Error('preview_urls must be false for the public PWA');
-          if (config.assets?.binding !== 'ASSETS') throw new Error('ASSETS binding missing');
-          const imagesBinding = Array.isArray(config.images)
-            ? config.images.some((item) => item?.binding === 'IMAGES')
-            : config.images?.binding === 'IMAGES';
-          if (!imagesBinding) throw new Error('IMAGES binding missing');
-          if (config.route || (Array.isArray(config.routes) && config.routes.length > 0)) {
-            throw new Error('Custom domains/routes must remain absent');
-          }
-          const serialized = JSON.stringify(config);
-          if (/sb_secret_|service[_-]?role/i.test(serialized)) throw new Error('Forbidden secret/service-role marker found');
-          console.log('Admin public release Cloudflare contract: PASS');
+          if (config.workers_dev !== true || config.preview_urls !== false) throw new Error('Invalid public Worker routing contract');
+          if (config.route || (Array.isArray(config.routes) && config.routes.length > 0)) throw new Error('Custom routes must remain absent');
+          if (/sb_secret_|service[_-]?role/i.test(JSON.stringify(config))) throw new Error('Forbidden secret marker in artifact config');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'public_config=' + configPath + '\n');
+          console.log('Exact Canary artifact manifest: PASS');
           NODE
 
-      - name: Verify Cloudflare authentication
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx wrangler whoami --json >/dev/null
+      - name: Setup Node for Wrangler only
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.13.0"
+          cache: npm
+          cache-dependency-path: release-workdir/package-lock.json
 
-      - name: Wrangler deployment dry-run
-        shell: bash
+      - name: Install locked deployment dependencies without rebuilding
+        working-directory: release-workdir
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Dependency audit
+        working-directory: release-workdir
+        run: npm audit --audit-level=moderate
+
+      - name: Verify Cloudflare authentication
+        working-directory: release-workdir
+        run: npx wrangler whoami --json >/dev/null
+
+      - name: Exact-artifact public deployment dry-run
+        working-directory: release-workdir
+        env:
+          CONFIG_PATH: ../${{ steps.bundle.outputs.public_config }}
         run: |
           set -euo pipefail
           rm -rf .admin-public-dry-run
-          npx wrangler deploy --dry-run --config "${{ steps.wrangler-config.outputs.config }}" --outdir .admin-public-dry-run
+          npx wrangler deploy             --dry-run             --config "$CONFIG_PATH"             --outdir .admin-public-dry-run
           test -d .admin-public-dry-run
 
-      - name: Fast-forward main to approved Preview
-        shell: bash
-        working-directory: .
-        env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
-          EVENT_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          remote_main="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-          if [ "$remote_main" = "$SOURCE_SHA" ]; then
-            echo 'main already matches approved Preview SHA.'
-            exit 0
-          fi
-          if [ "$remote_main" != "$EVENT_SHA" ]; then
-            echo 'main changed during verification; refusing to publish stale code.' >&2
-            exit 1
-          fi
-          git push origin "$SOURCE_SHA:refs/heads/main"
-          updated_main="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-          test "$updated_main" = "$SOURCE_SHA"
-          echo "main fast-forwarded to $SOURCE_SHA"
-
-      - name: Deploy general-public PWA Worker
+      - name: Deploy exact Canary-tested artifact to general-public Worker
         id: deploy
-        shell: bash
+        working-directory: release-workdir
         env:
-          CONFIG_PATH: ${{ steps.wrangler-config.outputs.config }}
+          CONFIG_PATH: ../${{ steps.bundle.outputs.public_config }}
         run: |
           set -euo pipefail
           output_file="$RUNNER_TEMP/aas-admin-public-deploy.txt"
-          npx wrangler deploy --config "$CONFIG_PATH" --keep-vars --message "AAS admin public release ${{ inputs.request_id }} ${{ inputs.source_sha }}" 2>&1 | tee "$output_file"
+          npx wrangler deploy             --config "$CONFIG_PATH"             --keep-vars             --message "AAS verified Canary promotion ${{ inputs.request_id }} ${{ inputs.source_sha }}"             2>&1 | tee "$output_file"
           production_url="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev[^[:space:]]*' "$output_file" | tail -n 1 || true)"
           production_url="${production_url%\)}"
           production_url="${production_url%\]}"
-          if [ -z "$production_url" ]; then
-            echo 'Production Worker deploy succeeded but workers.dev URL could not be parsed.' >&2
+          if [ "$production_url" != "https://ai-article-studio-pwa.ai-article-studio.workers.dev" ] &&              [ "$production_url" != "https://ai-article-studio-pwa.ai-article-studio.workers.dev/" ]; then
+            echo "Unexpected Production URL: ${production_url:-<missing>}" >&2
             exit 1
           fi
-          echo "production_url=$production_url" >> "$GITHUB_OUTPUT"
-          echo "General-public PWA URL: $production_url"
+          echo 'General-public PWA deployed from exact verified Canary artifact.'
 
       - name: Write deployment summary
         if: ${{ success() }}
         shell: bash
-        working-directory: .
-        env:
-          PRODUCTION_URL: ${{ steps.deploy.outputs.production_url }}
         run: |
           set -euo pipefail
           {
-            echo '## AAS admin-approved public release'
+            echo '## AAS verified Canary promotion'
             echo
             echo '- Request: ${{ inputs.request_id }}'
             echo '- Release: ${{ inputs.release_id }}'
-            echo '- Preview branch: ${{ inputs.source_branch }}'
-            echo '- SHA: ${{ inputs.source_sha }}'
-            echo "- General-public PWA: $PRODUCTION_URL"
-            echo '- Preview Worker remains separate'
+            echo '- Verified source SHA: ${{ inputs.source_sha }}'
+            echo '- Canary run: ${{ inputs.canary_run_id }}'
+            echo '- Bundle: aas-release-bundle-${{ inputs.source_sha }}'
+            echo '- Public PWA: https://ai-article-studio-pwa.ai-article-studio.workers.dev/'
+            echo '- No rebuild was performed during public promotion'
             echo '- Custom domain / DNS: unchanged'
             echo '- Stripe LIVE: unchanged'
           } >> "$GITHUB_STEP_SUMMARY"

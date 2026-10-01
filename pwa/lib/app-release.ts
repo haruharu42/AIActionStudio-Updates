@@ -4,9 +4,19 @@ export const APP_RELEASE_EFFECTIVE_KEY = "aas-pwa-effective-release";
 export const APP_RELEASE_STATE_EVENT = "aas-pwa-release-state";
 
 export type AppDeploymentAudience = "public" | "preview";
+export type AppDeploymentTier = "public" | "preview" | "canary";
+
+export const AAS_PRODUCTION_CANARY_HOSTNAME = "ai-article-studio-pwa-canary.ai-article-studio.workers.dev";
+
+export function appDeploymentTier(): AppDeploymentTier {
+  if (typeof window !== "undefined" && window.location.hostname === AAS_PRODUCTION_CANARY_HOSTNAME) {
+    return "canary";
+  }
+  return process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview" ? "preview" : "public";
+}
 
 export function appDeploymentAudience(): AppDeploymentAudience {
-  return process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview" ? "preview" : "public";
+  return appDeploymentTier() === "public" ? "public" : "preview";
 }
 
 export type AppRelease = {

@@ -8,7 +8,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   adminCreateAppRelease,
   adminListAppReleases,
-  adminPromoteAppReleaseToTesters,
   adminRollbackAppRelease,
   adminSetAppReleaseTester,
   type AdminAppRelease,
@@ -16,9 +15,12 @@ import {
 } from "@/lib/app-release";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
+  AAS_CANARY_PWA_URL,
   AAS_PREVIEW_RELEASE_BRANCH,
   checkGithubReleaseReadiness,
+  confirmCanaryDeployment,
   loadPublicPwaDeployments,
+  requestCanaryPwaDeployment,
   requestPublicPwaDeployment,
   type PublicDeployment,
   type PublicDeploymentSnapshot,
@@ -72,11 +74,11 @@ const EMPTY_FORM: FormState = {
 };
 
 const PUBLISH_VERIFICATION_ITEMS = [
-  { key: "preview-ci", label: "最新PreviewとCIを確認", detail: "公開対象と同じ候補版でTypecheck / Lint / 回帰テスト / Preview反映が成功している。" },
-  { key: "tester-core", label: "指定テスターで主要導線を確認", detail: "AAS-000002等の一般ユーザーテスターでログイン・記事作成・保存・設定など主要導線を確認した。" },
-  { key: "iphone-pwa", label: "iPhone実機PWAを確認", detail: "ホーム画面追加、起動、主要画面、復帰、キャッシュ更新を実機で確認した。" },
-  { key: "second-device", label: "別端末・別ブラウザを確認", detail: "PCまたは別対応ブラウザでも主要導線に致命的な崩れ・runtime errorがない。" },
-  { key: "tester-notifications", label: "Tester通知を確認", detail: "Tester段階の通知センター・必要な端末通知が想定どおり動作する。" },
+  { key: "preview-ci", label: "Production CanaryのbuildとCIを確認", detail: "Canaryへ出したsource SHAでTypecheck / Lint / 回帰テストが成功し、Canaryデプロイも成功している。" },
+  { key: "tester-core", label: "公開テスターで主要導線を確認", detail: "AAS-000002等の指定テスターでProduction Canaryへ入り、ログイン・記事作成・保存・設定など主要導線を確認した。" },
+  { key: "iphone-pwa", label: "iPhone実機Canaryを確認", detail: "Production Canaryをホーム画面または対応ブラウザで起動し、主要画面・復帰・キャッシュ更新を確認した。" },
+  { key: "second-device", label: "別端末・別ブラウザのCanaryを確認", detail: "PCまたは別対応ブラウザでもProduction Canaryの主要導線に致命的な崩れ・runtime errorがない。" },
+  { key: "tester-notifications", label: "Production Canary通知を確認", detail: "公開PWA側のテスター案内、Canary遷移、通知センターが想定どおり動作する。" },
   { key: "rollback", label: "停止・ロールバック経路を確認", detail: "Feature Controlのメンテナンス停止と、直前公開版へ戻す手順を確認した。" },
   { key: "operations", label: "重大な未解決障害がないことを確認", detail: "Security & Operationsで公開を止めるべきcritical/errorが残っていない。" },
 ] as const;
@@ -93,13 +95,14 @@ function formatDate(value: string | null): string {
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ja-JP");
 }
 
-function deploymentStatusLabel(status: PublicDeployment["status"]): string {
-  if (status === "requested") return "公開要求を受付";
-  if (status === "dispatched") return "GitHubへ送信済み";
-  if (status === "running") return "テスト・一般公開処理中";
-  if (status === "succeeded") return "一般公開PWAへ反映済み";
-  if (status === "failed") return "一般公開に失敗";
-  return "公開処理をキャンセル";
+function deploymentStatusLabel(deployment: PublicDeployment): string {
+  const target = deployment.deployment_kind === "canary" ? "Production Canary" : "一般公開PWA";
+  if (deployment.status === "requested") return target + "要求を受付";
+  if (deployment.status === "dispatched") return target + "をGitHubへ送信済み";
+  if (deployment.status === "running") return target + "へ反映中";
+  if (deployment.status === "succeeded") return target + "へ反映済み";
+  if (deployment.status === "failed") return target + "への反映に失敗";
+  return target + "処理をキャンセル";
 }
 
 function statusLabel(status: AdminAppRelease["status"]): string {
@@ -179,34 +182,71 @@ export function AdminReleasePage() {
   }, [candidate]);
 
   const publishVerificationReady = PUBLISH_VERIFICATION_ITEMS.every((item) => publishVerification.includes(item.key));
-  const candidateDeployment = useMemo(
+  const candidateCanaryDeployment = useMemo(
     () => candidate
-      ? deploymentSnapshot?.deployments.find((deployment) => deployment.release_id === candidate.id) ?? null
+      ? deploymentSnapshot?.deployments.find(
+          (deployment) => deployment.release_id === candidate.id && deployment.deployment_kind === "canary",
+        ) ?? null
       : null,
     [candidate, deploymentSnapshot],
   );
-  const deploymentInProgress = candidateDeployment
-    ? ["requested", "dispatched", "running"].includes(candidateDeployment.status)
-    : false;
+  const candidatePublicDeployment = useMemo(
+    () => candidate
+      ? deploymentSnapshot?.deployments.find(
+          (deployment) => deployment.release_id === candidate.id && deployment.deployment_kind === "public",
+        ) ?? null
+      : null,
+    [candidate, deploymentSnapshot],
+  );
+  const activeDeployment = useMemo(
+    () => [candidatePublicDeployment, candidateCanaryDeployment].find(
+      (deployment) => deployment && ["requested", "dispatched", "running"].includes(deployment.status),
+    ) ?? null,
+    [candidateCanaryDeployment, candidatePublicDeployment],
+  );
+  const canaryDeploymentInProgress = Boolean(
+    candidateCanaryDeployment && ["requested", "dispatched", "running"].includes(candidateCanaryDeployment.status),
+  );
+  const publicDeploymentInProgress = Boolean(
+    candidatePublicDeployment && ["requested", "dispatched", "running"].includes(candidatePublicDeployment.status),
+  );
+  const canaryVerified = Boolean(
+    candidateCanaryDeployment?.status === "succeeded" && candidateCanaryDeployment.verified_at,
+  );
   const candidateMatchesPreview = releaseMatchesPreviewBuild(candidate);
+  const canaryMatchesCandidate = Boolean(
+    candidate
+      && candidateCanaryDeployment
+      && candidateCanaryDeployment.status === "succeeded"
+      && candidate.build_key.endsWith("-" + candidateCanaryDeployment.source_sha.slice(0, 12)),
+  );
 
   useEffect(() => {
-    if (!candidateDeployment || !["requested", "dispatched", "running"].includes(candidateDeployment.status)) return;
+    if (!activeDeployment) return;
     let active = true;
     const client = getSupabaseClient();
     const timer = window.setInterval(() => {
-      void loadPublicPwaDeployments(client, candidateDeployment.id)
+      void loadPublicPwaDeployments(client, activeDeployment.id)
         .then(async (next) => {
           if (!active) return;
           setDeploymentSnapshot(next);
-          const refreshed = next.deployments.find((deployment) => deployment.id === candidateDeployment.id);
+          const refreshed = next.deployments.find((deployment) => deployment.id === activeDeployment.id);
           if (refreshed?.status === "succeeded") {
             const releases = await adminListAppReleases(client);
             if (!active) return;
             setSnapshot(releases);
-            setMessage("一般公開PWAへの反映が完了しました。");
+            setMessage(
+              refreshed.deployment_kind === "canary"
+                ? "Production Canaryへの反映が完了しました。指定テスターで確認してください。"
+                : "一般公開PWAへの反映が完了しました。",
+            );
           } else if (refreshed?.status === "failed") {
-            setError(refreshed.error_message || "一般公開PWAへの反映に失敗しました。内容を確認して再実行してください。");
+            setError(
+              refreshed.error_message
+                || (refreshed.deployment_kind === "canary"
+                  ? "Production Canaryへの反映に失敗しました。内容を確認して再実行してください。"
+                  : "一般公開PWAへの反映に失敗しました。内容を確認して再実行してください。"),
+            );
           }
         })
         .catch(() => {
@@ -217,7 +257,7 @@ export function AdminReleasePage() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [candidateDeployment]);
+  }, [activeDeployment]);
 
   const togglePublishVerification = (key: PublishVerificationKey) => {
     if (!candidate) return;
@@ -299,18 +339,72 @@ export function AdminReleasePage() {
     }
   };
 
-  const promoteToTesters = async (release: AdminAppRelease) => {
-    if (busy) return;
-    if (!window.confirm("v" + release.version + " を指定した一般ユーザーテスターへ反映しますか？\n他の一般ユーザーにはまだ公開されません。")) return;
+  const deployCanary = async (release: AdminAppRelease) => {
+    if (busy || canaryDeploymentInProgress) return;
+    if (!IS_PREVIEW_DEPLOYMENT) {
+      setError("Production Canaryへの反映はPreview PWAの管理者画面から実行してください。");
+      return;
+    }
+    if (currentSessionAal !== "aal2") {
+      setError("Production Canaryへの反映には管理者MFA（AAL2）での再認証が必要です。");
+      return;
+    }
+    if (!/^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA) || !releaseMatchesPreviewBuild(release)) {
+      setError("候補版と現在のPreview Buildが一致しません。最新Previewで候補版を登録し直してください。");
+      return;
+    }
+    if (!window.confirm(
+      "v" + release.version + " をProduction Canaryへ反映しますか？\n\n"
+      + "指定テスターだけがCanaryを利用できます。一般公開PWAは変更しません。\n"
+      + "Build: " + PREVIEW_BUILD_SHA.slice(0, 12),
+    )) return;
+
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const next = await adminPromoteAppReleaseToTesters(getSupabaseClient(), release.id);
-      setSnapshot(next);
-      setMessage("第2段階へ進めました。指定テスターだけが候補版を確認できます。");
-    } catch {
-      setError("テスター確認段階へ進められませんでした。テスター設定と候補版の状態を確認してください。");
+      const client = getSupabaseClient();
+      const request = await requestCanaryPwaDeployment(client, release.id, PREVIEW_BUILD_SHA);
+      const deployments = await loadPublicPwaDeployments(client, request.requestId);
+      setDeploymentSnapshot(deployments);
+      setMessage("Production Canaryへの反映を開始しました。完了後、指定テスターだけがCanaryを確認できます。");
+    } catch (canaryError) {
+      setError(canaryError instanceof Error ? canaryError.message : "Production Canaryへの反映を開始できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmCanary = async () => {
+    if (busy || !candidateCanaryDeployment || candidateCanaryDeployment.status !== "succeeded" || canaryVerified) return;
+    if (!publishVerificationReady) {
+      setError("Production Canary確認チェックをすべて完了してください。");
+      return;
+    }
+    if (currentSessionAal !== "aal2") {
+      setError("Production Canary確認の確定には管理者MFA（AAL2）での再認証が必要です。");
+      return;
+    }
+    if (!canaryMatchesCandidate) {
+      setError("Production Canaryと現在の候補版が一致しません。Canaryを作り直してください。");
+      return;
+    }
+    if (!window.confirm(
+      "AAS-000002等の指定テスターでProduction Canaryの確認が完了しましたか？\n\n"
+      + "確認済みにすると、このCanaryでテストした同一artifactだけが一般公開へ昇格できます。",
+    )) return;
+
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const client = getSupabaseClient();
+      await confirmCanaryDeployment(client, candidateCanaryDeployment.id);
+      const deployments = await loadPublicPwaDeployments(client);
+      setDeploymentSnapshot(deployments);
+      setMessage("Production Canaryを確認済みにしました。同一artifactを一般公開へ昇格できます。");
+    } catch (confirmError) {
+      setError(confirmError instanceof Error ? confirmError.message : "Production Canaryを確認済みにできませんでした。");
     } finally {
       setBusy(false);
     }
@@ -325,7 +419,7 @@ export function AdminReleasePage() {
       const next = await adminSetAppReleaseTester(getSupabaseClient(), aasUserId, enabled);
       setSnapshot(next);
       if (enabled) setTesterAasId("");
-      setMessage(enabled ? aasUserId + " を一般ユーザーテスターに設定しました。" : aasUserId + " のテスター指定を解除しました。");
+      setMessage(enabled ? aasUserId + " をProduction Canaryテスターに設定しました。" : aasUserId + " のテスター指定を解除しました。");
     } catch {
       setError("テスター設定を更新できませんでした。activeな一般ユーザーのAAS IDを確認してください。");
     } finally {
@@ -334,32 +428,33 @@ export function AdminReleasePage() {
   };
 
   const publish = async (release: AdminAppRelease) => {
-    if (busy || deploymentInProgress) return;
+    if (busy || publicDeploymentInProgress) return;
     if (!IS_PREVIEW_DEPLOYMENT) {
       setError("一般公開PWAへの反映はPreview PWAの管理者画面から実行してください。");
       return;
     }
-    if (!publishVerificationReady) {
-      setError("全体公開前チェックをすべて確認してください。");
+    if (!candidateCanaryDeployment || candidateCanaryDeployment.status !== "succeeded" || !canaryVerified) {
+      setError("一般公開前にProduction Canaryを指定テスターで確認し、確認済みにしてください。");
+      return;
+    }
+    if (!canaryMatchesCandidate) {
+      setError("確認済みCanaryと現在の候補版が一致しません。新しい候補版でCanary確認をやり直してください。");
       return;
     }
     if (currentSessionAal !== "aal2") {
-      setError("一般公開PWAへの反映には現在の管理者セッションでMFA認証（AAL2）が必要です。管理者MFA画面で再認証してください。");
+      setError("一般公開PWAへの反映には現在の管理者セッションでMFA認証（AAL2）が必要です。");
       return;
     }
-    if (!/^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA)) {
-      setError("現在のPreview Build SHAを確認できません。Previewを最新化してから再度お試しください。");
-      return;
-    }
-    if (!releaseMatchesPreviewBuild(release)) {
-      setError("候補版と現在のPreview Buildが一致しません。最新Previewで新しい管理者テスト版を登録し直してください。");
+    const verifiedSourceSha = candidateCanaryDeployment.source_sha;
+    if (!/^[0-9a-f]{40}$/.test(verifiedSourceSha)) {
+      setError("確認済みCanaryのsource SHAを確認できません。");
       return;
     }
     if (!window.confirm(
-      "v" + release.version + " の確認済みPreviewを一般公開PWAへ反映しますか？\n\n"
-      + "対象: " + AAS_PREVIEW_RELEASE_BRANCH + "\n"
-      + "Build: " + PREVIEW_BUILD_SHA.slice(0, 12) + "\n\n"
-      + "実行後はTypecheck / Lint / 回帰テスト / Cloudflare事前確認を再実行し、すべて成功した場合だけ一般公開PWAへ反映します。",
+      "v" + release.version + " の確認済みProduction Canaryを一般公開PWAへ昇格しますか？\n\n"
+      + "Canary Build: " + verifiedSourceSha.slice(0, 12) + "\n"
+      + "Canary Run: " + (candidateCanaryDeployment.github_run_id ?? "-") + "\n\n"
+      + "再ビルドは行わず、0002で確認した同一artifactをPublic Workerへ反映します。",
     )) return;
 
     setBusy(true);
@@ -367,10 +462,10 @@ export function AdminReleasePage() {
     setMessage("");
     try {
       const client = getSupabaseClient();
-      const request = await requestPublicPwaDeployment(client, release.id, PREVIEW_BUILD_SHA);
+      const request = await requestPublicPwaDeployment(client, release.id, verifiedSourceSha);
       const deployments = await loadPublicPwaDeployments(client, request.requestId);
       setDeploymentSnapshot(deployments);
-      setMessage("一般公開PWAへの反映を開始しました。アップデート管理を開いたままにすると進捗が自動更新されます。");
+      setMessage("確認済みProduction Canaryと同一artifactの一般公開昇格を開始しました。");
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "一般公開PWAへの反映を開始できませんでした。");
     } finally {
@@ -402,7 +497,7 @@ export function AdminReleasePage() {
         <div>
           <p className="eyebrow">RELEASE CONTROL</p>
           <h1>アップデート管理</h1>
-          <p>コード配布は①管理者確認 → ②指定テスター確認 → ③全体公開で進め、機能単位の公開・メンテナンスは全機能管理センターで制御します。</p>
+          <p>コード配布は①Preview管理者確認 → ②Production Canaryへ反映 → ③公開テスター確認済み → ④全一般ユーザーへ公開で進めます。</p>
         </div>
         <nav>
           <Link href="/admin/features">全機能管理センター</Link>
@@ -434,7 +529,11 @@ export function AdminReleasePage() {
         <article>
           <span>候補版の確認段階</span>
           <strong>{candidate ? "v" + candidate.version : "なし"}</strong>
-          <small>{candidate ? (snapshot?.channel.candidate_stage === "tester" ? "第2段階：指定テスター確認中" : "第1段階：管理者確認中") : "候補版を登録すると管理者だけで確認できます。"}</small>
+          <small>{candidate
+            ? (snapshot?.channel.candidate_stage === "tester"
+              ? (canaryVerified ? "第3段階：Production Canary確認済み" : "第2段階：Production Canary確認中")
+              : "第1段階：Preview管理者確認中")
+            : "候補版を登録するとPreview管理者だけで確認できます。"}</small>
         </article>
         <article>
           <span>更新方式</span>
@@ -451,9 +550,9 @@ export function AdminReleasePage() {
           </div>
         </div>
         <p className="trial-admin-note">
-          登録した時点では一般ユーザーへは反映されません。まず管理者だけで確認し、問題がなければ第2段階として指定テスターへ反映します。第2段階を通過するまで全体公開はDB側でも禁止します。
+          登録した時点では公開環境へは反映されません。Preview管理者で確認後、Production Canaryへ同じbuildを出し、指定テスターの確認済み操作を通過したartifactだけを一般公開できます。
         </p>
-        <div className="admin-safety-confirm">入力順：①バージョン → ②更新名を選択 → ③ユーザー向け変更内容 → ④任意/必須を選択。登録後も、テスター確認と全体公開は別操作です。</div>
+        <div className="admin-safety-confirm">入力順：①バージョン → ②更新名 → ③ユーザー向け変更内容 → ④任意/必須。登録後はCanary作成・Canary確認済み・一般公開がすべて別操作です。</div>
 
         <div className="release-admin-form">
           <label className="editor-field">
@@ -503,10 +602,10 @@ export function AdminReleasePage() {
         <div className="admin-panel-heading">
           <div>
             <p className="eyebrow">TEST USERS</p>
-            <h2>一般ユーザーテスター</h2>
+            <h2>Production Canaryテスター</h2>
           </div>
         </div>
-        <p className="trial-admin-note">管理者権限へ変更せず、一般ユーザーのまま候補版を確認するアカウントです。現在の既定テスターは AAS-000002 です。</p>
+        <p className="trial-admin-note">管理者権限へ変更せず、一般ユーザーのままProduction Canaryを確認するアカウントです。現在の既定テスターは AAS-000002 です。</p>
         <div className="release-admin-form">
           <label className="editor-field">
             <span>AASユーザーID</span>
@@ -518,7 +617,7 @@ export function AdminReleasePage() {
           {(snapshot?.testers ?? []).filter((tester) => tester.enabled).map((tester) => (
             <article key={tester.aas_user_id}>
               <div className="release-history-version"><strong>{tester.aas_user_id}</strong><span>一般ユーザー</span></div>
-              <div><strong>候補版テスター</strong><small>指定更新: {formatDate(tester.updated_at)}</small></div>
+              <div><strong>Production Canaryテスター</strong><small>指定更新: {formatDate(tester.updated_at)}</small></div>
               <div className="release-history-actions"><button type="button" disabled={busy} onClick={() => void setTester(tester.aas_user_id, false)}>指定解除</button></div>
             </article>
           ))}
@@ -528,31 +627,72 @@ export function AdminReleasePage() {
       {candidate && (
         <section className="release-admin-panel candidate">
           <div>
-            <p className="eyebrow">{snapshot?.channel.candidate_stage === "tester" ? "USER TEST PREVIEW" : "ADMIN PREVIEW"}</p>
+            <p className="eyebrow">
+              {snapshot?.channel.candidate_stage === "tester"
+                ? (canaryVerified ? "CANARY VERIFIED" : "PRODUCTION CANARY")
+                : "ADMIN PREVIEW"}
+            </p>
             <h2>
               {snapshot?.channel.candidate_stage === "tester"
-                ? `v${candidate.version} を指定テスター確認中`
-                : `v${candidate.version} を管理者確認中`}
+                ? (canaryVerified
+                  ? `v${candidate.version} のProduction Canary確認済み`
+                  : `v${candidate.version} をProduction Canary確認中`)
+                : `v${candidate.version} をPreview管理者確認中`}
             </h2>
             <p>{candidate.title}</p>
             {candidate.notes && <pre>{candidate.notes}</pre>}
+            {candidateCanaryDeployment?.status === "succeeded" && (
+              <p className="trial-admin-note">
+                Canary Build: {candidateCanaryDeployment.source_sha.slice(0, 12)} ・
+                {" "}<a href={AAS_CANARY_PWA_URL} target="_blank" rel="noopener noreferrer">Production Canaryを開く ↗</a>
+                {candidateCanaryDeployment.github_run_url && (
+                  <> ・ <a href={candidateCanaryDeployment.github_run_url} target="_blank" rel="noopener noreferrer">GitHub Actions ↗</a></>
+                )}
+              </p>
+            )}
           </div>
           <div className="release-admin-publish">
             <span className={candidate.update_kind === "required" ? "required" : ""}>
               {candidate.update_kind === "required" ? "必須アップデート" : "任意アップデート"}
             </span>
-            {snapshot?.channel.candidate_stage === "tester" ? (
+
+            {snapshot?.channel.candidate_stage !== "tester" && (
               <button
                 className="primary-action"
                 type="button"
-                disabled={busy || deploymentInProgress || !publishVerificationReady || currentSessionAal !== "aal2" || !IS_PREVIEW_DEPLOYMENT || !candidateMatchesPreview}
+                disabled={
+                  busy
+                  || canaryDeploymentInProgress
+                  || !(snapshot?.testers ?? []).some((tester) => tester.enabled)
+                  || currentSessionAal !== "aal2"
+                  || !IS_PREVIEW_DEPLOYMENT
+                  || !candidateMatchesPreview
+                }
+                onClick={() => void deployCanary(candidate)}
+              >
+                {canaryDeploymentInProgress ? "Production Canaryへ反映中…" : "第2段階：Production Canaryへ反映"}
+              </button>
+            )}
+
+            {snapshot?.channel.candidate_stage === "tester" && !canaryVerified && (
+              <button
+                className="primary-action"
+                type="button"
+                disabled={busy || !publishVerificationReady || currentSessionAal !== "aal2" || !canaryMatchesCandidate}
+                onClick={() => void confirmCanary()}
+              >
+                第3段階：Canary確認済みにする
+              </button>
+            )}
+
+            {snapshot?.channel.candidate_stage === "tester" && canaryVerified && (
+              <button
+                className="primary-action"
+                type="button"
+                disabled={busy || publicDeploymentInProgress || currentSessionAal !== "aal2" || !canaryMatchesCandidate}
                 onClick={() => void publish(candidate)}
               >
-                {deploymentInProgress ? "一般公開PWAへ反映中…" : "第3段階：一般公開PWAへ反映"}
-              </button>
-            ) : (
-              <button className="primary-action" type="button" disabled={busy || !(snapshot?.testers ?? []).some((tester) => tester.enabled)} onClick={() => void promoteToTesters(candidate)}>
-                第2段階：指定テスターへ反映
+                {publicDeploymentInProgress ? "一般公開PWAへ昇格中…" : "第4段階：全一般ユーザーへ公開"}
               </button>
             )}
           </div>
@@ -565,11 +705,11 @@ export function AdminReleasePage() {
             <div>
               <p className="eyebrow">GITHUB RELEASE CONNECTION</p>
               <h2>GitHub公開連携の読み取り診断</h2>
-              <p>管理者確認中・指定テスター確認中のどちらでも実行できます。公開処理やDB変更は開始しません。</p>
+              <p>Preview管理者確認中・Production Canary確認中のどちらでも実行できます。デプロイやDB変更は開始しません。</p>
             </div>
           </div>
           <div className="admin-safety-confirm">
-            <p>対象リポジトリと公開ワークフローへ、サーバー側の設定済みトークンでGET要求するだけの安全な診断です。</p>
+            <p>対象リポジトリ、Production Canaryワークフロー、一般公開ワークフローへGET要求するだけの安全な診断です。</p>
             {deploymentSnapshot && !deploymentSnapshot.supportsGithubReadiness && (
               <p className="route-notice error">
                 Workerの互換情報を確認できませんでした。現在のPreviewから読み取り診断を直接試せます。
@@ -582,70 +722,90 @@ export function AdminReleasePage() {
               <p role="status" className="release-github-readiness-result">
                 トークン設定: {githubReadiness.configured ? "あり" : "なし"}<br />
                 新リポジトリ読み取り: {githubReadiness.repositoryReadable ? "成功" : "未確認・失敗"}<br />
-                公開ワークフロー読み取り: {githubReadiness.workflowReadable ? "成功" : "未確認・失敗"}<br />
-                公開実行権限: 未検証（この診断ではdispatchしません）
+                Production Canaryワークフロー: {githubReadiness.canaryWorkflowReadable ? "成功" : "未確認・失敗"}<br />
+                一般公開ワークフロー: {githubReadiness.publicWorkflowReadable ? "成功" : "未確認・失敗"}<br />
+                dispatch権限: 未検証（この診断では実行しません）
               </p>
             )}
           </div>
         </section>
       )}
 
-      {candidate && snapshot?.channel.candidate_stage === "tester" && (
+      {candidate && snapshot?.channel.candidate_stage === "tester" && candidateCanaryDeployment?.status === "succeeded" && (
         <section className="release-admin-panel release-publish-verification">
           <div className="admin-panel-heading">
             <div>
-              <p className="eyebrow">PUBLIC RELEASE VERIFICATION</p>
-              <h2>全体公開前チェック</h2>
-              <p>v{candidate.version} を全一般ユーザーへ公開する前に、現在の候補版そのものを確認してください。</p>
+              <p className="eyebrow">PRODUCTION CANARY VERIFICATION</p>
+              <h2>{canaryVerified ? "Production Canary確認済み" : "Production Canary確認チェック"}</h2>
+              <p>v{candidate.version} をAAS-000002等の指定テスターで本番相当確認し、同一artifactを一般公開へ昇格できる状態にします。</p>
             </div>
             <strong>{publishVerification.length} / {PUBLISH_VERIFICATION_ITEMS.length}</strong>
           </div>
-          <p className="trial-admin-note">
-            候補版登録: {formatDate(candidate.created_at)} / build: {candidate.build_key}。候補版が長期間残っている場合は、現在のPreview・最新HEADと同一内容か必ず再確認してください。
-          </p>
-          <div className="release-publish-checklist">
-            {PUBLISH_VERIFICATION_ITEMS.map((item) => (
-              <label key={item.key} className={publishVerification.includes(item.key) ? "checked" : ""}>
-                <input
-                  type="checkbox"
-                  checked={publishVerification.includes(item.key)}
-                  onChange={() => togglePublishVerification(item.key)}
-                />
-                <span><strong>{item.label}</strong><small>{item.detail}</small></span>
-              </label>
-            ))}
-          </div>
-          <p className={publishVerificationReady ? "route-notice" : "route-notice error"}>
-            {publishVerificationReady
-              ? "全項目を確認しました。候補版の内容を再確認してから全体公開承認へ進めます。"
-              : "未確認項目があります。全項目を確認するまで全体公開ボタンは有効になりません。"}
-          </p>
+
           <div className="admin-safety-confirm">
-            <strong>一般公開PWAへの反映</strong><br />
-            Preview branch: {AAS_PREVIEW_RELEASE_BRANCH}<br />
-            Preview Build: {/^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA) ? PREVIEW_BUILD_SHA.slice(0, 12) : "取得できません"}
-            {candidateDeployment && (
-              <>
-                <br />状態: {deploymentStatusLabel(candidateDeployment.status)}
-                {candidateDeployment.github_run_url && (
-                  <> ・ <a href={candidateDeployment.github_run_url} target="_blank" rel="noopener noreferrer">GitHub Actionsを確認 ↗</a></>
-                )}
-                {candidateDeployment.error_message && <><br />エラー: {candidateDeployment.error_message}</>}
-              </>
+            <strong>Production Canary</strong><br />
+            URL: <a href={AAS_CANARY_PWA_URL} target="_blank" rel="noopener noreferrer">{AAS_CANARY_PWA_URL}</a><br />
+            Source SHA: {candidateCanaryDeployment.source_sha.slice(0, 12)}<br />
+            状態: {deploymentStatusLabel(candidateCanaryDeployment)}
+            {candidateCanaryDeployment.github_run_url && (
+              <> ・ <a href={candidateCanaryDeployment.github_run_url} target="_blank" rel="noopener noreferrer">GitHub Actions ↗</a></>
+            )}
+            {candidateCanaryDeployment.verified_at && (
+              <><br />確認済み: {formatDate(candidateCanaryDeployment.verified_at)}</>
             )}
           </div>
-          {!candidateMatchesPreview && (
+
+          {!canaryVerified && (
+            <>
+              <div className="release-publish-checklist">
+                {PUBLISH_VERIFICATION_ITEMS.map((item) => (
+                  <label key={item.key} className={publishVerification.includes(item.key) ? "checked" : ""}>
+                    <input
+                      type="checkbox"
+                      checked={publishVerification.includes(item.key)}
+                      onChange={() => togglePublishVerification(item.key)}
+                    />
+                    <span><strong>{item.label}</strong><small>{item.detail}</small></span>
+                  </label>
+                ))}
+              </div>
+              <p className={publishVerificationReady ? "route-notice" : "route-notice error"}>
+                {publishVerificationReady
+                  ? "Canary確認項目が揃いました。第3段階で確認済みにすると、このartifactが一般公開用として固定されます。"
+                  : "未確認項目があります。全項目を確認するまでCanary確認済みにはできません。"}
+              </p>
+            </>
+          )}
+
+          {canaryVerified && (
+            <p className="route-notice">
+              0002で確認したCanary artifactを固定済みです。以後main/Previewが進んでも、このsource SHAのartifactだけを第4段階で一般公開します。
+            </p>
+          )}
+
+          {candidatePublicDeployment && (
+            <div className="admin-safety-confirm">
+              <strong>一般公開昇格</strong><br />
+              状態: {deploymentStatusLabel(candidatePublicDeployment)}
+              {candidatePublicDeployment.github_run_url && (
+                <> ・ <a href={candidatePublicDeployment.github_run_url} target="_blank" rel="noopener noreferrer">GitHub Actions ↗</a></>
+              )}
+              {candidatePublicDeployment.error_message && <><br />エラー: {candidatePublicDeployment.error_message}</>}
+            </div>
+          )}
+
+          {!canaryMatchesCandidate && (
             <p className="route-notice error">
-              候補版のBuildと現在のPreview Buildが一致していません。最新Previewで新しい管理者テスト版を登録し直すと公開ボタンが有効になります。
+              Production Canaryのsource SHAと候補版buildが一致していません。一般公開はブロックされています。
             </p>
           )}
           {deploymentSnapshot && !deploymentSnapshot.configured && (
             <p className="route-notice error">
-              管理画面からの一般公開連携は初回設定待ちです。Supabase Edge Function secret「AAS_GITHUB_RELEASE_TOKEN」を設定すると有効になります。
+              GitHub連携が未設定です。Supabase Edge Function secret「AAS_GITHUB_RELEASE_TOKEN」を設定するとCanary/Publicデプロイを実行できます。
             </p>
           )}
           {!IS_PREVIEW_DEPLOYMENT && (
-            <p className="route-notice error">一般公開PWAへの反映操作はPreview PWAでのみ有効です。</p>
+            <p className="route-notice error">Canary確認確定と一般公開操作はPreview PWAの管理者画面でのみ有効です。</p>
           )}
           {currentSessionAal !== "aal2" && (
             <p className="route-notice error">
