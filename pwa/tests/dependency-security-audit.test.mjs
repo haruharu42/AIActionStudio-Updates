@@ -26,6 +26,7 @@ test("all PWA deployment paths block moderate dependency advisories", async () =
   for (const relative of [
     ".github/workflows/pwa-preview-deploy.yml",
     ".github/workflows/pwa-member-beta-deploy.yml",
+    ".github/workflows/pwa-admin-canary-release.yml",
     ".github/workflows/pwa-admin-public-release.yml",
   ]) {
     const workflow = await readFile(path.join(repoRoot, relative), "utf8");
