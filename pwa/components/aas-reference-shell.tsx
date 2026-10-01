@@ -41,10 +41,7 @@ export function AasReferenceHeader({
   const [releaseVersion, setReleaseVersion] = useState("");
 
   useEffect(() => {
-    if (!showVersion) {
-      setReleaseVersion("");
-      return;
-    }
+    if (!showVersion) return;
 
     const syncFromStorage = () => {
       setReleaseVersion(readEffectiveRelease()?.version ?? "");
@@ -56,9 +53,12 @@ export function AasReferenceHeader({
       setReleaseVersion(release?.version ?? "");
     };
 
-    syncFromStorage();
+    const frame = window.requestAnimationFrame(syncFromStorage);
     window.addEventListener(APP_RELEASE_STATE_EVENT, handleReleaseState);
-    return () => window.removeEventListener(APP_RELEASE_STATE_EVENT, handleReleaseState);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener(APP_RELEASE_STATE_EVENT, handleReleaseState);
+    };
   }, [showVersion]);
 
   return (
