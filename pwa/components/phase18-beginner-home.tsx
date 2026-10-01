@@ -136,7 +136,7 @@ function HomeWidgetSlot({
 function BeginnerAccessFallback({ unavailable = false }: { unavailable?: boolean }) {
   return (
     <div className="reference-home">
-      <AasReferenceHeader />
+      <AasReferenceHeader showVersion />
       <main className="reference-home-main">
         {unavailable ? (
           <section className="beginner-recommend" role="alert">
@@ -371,7 +371,7 @@ export function Phase18BeginnerHome() {
         : "記事ライブラリは現在、管理者または指定テストユーザーで動作確認中です。");
     return (
       <div className="reference-home">
-        <AasReferenceHeader hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
+        <AasReferenceHeader showVersion hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
         <main className="reference-home-main beginner-library-main">
           <section className="standalone-card feature-unavailable-card">
             <p className="eyebrow">{articleLibraryAccess.feature?.maintenanceMode ? "MAINTENANCE" : "FEATURE PREVIEW"}</p>
@@ -388,7 +388,7 @@ export function Phase18BeginnerHome() {
   if (section === "library") {
     return (
       <div className="reference-home">
-        <AasReferenceHeader hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
+        <AasReferenceHeader showVersion hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
         <main className="reference-home-main beginner-library-main">
           <div className="beginner-library-toolbar">
             <button type="button" onClick={() => openSection("home")}>← ホーム</button>
@@ -408,7 +408,7 @@ export function Phase18BeginnerHome() {
 
   return (
     <div className="reference-home">
-      <AasReferenceHeader hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
+      <AasReferenceHeader showVersion hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
       <main className="reference-home-main">
         <div className="reference-home-heading">
           <h1>⌂ ホーム</h1>
