@@ -61,7 +61,7 @@ export function ReleaseUpdateManager() {
     try {
       const success = window.sessionStorage.getItem("aas.release.update-success");
       if (success) {
-        setSuccessVersion(success);
+        queueMicrotask(() => setSuccessVersion(success));
         window.sessionStorage.removeItem("aas.release.update-success");
       }
     } catch {
@@ -112,7 +112,7 @@ export function ReleaseUpdateManager() {
     const params = new URLSearchParams(window.location.search);
     const requestedReleaseId = params.get("update");
     if (requestedReleaseId !== available.id) return;
-    setConfirmingReleaseId(available.id);
+    queueMicrotask(() => setConfirmingReleaseId(available.id));
     params.delete("update");
     const query = params.toString();
     window.history.replaceState(null, "", window.location.pathname + (query ? "?" + query : "") + window.location.hash);
