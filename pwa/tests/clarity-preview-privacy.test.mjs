@@ -2,9 +2,17 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-const clarity = fs.readFileSync(new URL("../components/clarity-preview-analytics.tsx", import.meta.url), "utf8");
-const adminLayout = fs.readFileSync(new URL("../app/admin/layout.tsx", import.meta.url), "utf8");
-const envExample = fs.readFileSync(new URL("../.env.example", import.meta.url), "utf8");
+const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
+const clarity = read("../components/clarity-preview-analytics.tsx");
+const envExample = read("../.env.example");
+const maskedRoutes = [
+  "../app/admin/layout.tsx",
+  "../app/create/page.tsx",
+  "../app/prompts/page.tsx",
+  "../app/account-design/page.tsx",
+  "../app/billing/page.tsx",
+  "../app/support/page.tsx",
+];
 
 test("Clarity analytics stays opt-in and non-production only", () => {
   assert.match(clarity, /NEXT_PUBLIC_AAS_CLARITY_ENABLED === "true"/);
@@ -18,6 +26,8 @@ test("Clarity starts with analytics and ad consent denied", () => {
   assert.match(clarity, /ad_storage: "denied"/);
 });
 
-test("Admin routes are explicitly masked from Clarity", () => {
-  assert.match(adminLayout, /data-clarity-mask="true"/);
+test("Sensitive AAS routes are explicitly masked from Clarity", () => {
+  for (const route of maskedRoutes) {
+    assert.match(read(route), /data-clarity-mask="true"/, route);
+  }
 });
