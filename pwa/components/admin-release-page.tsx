@@ -427,32 +427,33 @@ export function AdminReleasePage() {
   };
 
   const publish = async (release: AdminAppRelease) => {
-    if (busy || deploymentInProgress) return;
+    if (busy || publicDeploymentInProgress) return;
     if (!IS_PREVIEW_DEPLOYMENT) {
       setError("一般公開PWAへの反映はPreview PWAの管理者画面から実行してください。");
       return;
     }
-    if (!publishVerificationReady) {
-      setError("全体公開前チェックをすべて確認してください。");
+    if (!candidateCanaryDeployment || candidateCanaryDeployment.status !== "succeeded" || !canaryVerified) {
+      setError("一般公開前にProduction Canaryを指定テスターで確認し、確認済みにしてください。");
+      return;
+    }
+    if (!canaryMatchesCandidate) {
+      setError("確認済みCanaryと現在の候補版が一致しません。新しい候補版でCanary確認をやり直してください。");
       return;
     }
     if (currentSessionAal !== "aal2") {
-      setError("一般公開PWAへの反映には現在の管理者セッションでMFA認証（AAL2）が必要です。管理者MFA画面で再認証してください。");
+      setError("一般公開PWAへの反映には現在の管理者セッションでMFA認証（AAL2）が必要です。");
       return;
     }
-    if (!/^[0-9a-f]{40}$/.test(PREVIEW_BUILD_SHA)) {
-      setError("現在のPreview Build SHAを確認できません。Previewを最新化してから再度お試しください。");
-      return;
-    }
-    if (!releaseMatchesPreviewBuild(release)) {
-      setError("候補版と現在のPreview Buildが一致しません。最新Previewで新しい管理者テスト版を登録し直してください。");
+    const verifiedSourceSha = candidateCanaryDeployment.source_sha;
+    if (!/^[0-9a-f]{40}$/.test(verifiedSourceSha)) {
+      setError("確認済みCanaryのsource SHAを確認できません。");
       return;
     }
     if (!window.confirm(
-      "v" + release.version + " の確認済みPreviewを一般公開PWAへ反映しますか？\n\n"
-      + "対象: " + AAS_PREVIEW_RELEASE_BRANCH + "\n"
-      + "Build: " + PREVIEW_BUILD_SHA.slice(0, 12) + "\n\n"
-      + "実行後はTypecheck / Lint / 回帰テスト / Cloudflare事前確認を再実行し、すべて成功した場合だけ一般公開PWAへ反映します。",
+      "v" + release.version + " の確認済みProduction Canaryを一般公開PWAへ昇格しますか？\n\n"
+      + "Canary Build: " + verifiedSourceSha.slice(0, 12) + "\n"
+      + "Canary Run: " + (candidateCanaryDeployment.github_run_id ?? "-") + "\n\n"
+      + "再ビルドは行わず、0002で確認した同一artifactをPublic Workerへ反映します。",
     )) return;
 
     setBusy(true);
@@ -460,10 +461,10 @@ export function AdminReleasePage() {
     setMessage("");
     try {
       const client = getSupabaseClient();
-      const request = await requestPublicPwaDeployment(client, release.id, PREVIEW_BUILD_SHA);
+      const request = await requestPublicPwaDeployment(client, release.id, verifiedSourceSha);
       const deployments = await loadPublicPwaDeployments(client, request.requestId);
       setDeploymentSnapshot(deployments);
-      setMessage("一般公開PWAへの反映を開始しました。アップデート管理を開いたままにすると進捗が自動更新されます。");
+      setMessage("確認済みProduction Canaryと同一artifactの一般公開昇格を開始しました。");
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "一般公開PWAへの反映を開始できませんでした。");
     } finally {
