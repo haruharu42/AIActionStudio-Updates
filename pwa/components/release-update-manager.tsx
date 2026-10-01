@@ -10,29 +10,27 @@ import {
   loadMyAppReleaseState,
   type AppReleaseState,
 } from "@/lib/app-release";
+import { AAS_CANARY_PWA_URL } from "@/lib/release-deployment";
 
 const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support", "/plans"];
-
-const PREVIEW_PWA_URL = process.env.NEXT_PUBLIC_AAS_PREVIEW_URL?.trim()
-  || "https://aas-preview-ai-article-studio-pwa-preview.ai-article-studio.workers.dev/";
 
 function hiddenRoute(pathname: string): boolean {
   return HIDDEN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
 }
 
-function TesterPreviewBanner() {
+function TesterCanaryBanner() {
   return (
     <aside className="release-update-banner tester-preview-banner" aria-live="polite">
       <div>
         <span className="release-update-badge">TESTER</span>
         <strong>テスト版があります</strong>
-        <small>指定テスター向けPreviewで最新候補版を確認できます。</small>
+        <small>公開環境相当のProduction Canaryで最新候補版を確認できます。</small>
       </div>
       <div className="release-update-actions">
         <button
           type="button"
           className="primary-action"
-          onClick={() => { window.location.href = PREVIEW_PWA_URL; }}
+          onClick={() => { window.location.href = AAS_CANARY_PWA_URL; }}
         >
           テスト版を確認
         </button>
@@ -220,7 +218,7 @@ export function ReleaseUpdateManager() {
             <button type="button" onClick={() => setSuccessVersion("")} aria-label="閉じる">×</button>
           </aside>
         )}
-        {testerPreviewAvailable && <TesterPreviewBanner />}
+        {testerPreviewAvailable && <TesterCanaryBanner />}
       </>
     );
   }
