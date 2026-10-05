@@ -31,16 +31,16 @@ test("pins patched framework versions, current release metadata, and PWA cache g
   assert.match(layout, /"aas-phase": "56"/);
   assert.match(layout, /"aas-release-stage": process\.env\.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE \?\? "development"/);
   assert.doesNotMatch(layout, /phase8-local/);
-  assert.match(worker, /aas-pwa-phase56-runtime-v12-axia-generated/);
+  assert.match(worker, /aas-pwa-phase56-runtime-v12-mirea-generated/);
   assert.doesNotMatch(worker, /aas-pwa-phase17-prod-v2/);
   assert.doesNotMatch(worker, /aas-pwa-phase8-v1/);
   for (const productionGuard of [productionHelper, productionPreflight]) {
-    assert.match(productionGuard, /aas-pwa-phase56-runtime-v12-axia-generated/);
+    assert.match(productionGuard, /aas-pwa-phase56-runtime-v12-mirea-generated/);
     assert.match(productionGuard, /aas-pwa-phase17-prod-v2/);
     assert.match(productionGuard, /aas-pwa-phase8-v1/);
   }
   assert.match(productionHelper, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE = "public"/);
-  assert.match(productionHelper, /service_worker_cache_generation = "phase56-runtime-v12-axia-generated"/);
+  assert.match(productionHelper, /service_worker_cache_generation = "phase56-runtime-v12-mirea-generated"/);
   assert.match(productionPreflight, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: public/);
   assert.match(pullRequestCi, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: preview/);
 });
