@@ -113,7 +113,7 @@ export function ActionStudioHomeHero() {
           <h2 id="action-studio-hero-title">今日はAIで何を進めますか？</h2>
           <p>
             アイデアを、かたちに。記事・画像・SNS・副業の作業を、
-            アクシアとルーモと一緒に進められます。
+            ミレアとルピィと一緒に進められます。
           </p>
           <div className="action-studio-hero-chips" aria-label="AASでできること">
             <span>✓ 記事・コンテンツ</span>
@@ -123,7 +123,7 @@ export function ActionStudioHomeHero() {
           </div>
         </div>
         <div className="action-studio-character-caption" aria-label="AASイメージキャラクター">
-          <strong>アクシア × ルーモ</strong>
+          <strong>ミレア × ルピィ</strong>
           <small>ひらめきを、一緒に。もっと遠くへ。</small>
         </div>
       </div>
