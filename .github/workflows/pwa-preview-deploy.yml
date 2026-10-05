@@ -160,8 +160,13 @@ jobs:
           NEXT_PUBLIC_AAS_BUILD_SHA: ${{ steps.target.outputs.sha }}
         run: npm test
 
-      - name: Dependency audit
-        run: npm audit --audit-level=moderate
+      - name: Preview runtime dependency audit
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Preview development dependency advisory gate
+        env:
+          AAS_DEV_AUDIT_LEVEL: moderate
+        run: node scripts/check-known-dev-advisories.mjs
 
       - name: Validate PWA assets and auth cache exclusions
         shell: bash
