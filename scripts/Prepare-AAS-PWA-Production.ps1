@@ -212,7 +212,14 @@ try {
     Invoke-NpmStep "typecheck" @("run", "typecheck")
     Invoke-NpmStep "lint" @("run", "lint")
     Invoke-NpmStep "test/build regression" @("test")
-    Invoke-NpmStep "npm audit" @("audit", "--audit-level=high")
+    Invoke-NpmStep "production dependency audit" @("audit", "--omit=dev", "--audit-level=high")
+
+    Write-Host "=== development dependency advisory gate ===" -ForegroundColor Yellow
+    & node "scripts/check-known-dev-advisories.mjs"
+    if ($LASTEXITCODE -ne 0) {
+        throw "development dependency advisory gate failed"
+    }
+    Write-Host "PASS development dependency advisory gate" -ForegroundColor Green
 }
 finally {
     foreach ($name in $oldEnv.Keys) {
@@ -239,6 +246,8 @@ $report = [ordered]@{
     typecheck = "pass"
     lint = "pass"
     regression_build = "pass"
+    production_dependency_audit = "pass"
+    development_dependency_advisory_gate = "pass"
     npm_audit = "pass"
     deploy_performed = $false
     result = "PASS"
