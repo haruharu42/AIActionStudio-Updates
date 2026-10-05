@@ -62,8 +62,11 @@ jobs:
       - name: Build and regression tests
         run: npm test
 
-      - name: Dependency audit
-        run: npm audit --audit-level=high
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Development dependency advisory gate
+        run: node scripts/check-known-dev-advisories.mjs
 
       - name: Validate PWA assets and auth cache exclusions
         shell: bash
