@@ -180,7 +180,7 @@ foreach ($guard in @('/auth/callback','/api/','access_token','refresh_token')) {
         throw "Service worker auth/cache guard missing: $guard"
     }
 }
-if (-not $sw.Contains('aas-pwa-phase56-runtime-v12-axia-generated')) {
+if (-not $sw.Contains('aas-pwa-phase56-runtime-v12-mirea-generated')) {
     throw "Production service-worker cache generation is not current"
 }
 foreach ($staleGeneration in @('aas-pwa-phase17-prod-v2','aas-pwa-phase8-v1')) {
@@ -241,7 +241,7 @@ $report = [ordered]@{
     ai_terms_link = $AiTermsUrl
     pwa_assets_present = $true
     service_worker_auth_guards_present = $true
-    service_worker_cache_generation = "phase56-runtime-v12-axia-generated"
+    service_worker_cache_generation = "phase56-runtime-v12-mirea-generated"
     npm_ci = "pass"
     typecheck = "pass"
     lint = "pass"
