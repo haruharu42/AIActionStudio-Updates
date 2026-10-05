@@ -387,6 +387,9 @@ button:disabled { cursor: not-allowed; }
 }
 
 .library-stock-summary.reached {
+  border-color: #7f3f4b;
+  background: #2a1720;
+}
 
 .library-duplicate-quota-note {
   display: flex;
@@ -426,9 +429,6 @@ button:disabled { cursor: not-allowed; }
   .library-duplicate-quota-note {
     display: grid;
   }
-}
-  border-color: #7f3f4b;
-  background: #2a1720;
 }
 
 .library-stock-summary.unavailable {
