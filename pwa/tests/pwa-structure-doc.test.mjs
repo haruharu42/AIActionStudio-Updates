@@ -29,7 +29,7 @@ test("PWA structure guide records the enforced runtime boundaries", async () => 
   assert.match(guide, /components\/admin-infrastructure-usage-page\.tsx/);
   assert.match(guide, /lib\/infrastructure-usage\.ts/);
   assert.match(guide, /phase53-crystal-ui\.css/);
-  assert.match(guide, /public\/aas-axia-rumo-hero\.svg/);
+  assert.match(guide, /public\/aas-mirea-rupii-hero\.svg/);
   assert.match(guide, /lib\/admin-users-view\.ts/);
   assert.match(guide, /Browser-stored data is untrusted/);
   assert.match(guide, /UI components must not duplicate profile ownership or PWA entitlement RPC logic/);
