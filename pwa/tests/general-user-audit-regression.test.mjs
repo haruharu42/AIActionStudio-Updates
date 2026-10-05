@@ -76,10 +76,20 @@ test("dependency audit keeps production high-severity blocking while allowing on
   assert.match(gate, /Unexpected high\/critical dependency advisories/);
   assert.match(gate, /shell: process\.platform === "win32"/);
   assert.match(gate, /audit\.error/);
+  assert.match(gate, /AAS_DEV_AUDIT_LEVEL/);
+  assert.match(gate, /severityRank/);
 
   const windowsPreflight = await read("../scripts/Prepare-AAS-PWA-Production.ps1");
   assert.match(windowsPreflight, /production dependency audit/);
   assert.match(windowsPreflight, /audit", "--omit=dev", "--audit-level=high/);
   assert.match(windowsPreflight, /node "scripts\/check-known-dev-advisories\.mjs"/);
   assert.match(windowsPreflight, /development dependency advisory gate/);
+});
+
+
+test("Preview keeps moderate-or-higher dependency auditing while using the shared dev advisory gate", async () => {
+  const preview = await read("../.github/workflows/pwa-preview-deploy.yml");
+  assert.match(preview, /npm audit --omit=dev --audit-level=moderate/);
+  assert.match(preview, /AAS_DEV_AUDIT_LEVEL: moderate/);
+  assert.match(preview, /node scripts\/check-known-dev-advisories\.mjs/);
 });
