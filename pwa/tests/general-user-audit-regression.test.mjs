@@ -74,6 +74,8 @@ test("dependency audit keeps production high-severity blocking while allowing on
   assert.match(gate, /ALLOWED_HIGH_DEV_PACKAGES/);
   assert.match(gate, /value\.dev !== true/);
   assert.match(gate, /Unexpected high\/critical dependency advisories/);
+  assert.match(gate, /shell: process\.platform === "win32"/);
+  assert.match(gate, /audit\.error/);
 
   const windowsPreflight = await read("../scripts/Prepare-AAS-PWA-Production.ps1");
   assert.match(windowsPreflight, /production dependency audit/);
