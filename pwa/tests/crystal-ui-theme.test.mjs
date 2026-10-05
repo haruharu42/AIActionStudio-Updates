@@ -7,16 +7,16 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
-test("AAS crystal theme is loaded last and uses the finalized Axia and Rumo asset", async () => {
+test("AAS crystal theme is loaded last and uses the finalized Mirea and Rupii asset", async () => {
   const [layout, css, asset] = await Promise.all([
     read("app/layout.tsx"),
     read("app/phase53-crystal-ui.css"),
-    read("public/aas-axia-rumo-hero.svg"),
+    read("public/aas-mirea-rupii-hero.svg"),
   ]);
 
   assert.match(layout, /phase52-infrastructure-usage\.css";\s*import "\.\/phase53-crystal-ui\.css"/);
   assert.match(layout, /<body className="aas-crystal-theme">/);
-  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
+  assert.match(css, /url\("\/aas-mirea-rupii-hero\.svg"\)/);
   assert.match(css, /\.action-studio-hero::after/);
   assert.match(css, /\.aas-reference-desktop-nav/);
   assert.match(css, /\.aas-reference-bottom-nav/);
@@ -25,7 +25,7 @@ test("AAS crystal theme is loaded last and uses the finalized Axia and Rumo asse
   assert.match(asset, /data:image\/webp;base64,/);
 });
 
-test("home puts creator and article library before the Axia and Rumo hero and keeps quick actions lower", async () => {
+test("home puts creator and article library before the Mirea and Rupii hero and keeps quick actions lower", async () => {
   const home = await read("components/phase18-beginner-home.tsx");
   const creator = home.indexOf('className="reference-creator-card"');
   const library = home.indexOf("記事ライブラリ / noteマガジン");
