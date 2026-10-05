@@ -227,7 +227,7 @@ function AuthScreen({
             <p className="eyebrow">AAS CREATIVE PARTNER</p>
             <h1>AIで副業を、<br />もっと簡単に。</h1>
             <p className="lead">
-              アクシアとルーモが、記事・SNS・画像・副業ワークを
+              ミレアとルピィが、記事・SNS・画像・副業ワークを
               ひとつのスタジオで進めるお手伝いをします。
             </p>
             <div className="trust-row">
@@ -239,7 +239,7 @@ function AuthScreen({
           </div>
           <div className="auth-character-visual" aria-hidden="true" />
           <div className="auth-character-label">
-            <strong>アクシア × ルーモ</strong>
+            <strong>ミレア × ルピィ</strong>
             <small>AI Action Studio official guides</small>
           </div>
         </div>
