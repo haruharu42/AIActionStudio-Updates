@@ -7,11 +7,11 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
-test("Axia and Rumo are local presentation assets and the crystal theme loads last", async () => {
+test("Mirea and Rupii are local presentation assets and the crystal theme loads last", async () => {
   const [layout, css, asset, hub] = await Promise.all([
     read("app/layout.tsx"),
     read("app/phase53-crystal-ui.css"),
-    read("public/aas-axia-rumo-hero.svg"),
+    read("public/aas-mirea-rupii-hero.svg"),
     read("components/action-studio-home-hub.tsx"),
   ]);
 
@@ -19,15 +19,15 @@ test("Axia and Rumo are local presentation assets and the crystal theme loads la
   assert.doesNotMatch(layout, /phase53-crystal-character-ui/);
   assert.match(asset, /data:image\/webp;base64,/);
   assert.doesNotMatch(asset, /<image[^>]+href="https?:\/\//);
-  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
+  assert.match(css, /url\("\/aas-mirea-rupii-hero\.svg"\)/);
   assert.match(css, /url\("\/aas-login-hero-hq\.svg\?v=20260928-natural-v4"\)/);
   assert.doesNotMatch(css, /url\("\/aas-login-tile-4\.svg\?v=/);
   assert.match(css, /\.auth-character-visual[\s\S]*?width:\s*min\(48%, 580px\)[\s\S]*?right:\s*0;/);
   assert.match(css, /\.auth-character-visual[\s\S]*?background-size:\s*contain/);
-  assert.match(css, /\.action-studio-hero::after[\s\S]*?background:\s*url\("\/aas-axia-rumo-hero\.svg"\) center right \/ contain no-repeat/);
+  assert.match(css, /\.action-studio-hero::after[\s\S]*?background:\s*url\("\/aas-mirea-rupii-hero\.svg"\) center right \/ contain no-repeat/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*?\.auth-character-visual[\s\S]*?width:\s*min\(94vw, 560px\)[\s\S]*?background-size:\s*contain/);
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.action-studio-hero::after[\s\S]*?background-size:\s*contain/);
-  assert.match(hub, /アクシア × ルーモ/);
+  assert.match(hub, /ミレア × ルピィ/);
   assert.match(hub, /今日はAIで何を進めますか？/);
   assert.doesNotMatch(`${css}\n${asset}\n${hub}`, /service[_-]?role|sb_secret_|ghp_|github_token/i);
 });
