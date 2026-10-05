@@ -57,3 +57,21 @@ test("release control remains compatible with a private source repository", asyn
   assert.match(worker, /pwa-admin-public-release\.yml/);
   assert.doesNotMatch(worker, /raw\.githubusercontent\.com/);
 });
+
+
+test("dependency audit keeps production high-severity blocking while allowing only the exact unpatched dev-tool chain", async () => {
+  const [ci, preflight, gate] = await Promise.all([
+    read("../.github/workflows/pwa-phase9-17-ci.yml"),
+    read("../.github/workflows/pwa-production-preflight.yml"),
+    read("scripts/check-known-dev-advisories.mjs"),
+  ]);
+
+  for (const workflow of [ci, preflight]) {
+    assert.match(workflow, /npm audit --omit=dev --audit-level=high/);
+    assert.match(workflow, /node scripts\/check-known-dev-advisories\.mjs/);
+  }
+  assert.match(gate, /GHSA-vfj7-8cjw-p6xm/);
+  assert.match(gate, /ALLOWED_HIGH_DEV_PACKAGES/);
+  assert.match(gate, /value\.dev !== true/);
+  assert.match(gate, /Unexpected high\/critical dependency advisories/);
+});
