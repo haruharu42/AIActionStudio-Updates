@@ -41,18 +41,25 @@ try {
 }
 
 const vulnerabilities = report.vulnerabilities ?? {};
+const severityRank = { low: 1, moderate: 2, high: 3, critical: 4 };
+const requestedLevel = String(process.env.AAS_DEV_AUDIT_LEVEL ?? "high").toLowerCase();
+const threshold = severityRank[requestedLevel];
+if (!threshold) {
+  console.error(`Unsupported AAS_DEV_AUDIT_LEVEL: ${requestedLevel}`);
+  process.exit(1);
+}
 const blocking = Object.entries(vulnerabilities).filter(([, value]) =>
-  value && (value.severity === "high" || value.severity === "critical")
+  value && (severityRank[value.severity] ?? 0) >= threshold
 );
 
 if (blocking.length === 0) {
-  console.log("Full dependency audit: no high/critical advisories.");
+  console.log("Full dependency audit: no advisories at or above the configured threshold.");
   process.exit(0);
 }
 
 const unexpected = blocking.filter(([name]) => !ALLOWED_HIGH_DEV_PACKAGES.has(name));
 if (unexpected.length > 0) {
-  console.error("Unexpected high/critical dependency advisories:");
+  console.error("Unexpected dependency advisories at or above the configured threshold:");
   for (const [name, value] of unexpected) {
     console.error(`- ${name}: ${value.severity}`);
   }
