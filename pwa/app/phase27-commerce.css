@@ -206,3 +206,70 @@
   outline: 3px solid #a8cff8;
   outline-offset: 2px;
 }
+
+/* 2026-10-05 general-user readability audit */
+.commerce-back,
+.commerce-confirmation a,
+.billing-actions-card a,
+.legal-commerce-links,
+.commerce-public-shortcuts a {
+  font-size: 13px;
+}
+
+.commerce-hero .eyebrow,
+.commerce-mode,
+.commerce-plan-badge,
+.legal-commerce-label {
+  font-size: 12px;
+}
+
+.commerce-hero > p:last-of-type,
+.commerce-message,
+.commerce-invite p,
+.commerce-plan-card > p,
+.commerce-plan-card ul,
+.commerce-confirmation label,
+.commerce-confirmation > p,
+.commerce-empty p,
+.billing-actions-card p,
+.legal-commerce-lead,
+.legal-commerce-warning,
+.legal-commerce-table dd,
+.legal-commerce-notes p {
+  font-size: 14px;
+}
+
+.commerce-invite small,
+.commerce-invite-form label,
+.commerce-price span,
+.commerce-plan-card > small,
+.billing-access-grid span,
+.billing-access-grid small,
+.billing-subscription-list p,
+.billing-no-subscription,
+.legal-commerce-table dt,
+.legal-commerce-plans span,
+.legal-commerce-plans p {
+  font-size: 12px;
+}
+
+.commerce-invite-form input,
+.commerce-invite-form button,
+.commerce-plan-card button,
+.billing-section-head button,
+.billing-actions-card button {
+  font-size: 14px;
+}
+
+@media (max-width: 620px) {
+  .commerce-page,
+  .legal-commerce-page {
+    font-size: 16px;
+  }
+
+  .commerce-public-shortcuts a {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
