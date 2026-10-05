@@ -14,10 +14,18 @@ const ALLOWED_HIGH_DEV_PACKAGES = new Set([
 const ALLOWED_GHSA = "GHSA-vfj7-8cjw-p6xm";
 
 const audit = spawnSync(
-  process.platform === "win32" ? "npm.cmd" : "npm",
+  "npm",
   ["audit", "--json"],
-  { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
+  {
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+    shell: process.platform === "win32",
+  },
 );
+if (audit.error) {
+  console.error(`npm audit could not start: ${audit.error.message}`);
+  process.exit(1);
+}
 if (!audit.stdout) {
   console.error(audit.stderr || "npm audit produced no JSON output");
   process.exit(1);
