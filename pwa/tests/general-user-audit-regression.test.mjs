@@ -73,7 +73,7 @@ test("dependency audit keeps production high-severity blocking while allowing on
   assert.match(gate, /GHSA-vfj7-8cjw-p6xm/);
   assert.match(gate, /ALLOWED_HIGH_DEV_PACKAGES/);
   assert.match(gate, /value\.dev !== true/);
-  assert.match(gate, /Unexpected high\/critical dependency advisories/);
+  assert.match(gate, /Unexpected dependency advisories at or above the configured threshold/);
   assert.match(gate, /shell: process\.platform === "win32"/);
   assert.match(gate, /audit\.error/);
   assert.match(gate, /AAS_DEV_AUDIT_LEVEL/);
