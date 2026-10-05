@@ -36,7 +36,7 @@ export const HOME_WIDGET_LABELS: Record<HomeWidgetKey, string> = {
   membership: "Creator特典 / メンバーシップ",
   library: "記事ライブラリ / noteマガジン",
   releaseStatus: "リリース状態",
-  hero: "アクシア × ルーモ",
+  hero: "ミレア × ルピィ",
   quickStart: "クイックスタート / 使い方",
   articleSetup: "記事の基本設定",
   aiApps: "AIアプリ・関連機能",

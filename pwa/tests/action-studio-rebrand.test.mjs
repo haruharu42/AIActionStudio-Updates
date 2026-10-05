@@ -29,7 +29,7 @@ test("AI Action Studio branding is used on the active PWA shell", async () => {
   assert.match(offline, /AI Action Studio｜オフライン/);
   assert.doesNotMatch(offline, /AI記事スタジオ|AI Article Studio/);
   assert.match(offline, /addEventListener\("online"/);
-  assert.match(serviceWorker, /aas-pwa-phase56-runtime-v12-axia-generated/);
+  assert.match(serviceWorker, /aas-pwa-phase56-runtime-v12-mirea-generated/);
   assert.doesNotMatch(serviceWorker, /phase17-prod-v2/);
   assert.match(home, /ActionStudioHomeHero/);
   assert.match(home, /ActionStudioQuickActions/);

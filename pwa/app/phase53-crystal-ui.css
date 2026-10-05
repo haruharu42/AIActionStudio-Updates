@@ -1,4 +1,4 @@
-/* Phase 53: AAS crystal UI system inspired by Axia + Rumo.
+/* Phase 53: AAS crystal UI system inspired by Mirea + Rupii.
    Loaded last so it can restyle existing surfaces without changing feature contracts. */
 
 :root {
@@ -187,7 +187,7 @@ body.aas-crystal-theme .reference-quick-step:hover {
   background: #fbfdff;
 }
 
-/* Axia + Rumo hero */
+/* Mirea + Rupii hero */
 body.aas-crystal-theme .action-studio-hero-shell {
   display: grid;
   gap: 12px;
@@ -228,7 +228,7 @@ body.aas-crystal-theme .action-studio-hero::after {
   z-index: -1;
   inset: 0 0 0 auto;
   width: 58%;
-  background: url("/aas-axia-rumo-hero.svg") center right / contain no-repeat;
+  background: url("/aas-mirea-rupii-hero.svg") center right / contain no-repeat;
   -webkit-mask-image: linear-gradient(to right, transparent 0%, black 18%, black 100%);
   mask-image: linear-gradient(to right, transparent 0%, black 18%, black 100%);
   pointer-events: none;
@@ -1226,7 +1226,7 @@ body.aas-crystal-theme .infra-official-links a:hover {
   background: #fff;
 }
 
-/* Phase 53.1: signed-out/auth surfaces use the same Axia + Rumo visual system. */
+/* Phase 53.1: signed-out/auth surfaces use the same Mirea + Rupii visual system. */
 body.aas-crystal-theme .auth-page.auth-crystal-page {
   min-height: 100dvh;
   display: grid;
@@ -1585,7 +1585,7 @@ body.aas-crystal-theme .status-card::after {
   right: -12px;
   bottom: -8px;
   opacity: .22;
-  background: url("/aas-axia-rumo-hero.svg") center / cover no-repeat;
+  background: url("/aas-mirea-rupii-hero.svg") center / cover no-repeat;
   pointer-events: none;
 }
 
