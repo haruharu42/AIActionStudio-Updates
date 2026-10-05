@@ -1,13 +1,13 @@
-const CACHE_NAME = "aas-pwa-phase56-runtime-v12-axia-generated";
+const CACHE_NAME = "aas-pwa-phase56-runtime-v12-mirea-generated";
 const APP_SHELL = [
   "/offline.html",
   "/favicon.svg",
 ];
 const FRESH_BRANDING_ASSETS = new Set([
   "/manifest.webmanifest",
-  "/aas-axia-icon-180.png",
-  "/aas-axia-icon-192.png",
-  "/aas-axia-icon-512.png",
+  "/aas-mirea-icon-180.png",
+  "/aas-mirea-icon-192.png",
+  "/aas-mirea-icon-512.png",
   "/aas-login-hero-hq.svg",
   "/aas-login-tile-1.svg",
   "/aas-login-tile-2.svg",
@@ -126,8 +126,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: "/aas-axia-icon-192.png?v=20260928-axia-v2",
-      badge: "/aas-axia-icon-192.png?v=20260928-axia-v2",
+      icon: "/aas-mirea-icon-192.png?v=20260928-mirea-v2",
+      badge: "/aas-mirea-icon-192.png?v=20260928-mirea-v2",
       tag: notificationId > 0 ? "aas-notification-" + notificationId : undefined,
       renotify: false,
       data: { href, notificationId },
