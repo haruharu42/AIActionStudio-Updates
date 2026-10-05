@@ -30,7 +30,13 @@ test("all PWA deployment paths block moderate dependency advisories", async () =
     ".github/workflows/pwa-admin-public-release.yml",
   ]) {
     const workflow = await readFile(path.join(repoRoot, relative), "utf8");
-    assert.match(workflow, /npm audit --audit-level=moderate/);
+    if (relative.endsWith("pwa-preview-deploy.yml")) {
+      assert.match(workflow, /npm audit --omit=dev --audit-level=moderate/);
+      assert.match(workflow, /AAS_DEV_AUDIT_LEVEL: moderate/);
+      assert.match(workflow, /node scripts\/check-known-dev-advisories\.mjs/);
+    } else {
+      assert.match(workflow, /npm audit --audit-level=moderate/);
+    }
     assert.doesNotMatch(workflow, /npm audit --audit-level=high/);
   }
 });
