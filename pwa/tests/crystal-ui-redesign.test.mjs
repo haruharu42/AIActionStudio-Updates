@@ -24,18 +24,18 @@ test("home prioritizes creator through article library before the AAS hero and k
   assert.ok(quick > ranking);
 });
 
-test("Axia and Rumo hero is bundled locally and used by the home hero", async () => {
+test("Mirea and Rupii hero is bundled locally and used by the home hero", async () => {
   const [asset, css, hub, layout] = await Promise.all([
-    read("public/aas-axia-rumo-hero.svg"),
+    read("public/aas-mirea-rupii-hero.svg"),
     read("app/phase53-crystal-ui.css"),
     read("components/action-studio-home-hub.tsx"),
     read("app/layout.tsx"),
   ]);
 
-  assert.match(asset, /AAS アクシアとルーモ/);
+  assert.match(asset, /AAS ミレアとルピィ/);
   assert.match(asset, /data:image\/webp;base64,/);
-  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
-  assert.match(hub, /アクシア × ルーモ/);
+  assert.match(css, /url\("\/aas-mirea-rupii-hero\.svg"\)/);
+  assert.match(hub, /ミレア × ルピィ/);
   assert.match(hub, /今日はAIで何を進めますか？/);
   assert.match(layout, /phase53-crystal-ui\.css/);
   assert.match(layout, /className="aas-crystal-theme"/);
@@ -89,7 +89,7 @@ test("new mobile defaults match the preview information architecture while prese
   assert.match(nav, /mobileNavItemsStorageKey/);
 });
 
-test("signed-out auth and access surfaces use the Axia and Rumo crystal design", async () => {
+test("signed-out auth and access surfaces use the Mirea and Rupii crystal design", async () => {
   const [app, css, layout, config, sw] = await Promise.all([
     read("components/phase6-app.tsx"),
     read("app/phase53-crystal-ui.css"),
@@ -100,7 +100,7 @@ test("signed-out auth and access surfaces use the Axia and Rumo crystal design",
 
   assert.match(app, /auth-crystal-page/);
   assert.match(app, /auth-character-stage/);
-  assert.match(app, /アクシア × ルーモ/);
+  assert.match(app, /ミレア × ルピィ/);
   assert.match(app, /auth-build-stamp/);
   assert.match(css, /auth-character-visual/);
   assert.match(await read("app/globals.css"), /"Noto Sans JP", "Noto Sans CJK JP"/);
@@ -120,7 +120,7 @@ test("signed-out auth and access surfaces use the Axia and Rumo crystal design",
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-visual \{[\s\S]*position: relative;[\s\S]*width: min\(94vw, 560px\);[\s\S]*background-size: contain;/);
   assert.match(layout, /"aas-build-sha"/);
   assert.match(config, /NEXT_PUBLIC_AAS_BUILD_SHA/);
-  assert.match(sw, /phase56-runtime-v12-axia-generated/);
+  assert.match(sw, /phase56-runtime-v12-mirea-generated/);
 });
 
 test("shared header exposes build identity for live deployment verification", async () => {
