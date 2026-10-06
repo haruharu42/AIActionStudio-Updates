@@ -33,6 +33,7 @@ test("all PWA deployment paths block moderate dependency advisories", async () =
     if (
       relative.endsWith("pwa-preview-deploy.yml")
       || relative.endsWith("pwa-admin-canary-release.yml")
+      || relative.endsWith("pwa-admin-public-release.yml")
     ) {
       assert.match(workflow, /npm audit --omit=dev --audit-level=moderate/);
       assert.match(workflow, /AAS_DEV_AUDIT_LEVEL: moderate/);
