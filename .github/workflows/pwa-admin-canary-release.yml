@@ -149,8 +149,13 @@ jobs:
           NEXT_PUBLIC_AAS_BUILD_SHA: ${{ inputs.source_sha }}
         run: npm test
 
-      - name: Dependency audit
-        run: npm audit --audit-level=moderate
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Development dependency advisory gate
+        env:
+          AAS_DEV_AUDIT_LEVEL: moderate
+        run: node scripts/check-known-dev-advisories.mjs
 
       - name: Locate generated public Wrangler config
         id: wrangler-config
