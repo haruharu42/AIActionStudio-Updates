@@ -165,9 +165,15 @@ jobs:
         working-directory: release-workdir
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Dependency audit
+      - name: Production dependency audit
         working-directory: release-workdir
-        run: npm audit --audit-level=moderate
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Development dependency advisory gate
+        working-directory: release-workdir
+        env:
+          AAS_DEV_AUDIT_LEVEL: moderate
+        run: node scripts/check-known-dev-advisories.mjs
 
       - name: Verify Cloudflare authentication
         working-directory: release-workdir
