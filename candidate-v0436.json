@@ -1,7 +1,0 @@
-{
-  "version": "0.4.3.6",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.3.6_AdminUserMode.zip",
-  "sha256": "5E7950F00D44D808ADF6F3C0D0C2CEDB0383BFD304548CD8D6D6788CDBC0C98D",
-  "channel": "stable",
-  "notes": "v0.4.3.6: fixes Windows Admin action-button clipping and adds safe Admin/User display-mode switching without changing database roles. Cumulative from v0.4.3.4-v0.4.3.5."
-}

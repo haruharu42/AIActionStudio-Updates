@@ -1,7 +1,0 @@
-{
-  "version": "0.4.1",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.1_WebPromptEngineV2.zip",
-  "sha256": "57B9EBBC24691A23399358E9E2EAE2DBC7CC79FACDDFBD59CFB6F3BC9FBD3432",
-  "channel": "stable",
-  "notes": "Web Prompt Engine v2 with refreshed note/Tips/Brain strategies, stronger factual safeguards, reader brief structure, and illustration marker support."
-}

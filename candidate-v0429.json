@@ -1,7 +1,0 @@
-{
-  "version": "0.4.2.9",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2.9_LiveArticleCreatorHook.zip",
-  "sha256": "B654A757CF6E56701FFA2C31097080722DB980C9BD7E338958664F514A39E04D",
-  "channel": "stable",
-  "notes": "v0.4.2.9: activates the approved six-step UI from the real Article Creator navigation event and validates the live Tk event path on Windows."
-}

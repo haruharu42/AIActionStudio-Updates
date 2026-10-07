@@ -1,7 +1,0 @@
-{
-  "version": "0.4.3.7",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.3.7_AdminUIPayloadRepair.zip",
-  "sha256": "540ECC2C4DBC69C9A6A66A363EBEDE14297DAB6F91C2611665CDBEC6BE859B59",
-  "channel": "stable",
-  "notes": "v0.4.3.7: forces the verified Admin UI payload onto Windows installations that already report v0.4.3.6, and verifies the installed auth_ui.py SHA256. No feature, database, OAuth, or role changes."
-}

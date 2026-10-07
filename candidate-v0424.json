@@ -1,7 +1,0 @@
-{
-  "version": "0.4.2.4",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2.4_ImagePlanning.zip",
-  "sha256": "BCD795F55E3EA1E6C36E8F816486C63CF7FCE8A0885D34C63D30CFA1C42999B1",
-  "channel": "preview",
-  "notes": "v0.4.2.4: moves image planning before article creation, separates eyecatch/illustration choices, and adds article-aware illustration counts up to six."
-}

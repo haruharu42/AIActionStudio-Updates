@@ -1,8 +1,0 @@
-.ai-selected-chatgpt .openai-prompt-actions .openai-launch-action:nth-of-type(3),
-.ai-selected-chatgpt .openai-prompt-actions .openai-launch-action:nth-of-type(4),
-.ai-selected-claude .openai-prompt-actions .openai-launch-action:nth-of-type(2),
-.ai-selected-claude .openai-prompt-actions .openai-launch-action:nth-of-type(4),
-.ai-selected-gemini .openai-prompt-actions .openai-launch-action:nth-of-type(2),
-.ai-selected-gemini .openai-prompt-actions .openai-launch-action:nth-of-type(3) {
-  display: none;
-}

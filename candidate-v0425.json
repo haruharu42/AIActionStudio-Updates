@@ -1,7 +1,0 @@
-{
-  "version": "0.4.2.5",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2.5_GuidedWizardHistory.zip",
-  "sha256": "B36B09D1FB094AB96D8EF731050B5063029BAD155E5DE6F6A1C1A95AA8761C51",
-  "channel": "preview",
-  "notes": "v0.4.2.5: adds guided article-creation pages, clear/new controls, and a ten-item local recent-work history for Web AI drafts."
-}

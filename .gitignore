@@ -1,8 +1,0 @@
-.env
-.env.*
-!.env.example
-config/auth.json
-**/__pycache__/
-*.pyc
-.build_v*/
-/.wrangler/

@@ -1,7 +1,0 @@
-{
-  "version": "0.4.3.2",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.3.2_MarkdownSafePublish.zip",
-  "sha256": "98D07EB7FD431EB169B4685C21B35452A7BF56964DA24C8FDD93416B1AC366A8",
-  "channel": "stable",
-  "notes": "v0.4.3.2: preserves Markdown tables, separates source/insertion/publish copies, removes internal illustration metadata from publish text, and strengthens 2D anime prompt consistency."
-}

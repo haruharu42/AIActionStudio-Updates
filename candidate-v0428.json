@@ -1,7 +1,0 @@
-{
-  "version": "0.4.2.8",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2.8_DirectVisualWizard.zip",
-  "sha256": "51FE20DA9375911E64213B9B905A092B3193E130D53CC95D8E69B3D1593F19AB",
-  "channel": "stable",
-  "notes": "v0.4.2.8: directly activates the approved six-step visual wizard, removes legacy call paths, and adds real Windows Tkinter runtime validation."
-}

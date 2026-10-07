@@ -1,7 +1,0 @@
-{
-  "version": "0.4.0",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.0_Phase35WebAIProduction.zip",
-  "sha256": "01ACE4C47D4E5B4B1E35F45EC7AFD9342BF1166255CB1A5062BD8E8553A06A56",
-  "channel": "stable",
-  "notes": "Phase 3.5 Web AI production workflow: external model config, paid-value engine, ingest/repair, save/resume, and publish-ready UI integration."
-}

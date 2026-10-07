@@ -1,7 +1,0 @@
-{
-  "version": "0.4.2.7",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2.7_VisualSixStepWizard.zip",
-  "sha256": "6D6AD7B1A71F4C21E3AE1DEF1DC07152942F028B7FE2989CDE456638A62C6B76",
-  "channel": "stable",
-  "notes": "v0.4.2.7: dedicated six-step visual article wizard, persistent recent work, explicit paste clearing, decorated completion preview, and inline image-prompt results."
-}
