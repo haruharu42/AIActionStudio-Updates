@@ -1,7 +1,0 @@
-{
-  "version": "0.4.3.3",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.3.3_AuthUIFoundation.zip",
-  "sha256": "CB813DF29EFB1BA27C572D19F332460C3B9A080143868BFC22433D9AE5263CC9",
-  "channel": "stable",
-  "notes": "v0.4.3.3: cumulative update from v0.4.2.9-v0.4.3.2 adding the Supabase Auth foundation, DPAPI session persistence, consent-aware registration, and server-profile-driven User/Admin navigation without changing existing article data or workflows."
-}

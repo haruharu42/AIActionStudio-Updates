@@ -1,9 +1,0 @@
-{
-  "supabase_url": "",
-  "anon_key": "",
-  "redirect_url": "http://127.0.0.1:8765/auth/callback",
-  "required": true,
-  "terms_url": "",
-  "privacy_url": "",
-  "ai_terms_url": ""
-}

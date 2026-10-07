@@ -1,7 +1,0 @@
-{
-  "version": "0.4.3.0",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.3.0_StepFiveAIAuto.zip",
-  "sha256": "AF066CA1D9FC9C1FE84813EAF4FD0C7DCBF29744019D16807F7FA0D365A9F54B",
-  "channel": "stable",
-  "notes": "v0.4.3.0: fixes STEP 4 to STEP 5 using the validated original creation action, adds AI-auto theme selection, and safely refreshes Python caches."
-}

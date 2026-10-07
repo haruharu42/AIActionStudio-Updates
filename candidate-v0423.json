@@ -1,7 +1,0 @@
-{
-  "version": "0.4.2.3",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2.3_AnimeStyleTuning.zip",
-  "sha256": "C56C1AA6F3A604A6BDDA5A4D8ED0A149DB7AD12FCBDC31ABD598B1D893A8E856",
-  "channel": "preview",
-  "notes": "v0.4.2.3: strengthens Anime and Manga image prompts with clear 2D line-art/cel-shading guidance and non-photoreal exclusions."
-}

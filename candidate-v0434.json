@@ -1,7 +1,0 @@
-{
-  "version": "0.4.3.4",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.3.4_GoogleOAuthFix.zip",
-  "sha256": "11DFF408A8DB5A6AA104C31BB55715DA30A4DC16E72180D07E0155B47569BE0D",
-  "channel": "stable",
-  "notes": "v0.4.3.4: fixes Google OAuth state conflicts while preserving Supabase PKCE, Email/Password Auth, DPAPI sessions, role authorization, and all article workflows. Cumulative from v0.4.2.9-v0.4.3.3."
-}

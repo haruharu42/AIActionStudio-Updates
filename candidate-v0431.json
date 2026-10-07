@@ -1,7 +1,0 @@
-{
-  "version": "0.4.3.1",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.3.1_EmbeddedSixStepFlowBridge.zip",
-  "sha256": "0DC22AAFA5F88949455F0FE50FCBBD9CE97F6AAB174AB198CBFF5E6F37199863",
-  "channel": "stable",
-  "notes": "v0.4.3.1: implements the approved single-screen six-step Web AI flow and safely supports direct updates from v0.4.2.9 or v0.4.3.0."
-}

@@ -1,7 +1,0 @@
-{
-  "version": "0.4.2.6",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2.6_EmbeddedSingleItemWizard.zip",
-  "sha256": "0D5FBBD5280B422EE9EADE71F8BA8A67DA712D3F9330B175415298D594ADBC67",
-  "channel": "preview",
-  "notes": "v0.4.2.6: keeps article creation in the main screen, starts with generation method and image plan, and shows each remaining setup item one at a time."
-}
